@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -21,15 +24,13 @@ jobs:
       - name: Install dependencies
         run: |
           pip install pyinstaller
-          pip install streamlit pandas altair plotly numpy matplotlib pillow opencv-python pdfminer.six rapidocr-onnxruntime psutil pydantic requests pyjwt cryptography
+          pip install streamlit pandas altair plotly numpy matplotlib pillow opencv-python pdfminer.six rapidocr-onnxruntime psutil pydantic requests pyjwt cryptography pyyaml python-dateutil
 
       - name: Build executable
         run: pyinstaller gestio.spec
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: dist/GestioV4.exe
           draft: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
