@@ -67,7 +67,6 @@ from domains.transactions.database.schema import (
 )
 from domains.transactions.database.schema_table_recurrence import init_recurrence_table
 from domains.transactions import TransactionRepository
-from domains.portfolio.database import init_portfolio_db
 
 # ==============================
 # IMPORTS - UI
@@ -97,7 +96,6 @@ try:
     init_transaction_table()
     migrate_transaction_table()
     init_recurrence_table()
-    init_portfolio_db()
     
     # Init new tables
     from domains.transactions.database.schema import init_virement_table, init_attachments_table
