@@ -1,0 +1,35 @@
+name: Build Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install pyinstaller
+          pip install streamlit pandas altair plotly numpy matplotlib pillow opencv-python pdfminer.six rapidocr-onnxruntime psutil pydantic requests pyjwt cryptography
+
+      - name: Build executable
+        run: pyinstaller gestio.spec
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: dist/GestioV4.exe
+          draft: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

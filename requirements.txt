@@ -1,38 +1,16 @@
-# Core Framework
-streamlit>=1.35.0
-pywebview>=5.0.0
-
-# Data Manipulation & Analysis
-pandas>=2.0.0
-numpy>=1.24.0
-python-dateutil>=2.8.2
-
-# Visualization
-plotly>=5.17.0
-matplotlib>=3.7.0
-
-# Document Processing (OCR & PDF)
-# -----------------------------
-# PDF Extraction
-pdfminer.six>=20221105
-
-# OCR Engine (Main)
-rapidocr-onnxruntime>=1.3.0
-
-# OCR Utilities (Image Processing)
-opencv-python-headless>=4.8.0
-
-# Configuration & Utils
-PyYAML>=6.0.0
-regex>=2023.8.8
-watchdog>=3.0.0
-psutil>=5.9.0
-
-# LLM Integration (Optional features)
-openai>=1.0.0
-pydantic>=2.0.0
-
-# API & Security (Banking Connectors)
-requests>=2.31.0
-pyjwt[crypto]>=2.8.0
-cryptography>=42.0.0
+streamlit
+pandas
+numpy
+plotly
+matplotlib
+PIL
+cv2
+pyyaml
+pdfminer
+rapidocr-onnxruntime
+python-dateutil
+psutil
+pydantic
+requests
+pyjwt
+cryptography
