@@ -2,8 +2,11 @@ name: Build Release
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches:
+      - main
+    paths:
+      - '**.py'           # Se déclenche uniquement si un fichier .py est modifié
+  workflow_dispatch:      # Lancement manuel depuis GitHub Actions
 
 permissions:
   contents: write
