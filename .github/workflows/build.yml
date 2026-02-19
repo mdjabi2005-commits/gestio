@@ -32,8 +32,18 @@ jobs:
       - name: Build executable
         run: pyinstaller gestio.spec
 
+      - name: Generate tag name
+        id: tag
+        run: |
+          $date = Get-Date -Format "yyyy.MM.dd"
+          $sha = "${{ github.sha }}".Substring(0, 7)
+          $tag = "v$date-$sha"
+          echo "TAG_NAME=$tag" >> $env:GITHUB_OUTPUT
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.tag.outputs.TAG_NAME }}
+          name: "Release ${{ steps.tag.outputs.TAG_NAME }}"
           files: dist/GestioV4.exe
           draft: true
