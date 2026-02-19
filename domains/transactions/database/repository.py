@@ -291,7 +291,6 @@ class TransactionRepository:
         finally:
             close_connection(conn)
 
-
     def get_by_id(self, tx_id: int) -> Optional[dict]:
         """Récupère une transaction par son ID."""
         conn = None
