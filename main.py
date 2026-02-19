@@ -60,7 +60,6 @@ from config import (
 # ==============================
 # IMPORTS - Database
 # ==============================
-# from shared.database import init_db, migrate_database_schema # Moved to domain
 from domains.transactions.database.schema import (
     init_transaction_table,
     migrate_transaction_table
@@ -96,10 +95,9 @@ try:
     init_transaction_table()
     migrate_transaction_table()
     init_recurrence_table()
-    
-    # Init new tables
-    from domains.transactions.database.schema import init_virement_table, init_attachments_table
-    init_virement_table()
+
+    # Init attachments table
+    from domains.transactions.database.schema import init_attachments_table
     init_attachments_table()
     # Auto-generate missing recurring transactions
     from domains.transactions.recurrence import backfill_all_recurrences

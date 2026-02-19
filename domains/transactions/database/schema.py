@@ -95,47 +95,6 @@ def init_transaction_table(db_path: str = None) -> None:
         close_connection(conn)
 
 
-def init_virement_table(db_path: str = None) -> None:
-    """
-    Initialise la table dédiée aux virements internes.
-    """
-    conn = None
-    try:
-        conn = get_db_connection(db_path=db_path)
-        cursor = conn.cursor()
-
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS virements (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                date TEXT NOT NULL,
-                description TEXT,
-                amount REAL NOT NULL,
-                iban_source TEXT,
-                iban_destination TEXT,
-                external_id_source TEXT,
-                external_id_destination TEXT,
-                source TEXT DEFAULT 'Manuel'
-            )
-        """)
-        
-        # Index pour recherches rapides par compte ou FITID
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_virements_source ON virements(iban_source)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_virements_dest ON virements(iban_destination)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_virements_fitid_src ON virements(external_id_source)")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_virements_fitid_dst ON virements(external_id_destination)")
-
-        conn.commit()
-        logger.info("Virements table initialized successfully")
-
-    except sqlite3.Error as e:
-        logger.error(f"Virements table initialization failed: {e}")
-        if conn:
-            conn.rollback()
-        raise
-    finally:
-        close_connection(conn)
-
-
 def init_attachments_table(db_path: str = None) -> None:
     """
     Initialise la table pour les pièces jointes (factures, tickets).

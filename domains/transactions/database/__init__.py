@@ -4,7 +4,6 @@ Consolidates all database-related logic for transactions domain.
 """
 
 from .model import Transaction
-from .model_virement import Virement
 from .validation import (
     TRANSACTION_TYPES,
     TRANSACTION_CATEGORIES,
@@ -17,13 +16,11 @@ from .validation import (
     safe_date_convert,
 )
 from .repository import TransactionRepository, transaction_repository, CATÉGORIES, TYPES_TRANSACTION
-from .repository_virement import VirementRepository, virement_repository
-from .schema import init_transaction_table, migrate_transaction_table, create_indexes, init_virement_table
+from .schema import init_transaction_table, migrate_transaction_table, create_indexes, init_attachments_table
 
 __all__ = [
     # Model
     'Transaction',
-    'Virement',
     # Constants
     'TRANSACTION_TYPES',
     'TRANSACTION_CATEGORIES',
@@ -39,11 +36,9 @@ __all__ = [
     # Repository
     'TransactionRepository',
     'transaction_repository',
-    'VirementRepository',
-    'virement_repository',
     # Schema
     'init_transaction_table',
-    'init_virement_table',
+    'init_attachments_table',
     'migrate_transaction_table',
     'create_indexes',
 ]

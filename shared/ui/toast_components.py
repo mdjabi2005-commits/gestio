@@ -12,8 +12,6 @@ import streamlit.components.v1 as components
 import pandas as pd
 from PIL import Image
 
-# from shared.services import trouver_fichiers_associes (Deleted)
-
 logger = logging.getLogger(__name__)
 
 
@@ -349,16 +347,6 @@ def afficher_documents_associes(transaction: Dict[str, Any], context: Optional[s
                     image = Image.open(fichier)
                     st.image(image, caption=f"🧾 {nom_fichier}", use_column_width=True)
 
-                    # Optional: Re-OCR
-                    with st.expander("🔍 Analyser le texte"):
-                        # Import here to avoid circular dependency
-                        try:
-                            from domains.ocr import full_ocr
-                            texte_ocr = full_ocr(fichier, show_ticket=False)
-                            st.text_area("Texte du ticket:", texte_ocr, height=150)
-                        except ImportError:
-                            st.warning("OCR module not available")
-
                 except Exception as e:
                     toast_error(f"Impossible d'afficher l'image: {e}")
 
@@ -366,37 +354,28 @@ def afficher_documents_associes(transaction: Dict[str, Any], context: Optional[s
                 # Display PDF info
                 st.success(f"📄 **{nom_fichier}**")
 
-                # Extract text automatically
+                # Extract text automatically and provide download button
                 try:
-                    # Import here to avoid circular dependency
-                    try:
-                        from domains.ocr import extract_text_from_pdf
-                        texte_pdf = extract_text_from_pdf(fichier)
-                        if texte_pdf.strip():
-                            with st.expander("📖 Contenu du document"):
-                                apercu = texte_pdf[:2000] + "..." if len(texte_pdf) > 2000 else texte_pdf
-                                st.text_area("Extrait:", apercu, height=200)
-                    except ImportError:
-                        st.info("📄 Document PDF (extraction de texte non disponible)")
-                except Exception:
-                    st.info("📄 Document PDF (contenu non extrait)")
+                    st.info("📄 Document PDF")
 
-                # Download button
-                with open(fichier, "rb") as f:
-                    file_hash = hashlib.md5(fichier.encode()).hexdigest()[:8]
-                    # Create context-aware key to avoid duplicates
-                    context_suffix = f"_{context}" if context else ""
-                    # Add timestamp to guarantee absolute uniqueness even if all metadata is identical
+                    # Download button (inside try so file open errors are caught)
                     import time
-                    unique_id = str(int(time.time() * 1000000))[-8:]  # Last 8 digits of microsecond timestamp
-                    st.download_button(
-                        label="⬇️ Télécharger le document",
-                        data=f.read(),
-                        file_name=nom_fichier,
-                        mime="application/pdf",
-                        use_container_width=True,
-                        key=f"dl_{file_hash}_{i}{context_suffix}_{unique_id}"
-                    )
+                    with open(fichier, "rb") as f:
+                        file_hash = hashlib.md5(fichier.encode()).hexdigest()[:8]
+                        # Create context-aware key to avoid duplicates
+                        context_suffix = f"_{context}" if context else ""
+                        # Add timestamp to guarantee absolute uniqueness even if all metadata is identical
+                        unique_id = str(int(time.time() * 1000000))[-8:]  # Last 8 digits of microsecond timestamp
+                        st.download_button(
+                            label="⬇️ Télécharger le document",
+                            data=f.read(),
+                            file_name=nom_fichier,
+                            mime="application/pdf",
+                            use_container_width=True,
+                            key=f"dl_{file_hash}_{i}{context_suffix}_{unique_id}"
+                        )
+                except Exception as e:
+                    toast_error(f"Impossible d'afficher le document PDF: {e}")
 
 
 

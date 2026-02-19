@@ -1,4 +1,3 @@
-# import easyocr  <-- REMOVED TOP LEVEL IMPORT
 import logging
 import numpy as np
 import cv2
