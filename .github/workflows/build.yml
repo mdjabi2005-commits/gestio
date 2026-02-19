@@ -5,7 +5,8 @@ on:
     branches:
       - main
     paths:
-      - '**.py'           # Se déclenche uniquement si un fichier .py est modifié
+      - '**.py'                              # Fichiers Python
+      - '.github/workflows/build.yml'       # Le workflow lui-même
   workflow_dispatch:      # Lancement manuel depuis GitHub Actions
 
 permissions:
@@ -24,10 +25,13 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
       - name: Install dependencies
         run: |
-          pip install pyinstaller
-          pip install streamlit pandas altair plotly numpy matplotlib pillow opencv-python pdfminer.six rapidocr-onnxruntime psutil pydantic requests pyjwt cryptography pyyaml python-dateutil
+          uv pip install --system pyinstaller
+          uv pip install --system streamlit pandas altair plotly numpy matplotlib pillow opencv-python pdfminer.six rapidocr-onnxruntime psutil pydantic requests pyjwt cryptography pyyaml python-dateutil
 
       - name: Build executable
         run: pyinstaller gestio.spec
