@@ -47,24 +47,47 @@ jobs:
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
 
-      - name: System dependencies Linux
-        if: matrix.os == 'ubuntu-22.04'
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y libgl1 libglib2.0-0 libfuse2 patchelf desktop-file-utils libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0
-
       - name: Install dependencies
         run: uv sync --frozen --no-dev
 
-      - name: Install PyInstaller (Windows only)
+      - name: Install PyInstaller
         if: matrix.os == 'windows-latest'
         run: uv sync --frozen --no-dev --group build
 
       - name: Generate icons
+        if: matrix.os == 'windows-latest'
         run: uv run python resources/icons/generate_icons.py
 
       - name: PyInstaller build
+        if: matrix.os == 'windows-latest'
         run: uv run pyinstaller gestio.spec --noconfirm
+
+      - name: Validate Azure secrets
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $missing = @()
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_VAULT_URI))    { $missing += "AZURE_VAULT_URI" }
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_ID))    { $missing += "AZURE_CLIENT_ID" }
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_TENANT_ID))    { $missing += "AZURE_TENANT_ID" }
+          if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_SECRET)){ $missing += "AZURE_CLIENT_SECRET" }
+
+          # Afficher les longueurs (pas les valeurs) pour debug
+          Write-Host "AZURE_VAULT_URI    : $($env:AZURE_VAULT_URI.Length) chars"
+          Write-Host "AZURE_CLIENT_ID    : $($env:AZURE_CLIENT_ID.Length) chars"
+          Write-Host "AZURE_TENANT_ID    : $($env:AZURE_TENANT_ID.Length) chars"
+          Write-Host "AZURE_CLIENT_SECRET: $($env:AZURE_CLIENT_SECRET.Length) chars"
+
+          if ($missing.Count -gt 0) {
+            Write-Error "Secrets GitHub manquants ou vides : $($missing -join ', ')"
+            Write-Host ""
+            Write-Host "Comment corriger :"
+            Write-Host "  1. Aller sur GitHub -> Settings -> Secrets and variables -> Actions"
+            Write-Host "  2. Verifier que ces secrets existent et ne sont pas vides : $($missing -join ', ')"
+            exit 1
+          }
+
+          Write-Host "Tous les secrets Azure sont presents."
 
       - name: Install AzureSignTool
         if: matrix.os == 'windows-latest'
