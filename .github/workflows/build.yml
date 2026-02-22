@@ -218,5 +218,5 @@ jobs:
             ./release/Gestio-Setup-*.exe
             ./release/install-mac-linux.sh
           fail_on_unmatched_files: true
-          draft: false
+          draft: true
           prerelease: false
