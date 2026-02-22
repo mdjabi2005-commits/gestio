@@ -34,12 +34,6 @@ jobs:
           - os: windows-latest
             name: Windows
             artifact: GestioV4-Windows
-          - os: macos-latest
-            name: macOS
-            artifact: GestioV4-macOS
-          - os: ubuntu-22.04
-            name: Linux
-            artifact: GestioV4-Linux
 
     steps:
       - name: Checkout
@@ -60,6 +54,10 @@ jobs:
           sudo apt-get install -y libgl1 libglib2.0-0 libfuse2 patchelf desktop-file-utils libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0
 
       - name: Install dependencies
+        run: uv sync --frozen --no-dev
+
+      - name: Install PyInstaller (Windows only)
+        if: matrix.os == 'windows-latest'
         run: uv sync --frozen --no-dev --group build
 
       - name: Generate icons
@@ -143,53 +141,6 @@ jobs:
           path: dist/installer/Gestio-Setup-*.exe
           if-no-files-found: error
 
-      - name: Create macOS dmg
-        if: matrix.os == 'macos-latest'
-        run: |
-          brew install create-dmg
-          create-dmg \
-            --volname "Gestio V4" \
-            --volicon "resources/icons/gestio.icns" \
-            --window-pos 200 120 --window-size 600 400 \
-            --icon-size 100 \
-            --icon "Gestio.app" 175 190 \
-            --hide-extension "Gestio.app" \
-            --app-drop-link 425 190 \
-            --no-internet-enable \
-            "dist/Gestio-macOS.dmg" \
-            "dist/Gestio.app"
-
-      - name: Upload macOS artifact
-        if: matrix.os == 'macos-latest'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: dist/Gestio-macOS.dmg
-          if-no-files-found: error
-
-      - name: Create Linux AppImage
-        if: matrix.os == 'ubuntu-22.04'
-        run: |
-          wget -q "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" -O /tmp/appimagetool
-          chmod +x /tmp/appimagetool
-          APPDIR="dist/GestioV4.AppDir"
-          mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/icons/hicolor/512x512/apps"
-          cp -r dist/GestioV4/* "$APPDIR/usr/bin/"
-          cp resources/icons/gestio.png "$APPDIR/usr/share/icons/hicolor/512x512/apps/gestio.png"
-          cp resources/icons/gestio.png "$APPDIR/gestio.png"
-          printf '[Desktop Entry]\nName=Gestio\nExec=GestioV4\nIcon=gestio\nType=Application\nCategories=Finance;Office;\nTerminal=false\n' > "$APPDIR/gestio.desktop"
-          printf '#!/bin/bash\nSELF=$(readlink -f "$0")\nHERE=$(dirname "$SELF")\nexec "$HERE/usr/bin/GestioV4" "$@"\n' > "$APPDIR/AppRun"
-          chmod +x "$APPDIR/AppRun"
-          ARCH=x86_64 /tmp/appimagetool "$APPDIR" "dist/Gestio-Linux.AppImage"
-
-      - name: Upload Linux artifact
-        if: matrix.os == 'ubuntu-22.04'
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact }}
-          path: dist/Gestio-Linux.AppImage
-          if-no-files-found: error
-
   release:
     name: Create GitHub Release
     needs: build
@@ -197,14 +148,19 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/')
 
     steps:
-      - name: Download all artifacts
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
+          name: GestioV4-Windows
           path: ./release
-          merge-multiple: true
 
-      - name: List files
-        run: ls -lh ./release/
+      - name: Prepare Mac/Linux script
+        run: |
+          chmod +x install-mac-linux.sh
+          cp install-mac-linux.sh ./release/install-mac-linux.sh
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -215,15 +171,13 @@ jobs:
 
             | Platform | File | Instructions |
             |---|---|---|
-            | Windows | Gestio-Setup-v*.exe | Double-click installer |
-            | macOS | Gestio-macOS.dmg | Open and drag to Applications |
-            | Linux | Gestio-Linux.AppImage | chmod +x then run |
+            | Windows | `Gestio-Setup-v*.exe` | Double-click, assistant d'installation |
+            | macOS / Linux | `install-mac-linux.sh` | `chmod +x install-mac-linux.sh && ./install-mac-linux.sh` |
 
             Your financial data is stored only on your machine.
           files: |
             ./release/Gestio-Setup-*.exe
-            ./release/Gestio-macOS.dmg
-            ./release/Gestio-Linux.AppImage
+            ./release/install-mac-linux.sh
           fail_on_unmatched_files: true
           draft: false
           prerelease: false
