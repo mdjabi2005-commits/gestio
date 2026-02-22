@@ -150,9 +150,8 @@ jobs:
           }
           Write-Host "gestio.iss OK - $($bytes.Count) octets, 100% ASCII"
 
-          # Installer Inno Setup
-          Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "$env:TEMP\innosetup.exe"
-          Start-Process -FilePath "$env:TEMP\innosetup.exe" -ArgumentList "/VERYSILENT /NORESTART" -Wait
+          # Installer Inno Setup via chocolatey (pre-installe sur les runners Windows)
+          choco install innosetup --no-progress --yes
           New-Item -ItemType Directory -Force -Path "dist\installer" | Out-Null
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" gestio.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
