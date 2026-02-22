@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 """
-Gestio — Générateur d'icônes
-Génère gestio.png, gestio.ico et gestio.icns depuis zéro.
-Requires : pillow (déjà dans uv.lock)
+Gestio - Generateur d'icones
+Genere gestio.png, gestio.ico et gestio.icns depuis zero.
+Requires : pillow (deja dans uv.lock)
 
 Usage :
     uv run python resources/icons/generate_icons.py
 """
 
-
 import io
 import struct
+import sys
 from pathlib import Path
+
+# Forcer UTF-8 sur stdout/stderr
+# Windows GitHub Actions utilise cp1252 par defaut -> crash sur les emojis
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -87,7 +94,7 @@ def generate_png(size: int = 512) -> Image.Image:
 def save_png(img: Image.Image) -> Path:
     path = OUT / "gestio.png"
     img.save(path, "PNG", optimize=True)
-    print(f"✅ gestio.png  ({img.size[0]}x{img.size[1]})")
+    print(f"OK gestio.png  ({img.size[0]}x{img.size[1]})")
     return path
 
 
@@ -104,7 +111,7 @@ def save_ico(img: Image.Image) -> Path:
         sizes=[(s, s) for s in sizes],
         append_images=icons[1:],
     )
-    print(f"✅ gestio.ico  (résolutions : {', '.join(str(s) for s in sizes)})")
+    print(f"OK gestio.ico  (resolutions : {', '.join(str(s) for s in sizes)})")
     return path
 
 
@@ -141,23 +148,22 @@ def save_icns(img: Image.Image) -> Path:
     with open(path, "wb") as f:
         f.write(b"icns" + struct.pack(">I", total_len) + body)
 
-    print(f"✅ gestio.icns (résolutions : {', '.join(str(s[1]) for s in apple_types)})")
+    print(f"OK gestio.icns (resolutions : {', '.join(str(s[1]) for s in apple_types)})")
     return path
 
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    print("\n💰 Gestio — Génération des icônes\n")
+    print("\nGestio - Generation des icones\n")
 
     img = generate_png(512)
     save_png(img)
     save_ico(img)
     save_icns(img)
 
-    print(f"\n📁 Icônes générées dans : {OUT.resolve()}")
-    print("   → gestio.png  (Linux / AppImage)")
-    print("   → gestio.ico  (Windows / Inno Setup)")
-    print("   → gestio.icns (macOS / .app bundle)")
-    print("\n✨ Tu peux remplacer gestio.png par ton propre logo et relancer ce script.")
-
+    print(f"\nIcones generees dans : {OUT.resolve()}")
+    print("  -> gestio.png  (Linux)")
+    print("  -> gestio.ico  (Windows / Inno Setup)")
+    print("  -> gestio.icns (macOS)")
+    print("\nPour utiliser ton propre logo : remplace gestio.png et relance ce script.")
