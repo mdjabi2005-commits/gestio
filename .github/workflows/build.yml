@@ -60,10 +60,7 @@ jobs:
           sudo apt-get install -y libgl1 libglib2.0-0 libfuse2 patchelf desktop-file-utils libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0
 
       - name: Install dependencies
-        run: uv sync --frozen --no-dev
-
-      - name: Install PyInstaller
-        run: uv pip install pyinstaller
+        run: uv sync --frozen --no-dev --group build
 
       - name: Generate icons
         run: uv run python resources/icons/generate_icons.py

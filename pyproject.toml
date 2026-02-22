@@ -31,3 +31,9 @@ dev = [
 test = [
     "pytest",
 ]
+
+[dependency-groups]
+build = [
+    "pyinstaller>=6.0",
+]
+
