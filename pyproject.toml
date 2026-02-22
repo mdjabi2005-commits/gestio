@@ -34,6 +34,6 @@ test = [
 
 [dependency-groups]
 build = [
-    "pyinstaller>=6.0",
+    "pyinstaller>=6.0",  # Windows uniquement (PyInstaller + Inno Setup)
 ]
 
