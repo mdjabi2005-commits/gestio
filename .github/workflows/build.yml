@@ -136,22 +136,16 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          # Supprimer tout gestio.iss existant (potentiellement corrompu UTF-8)
-          # puis regenerer en ASCII pur depuis le script Python
+          # Generer gestio.iss en ASCII pur
           if (Test-Path "gestio.iss") { Remove-Item "gestio.iss" -Force }
           uv run python scripts/generate_iss.py
-
-          # Verifier le resultat
           $bytes = [System.IO.File]::ReadAllBytes("gestio.iss")
           $bad = $bytes | Where-Object { $_ -gt 127 }
-          if ($bad.Count -gt 0) {
-            Write-Error "gestio.iss contient $($bad.Count) octets non-ASCII apres generation !"
-            exit 1
-          }
+          if ($bad.Count -gt 0) { Write-Error "gestio.iss non-ASCII !"; exit 1 }
           Write-Host "gestio.iss OK - $($bytes.Count) octets, 100% ASCII"
 
-          # Installer Inno Setup via chocolatey (pre-installe sur les runners Windows)
-          choco install innosetup --no-progress --yes
+          # Installer Inno Setup via winget (pre-installe sur runners Windows GitHub)
+          winget install --exact --id JRSoftware.InnoSetup --silent --accept-package-agreements --accept-source-agreements
           New-Item -ItemType Directory -Force -Path "dist\installer" | Out-Null
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" gestio.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
