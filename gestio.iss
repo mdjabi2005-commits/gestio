@@ -75,7 +75,7 @@ Type: filesandordirs; Name: "{app}\_internal\__pycache__"
 
 [Messages]
 WelcomeLabel1=Bienvenue dans l'assistant d'installation de [name]
-WelcomeLabel2=Gestio est votre application de gestion financiere personnelle.%n%nVos donnees restent 100%% sur votre machine.%n%nCliquez sur Suivant pour continuer.
+WelcomeLabel2=Gestio - Gestion Financiere Personnelle.%n%nVos donnees restent 100%% sur votre machine.%n%nCliquez sur Suivant pour continuer.
 
 [Code]
 function InitializeSetup(): Boolean;
