@@ -136,9 +136,19 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          # Generer gestio.iss en ASCII pur depuis le script Python
-          # Evite toute corruption UTF-8 introduite par l'editeur
+          # Supprimer tout gestio.iss existant (potentiellement corrompu UTF-8)
+          # puis regenerer en ASCII pur depuis le script Python
+          if (Test-Path "gestio.iss") { Remove-Item "gestio.iss" -Force }
           uv run python scripts/generate_iss.py
+
+          # Verifier le resultat
+          $bytes = [System.IO.File]::ReadAllBytes("gestio.iss")
+          $bad = $bytes | Where-Object { $_ -gt 127 }
+          if ($bad.Count -gt 0) {
+            Write-Error "gestio.iss contient $($bad.Count) octets non-ASCII apres generation !"
+            exit 1
+          }
+          Write-Host "gestio.iss OK - $($bytes.Count) octets, 100% ASCII"
 
           # Installer Inno Setup
           Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "$env:TEMP\innosetup.exe"
@@ -151,7 +161,12 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $installer = Get-ChildItem "dist\installer\Gestio-Setup-*.exe" | Select-Object -First 1
+          $installer = Get-ChildItem "dist\installer\Gestio-Setup-*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $installer) {
+            Write-Error "Installeur introuvable dans dist\installer\ - Inno Setup a echoue"
+            exit 1
+          }
+          Write-Host "Signature de : $($installer.FullName)"
           AzureSignTool sign `
             --azure-key-vault-url "$env:AZURE_VAULT_URI" `
             --azure-key-vault-client-id "$env:AZURE_CLIENT_ID" `
