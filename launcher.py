@@ -325,9 +325,14 @@ class Launcher:
         self.root.mainloop()
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Point d'entrée principal — utilisé par uv tool install / pipx."""
     if getattr(sys, 'frozen', False):
         import multiprocessing
-
         multiprocessing.freeze_support()
     Launcher().run()
+
+
+if __name__ == "__main__":
+    main()
+

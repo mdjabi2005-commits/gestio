@@ -1,7 +1,9 @@
 [project]
 name = "gestion-financiere"
 version = "4.0"
-description = "Financial Management Application"
+description = "Application de gestion financiere personnelle"
+readme = "README.md"
+license = { file = "LICENSE" }
 requires-python = ">=3.10"
 dependencies = [
     "pandas",
@@ -21,8 +23,10 @@ dependencies = [
     "pyjwt",
     "cryptography",
     "ollama>=0.6.1",
-
 ]
+
+[project.scripts]
+gestio = "launcher:main"
 
 [project.optional-dependencies]
 dev = [
