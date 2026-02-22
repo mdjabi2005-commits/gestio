@@ -16,6 +16,9 @@ build/
 .env.*
 !.env.example
 
+# ── Inno Setup (genere automatiquement par scripts/generate_iss.py) ──────────
+gestio.iss
+
 # ── PyInstaller ───────────────────────────────────────────────────────────────
 dist/
 build/

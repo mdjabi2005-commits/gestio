@@ -136,15 +136,11 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          # Verifier que gestio.iss est en ASCII pur (previent Out of memory)
-          $bytes = [System.IO.File]::ReadAllBytes("gestio.iss")
-          $nonAscii = $bytes | Where-Object { $_ -gt 127 }
-          if ($nonAscii.Count -gt 0) {
-            Write-Error "gestio.iss contient $($nonAscii.Count) caracteres non-ASCII. Corrigez le fichier."
-            exit 1
-          }
-          Write-Host "gestio.iss OK - ASCII pur ($($bytes.Count) octets)"
+          # Generer gestio.iss en ASCII pur depuis le script Python
+          # Evite toute corruption UTF-8 introduite par l'editeur
+          uv run python scripts/generate_iss.py
 
+          # Installer Inno Setup
           Invoke-WebRequest -Uri "https://jrsoftware.org/download.php/is.exe" -OutFile "$env:TEMP\innosetup.exe"
           Start-Process -FilePath "$env:TEMP\innosetup.exe" -ArgumentList "/VERYSILENT /NORESTART" -Wait
           New-Item -ItemType Directory -Force -Path "dist\installer" | Out-Null
