@@ -92,7 +92,10 @@ jobs:
       - name: Install AzureSignTool
         if: matrix.os == 'windows-latest'
         shell: pwsh
-        run: dotnet tool install --global AzureSignTool
+        run: |
+          dotnet tool install --global AzureSignTool
+          # Attendre la propagation RBAC Azure (2 min max)
+          Start-Sleep -Seconds 30
 
       - name: Sign GestioV4.exe
         if: matrix.os == 'windows-latest'
