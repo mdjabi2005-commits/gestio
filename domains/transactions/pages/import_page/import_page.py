@@ -1,6 +1,7 @@
-import streamlit as st
-import pandas as pd
 from datetime import datetime, date
+
+import pandas as pd
+import streamlit as st
 
 from domains.transactions.database.repository import transaction_repository, CATÉGORIES
 
@@ -9,9 +10,11 @@ from domains.transactions.database.repository import transaction_repository, CAT
 # 1. HELPERS
 # =========================================================
 
+# noinspection PyBroadException
 def load_data(uploaded_file) -> pd.DataFrame:
     """Charge le fichier CSV/Excel."""
     if uploaded_file.name.lower().endswith('.csv'):
+        # noinspection PyBroadException
         try:
             df = pd.read_csv(uploaded_file, sep=None, engine='python')
         except Exception:
@@ -70,6 +73,7 @@ def detect_columns(df: pd.DataFrame) -> dict:
 # 2. MAIN PAGE
 # =========================================================
 
+# noinspection PyBroadException
 def import_transactions_page():
     st.title("📥 Import de Transactions")
 
@@ -150,10 +154,14 @@ def import_transactions_page():
                 else:
                     rows = []
                     for _, row in df.iterrows():
+                        # noinspection PyBroadException
                         try:
-                            d = pd.to_datetime(row[date_col], dayfirst=True, errors='coerce').date()
-                            if pd.isna(d):
+                            parsed = pd.to_datetime(row[date_col], dayfirst=True, errors='coerce')
+                            if pd.isna(parsed):
                                 d = date.today()
+                            else:
+                                # noinspection PyUnresolvedReferences
+                                d = pd.Timestamp(parsed).to_pydatetime().date()
                         except Exception:
                             d = date.today()
 
@@ -182,7 +190,14 @@ def import_transactions_page():
 
     # === ÉTAPE 2: ÉDITION ===
     elif st.session_state.import_step == "editor":
-        draft_df = st.session_state.draft_df
+        _raw_draft = st.session_state.draft_df
+
+        if _raw_draft is None:
+            st.error("Aucune donnée à éditer. Veuillez recommencer l'import.")
+            st.session_state.import_step = "config"
+            st.rerun()
+
+        draft_df: pd.DataFrame = pd.DataFrame(_raw_draft) if not isinstance(_raw_draft, pd.DataFrame) else _raw_draft
 
         st.subheader("2️⃣ Vérifier et corriger")
         st.info("""
@@ -219,16 +234,20 @@ def import_transactions_page():
         if st.button("🚀 Importer", type="primary"):
             success, errors = 0, 0
             prog = st.progress(0)
+            total = len(edited_df)
 
-            for i, row in edited_df.iterrows():
+            for counter, (_, row) in enumerate(edited_df.iterrows()):
+                # noinspection PyBroadException
                 try:
+                    d_val = row["date"]
+                    date_str = d_val.isoformat() if isinstance(d_val, (date, datetime)) else str(d_val)
                     tx = {
-                        "date": row["Date"].isoformat() if isinstance(row["Date"], (date, datetime)) else str(row["Date"]),
-                        "montant": float(row["Montant"]),
-                        "type": row["Type"],
-                        "categorie": row["Catégorie"],
-                        "sous_categorie": str(row.get("Sous-Catégorie", "")),
-                        "description": str(row.get("Description", "")),
+                        "date": date_str,
+                        "montant": float(row["montant"]),
+                        "type": row["type"],
+                        "categorie": row["categorie"],
+                        "sous_categorie": str(row.get("sous_categorie", "")),
+                        "description": str(row.get("description", "")),
                         "source": "import_v2",
                         "external_id": None
                     }
@@ -239,7 +258,7 @@ def import_transactions_page():
                 except Exception:
                     errors += 1
 
-                prog.progress((i + 1) / len(edited_df))
+                prog.progress(int((counter + 1) / total * 100))
 
             st.success(f"✅ {success} importées | ❌ {errors} erreurs")
             if errors > 0:

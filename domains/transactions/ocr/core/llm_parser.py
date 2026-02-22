@@ -3,21 +3,23 @@ LLM Parser - Extraction intelligente via Ollama
 Utilise un LLM local pour structurer les données issues de l'OCR.
 """
 
-import logging
 import json
+import logging
 import re
-from datetime import date
-from typing import Optional, Dict, Any
+from typing import Dict, Any
+
 import ollama
 
 logger = logging.getLogger(__name__)
 
+
+# noinspection PyTypeChecker
 class LLMParser:
     """
     Parser utilisant un LLM local via Ollama pour extraire des informations structurées
     depuis du texte brut (OCR).
     """
-    
+
     def __init__(self, model_name: str = "llama3.1:latest", host: str = "http://127.0.0.1:11434"):
         """
         Initialise le parser LLM.
@@ -62,7 +64,7 @@ class LLMParser:
 
         try:
             logger.info(f"Envoi au LLM ({self.model_name}) pour parsing...")
-            
+
             response = self.client.chat(model=self.model_name, messages=[
                 {
                     'role': 'system',
@@ -75,71 +77,74 @@ class LLMParser:
             ], options={
                 'temperature': 0.1,  # Très déterministe
                 'num_predict': 512,  # Limite la taille de la réponse
-                'format': 'json'     # Force le format JSON (supporté par Ollama récents)
+                'format': 'json'  # Force le format JSON (supporté par Ollama récents)
             })
-            
+
             content = response['message']['content']
             logger.debug(f"Réponse LLM brute: {content}")
-            
+
             # Nettoyage et parsing JSON
             try:
                 # Parfois le modèle met du markdown ```json ... ``` malgré l'option format
                 if "```" in content:
                     content = re.search(r"```(?:json)?(.*?)```", content, re.DOTALL).group(1)
-                
+
                 data = json.loads(content)
-                
+
                 # Normalisation des données
                 processed_data = self._post_process(data)
                 logger.info(f"Parsing LLM réussi: {processed_data}")
                 return processed_data
-                
+
             except json.JSONDecodeError as e:
                 logger.error(f"Erreur décodage JSON LLM: {e} - Contenu: {content}")
                 return {}
-                
+
         except Exception as e:
             logger.error(f"Erreur communication Ollama: {e}")
             return {}
 
-    def _post_process(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    # noinspection PyTypeChecker
+    @staticmethod
+    def _post_process(data: Dict[str, Any]) -> Dict[str, Any]:
         """Nettoie et valide les données extraites."""
         result = {
             "amount": None,
             "date": None,
-            "type": "Dépense", # Par défaut
+            "type": "Dépense",  # Par défaut
             "category": "Autre",
             "subcategory": None,
             "description": "Transaction"
         }
-        
+
         # Montant
         if data.get("amount"):
             try:
                 # Gérer les formats string avec virgule "12,50" -> 12.50
                 val = str(data["amount"]).replace(',', '.').replace('€', '').strip()
+                # noinspection PyTypeChecker
                 result["amount"] = float(val)
             except ValueError:
                 pass
-        
+
         # Date
         if data.get("date"):
             # Le prompt demande YYYY-MM-DD, on espère que le LLM respecte
             # On pourrait ajouter un parsing dateutil ici pour être robuste
             result["date"] = data["date"]
-            
+
         # Type
         if data.get("type") in ["Dépense", "Revenu"]:
             result["type"] = data["type"]
-            
+
         # Description
         if data.get("description"):
             result["description"] = data["description"]
-            
+
         # Categories
         if data.get("category"):
             result["category"] = data["category"]
         if data.get("subcategory"):
             result["subcategory"] = data["subcategory"]
-            
+
         return result

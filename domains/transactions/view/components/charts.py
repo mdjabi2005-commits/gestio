@@ -5,9 +5,9 @@ Ce module contient les fonctions de graphiques partagées
 entre différentes pages de l'application.
 """
 
-import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
+import streamlit as st
 
 
 def render_evolution_chart(df: pd.DataFrame, height: int = 400) -> None:
@@ -24,58 +24,60 @@ def render_evolution_chart(df: pd.DataFrame, height: int = 400) -> None:
     if df.empty:
         st.info("Aucune donnée disponible pour le graphique")
         return
-    
+
     # Préparer les données mensuelles
     df_copy = df.copy()
     df_copy["date"] = pd.to_datetime(df_copy["date"])
     df_copy["mois_str"] = df_copy["date"].dt.strftime("%b %Y")
-    
+
     # Grouper par mois et type (Assurons nous que le type est normalisé ici aussi par sécurité)
     df_copy["type"] = df_copy["type"].astype(str).str.capitalize()
-    
+
     df_evolution = df_copy.groupby(["mois_str", "type"])["amount"].sum().unstack(fill_value=0)
     df_evolution = df_evolution.reindex(
         sorted(df_evolution.index, key=lambda x: pd.to_datetime(x, format='%b %Y'))
     )
-    
+
     # S'assurer que les colonnes existent (Capitalized)
     if "Revenu" not in df_evolution.columns:
         df_evolution["Revenu"] = 0
     if "Dépense" not in df_evolution.columns:
         df_evolution["Dépense"] = 0
-    
+
     # Arrondir les valeurs
     df_evolution["Dépense"] = df_evolution["Dépense"].round(2)
     df_evolution["Revenu"] = df_evolution["Revenu"].round(2)
-    
+
     # Calculer le solde
     solde = (df_evolution["Revenu"] - df_evolution["Dépense"]).round(2)
-    
+
     # Créer le graphique
     fig = go.Figure()
-    
+
     # Barres de revenus
     fig.add_trace(go.Bar(
         name='Revenus',
         x=df_evolution.index,
         y=df_evolution["Revenu"],
-        marker_color='#00D4AA',
-        marker_line_color='#00A87E',
-        marker_line_width=1.5,
+        marker=dict(
+            color='#00D4AA',
+            line=dict(color='#00A87E', width=1.5),
+        ),
         hovertemplate='<b>%{x}</b><br>Revenus: %{y:,.0f} €<extra></extra>'
     ))
-    
+
     # Barres de dépenses
     fig.add_trace(go.Bar(
         name='Dépenses',
         x=df_evolution.index,
         y=df_evolution["Dépense"],
-        marker_color='#FF6B6B',
-        marker_line_color='#CC5555',
-        marker_line_width=1.5,
+        marker=dict(
+            color='#FF6B6B',
+            line=dict(color='#CC5555', width=1.5),
+        ),
         hovertemplate='<b>%{x}</b><br>Dépenses: %{y:,.0f} €<extra></extra>'
     ))
-    
+
     # Ligne de solde
     fig.add_trace(go.Scatter(
         name='Solde',
@@ -86,7 +88,7 @@ def render_evolution_chart(df: pd.DataFrame, height: int = 400) -> None:
         marker=dict(size=8, color='#4A90E2', line=dict(color='white', width=2)),
         hovertemplate='<b>%{x}</b><br>Solde: %{y:+,.0f} €<extra></extra>'
     ))
-    
+
     # Configuration du layout
     fig.update_layout(
         title=dict(
@@ -123,5 +125,5 @@ def render_evolution_chart(df: pd.DataFrame, height: int = 400) -> None:
             color='white'
         )
     )
-    
+
     st.plotly_chart(fig, use_container_width=True)

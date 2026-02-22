@@ -1,7 +1,66 @@
+# ── Python ────────────────────────────────────────────────────────────────────
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
-build/
+*.pyd
+*.egg-info/
+*.egg
+.eggs/
 dist/
-*.spec
+build/
+*.spec.bak
+
+# ── uv / virtualenv ───────────────────────────────────────────────────────────
+.venv/
 .env
+.env.*
+!.env.example
+
+# ── PyInstaller ───────────────────────────────────────────────────────────────
+dist/
+build/
+*.manifest
+
+# ── Données utilisateur (ne jamais commiter) ──────────────────────────────────
+analyse/
+~/analyse/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Icônes générées (recréées par generate_icons.py) ─────────────────────────
+resources/icons/gestio.ico
+resources/icons/gestio.icns
+resources/icons/gestio.png
+
+# ── Azure / Secrets ───────────────────────────────────────────────────────────
+*.pem
+*.pfx
+*.p12
+*.key
+*.cer
+.azure/
+cert-policy.json
+
+# ── OS ────────────────────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Tests ─────────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+

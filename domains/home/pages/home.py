@@ -10,7 +10,7 @@ def interface_accueil() -> None:
     Page d'accueil simplifiée.
     """
     st.title("🏠 Bienvenue dans Gestio V4")
-    
+
     st.markdown("""
     ## 💰 Gestion Financière Simplifiée
     
@@ -19,9 +19,9 @@ def interface_accueil() -> None:
     ### 🚀 Commencez ici :
     
     """)
-    
+
     col1, col2 = st.columns(2)
-    
+
     with col1:
         st.markdown("""
         ### ➕ Ajouter des Transactions
@@ -32,11 +32,11 @@ def interface_accueil() -> None:
         - 📊 Importer un fichier CSV  
         - 🔁 Créer une transaction récurrente
         """)
-        
+
         if st.button("➕ Ajouter une Transaction", type="primary", use_container_width=True):
             st.session_state.requested_page = "➕ Ajouter Transaction"
             st.rerun()
-    
+
     with col2:
         st.markdown("""
         ### 📊 Voir vos Transactions
@@ -47,17 +47,17 @@ def interface_accueil() -> None:
         - ✏️ Modification directe des données
         - 🗑️ Suppression de transactions
         """)
-        
+
         if st.button("📊 Voir mes Transactions", use_container_width=True):
             st.session_state.requested_page = "📊 Voir Transactions"
             st.rerun()
-    
+
     st.markdown("---")
-    
+
     st.info("""
     💡 **Astuce** : Utilisez la barre latérale pour naviguer rapidement entre les différentes pages.
     """)
-    
+
     st.success("""
     ✅ **Application prête à l'emploi !** Toutes les fonctionnalités de base sont opérationnelles.
     """)

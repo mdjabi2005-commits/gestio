@@ -8,7 +8,7 @@ def refresh_and_rerun():
     st.rerun()
 
 
-def insert_transaction_batch(transactions):
+def insert_transaction_batch():
     """Insert multiple transactions (legacy function)."""
     # This is a legacy function, not used in the new architecture
     pass

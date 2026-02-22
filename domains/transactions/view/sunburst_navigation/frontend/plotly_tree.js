@@ -107,14 +107,14 @@ function initComponent() {
 
         const layout = {
             height: height,
-            margin: { t: 30, l: 10, r: 10, b: 10 },
+            margin: {t: 30, l: 10, r: 10, b: 10},
             paper_bgcolor: '#0f172a',
             plot_bgcolor: '#0f172a',
-            font: { color: 'white', size: 12 }
+            font: {color: 'white', size: 12}
         };
 
         // Render Plotly chart
-        Plotly.newPlot('plotly-container', data, layout, { responsive: true });
+        Plotly.newPlot('plotly-container', data, layout, {responsive: true});
 
         console.log('[PLOTLY_TREE] Plotly rendered successfully');
 

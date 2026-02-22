@@ -4,9 +4,10 @@ This module provides functions to load and apply CSS styles from the
 resources/styles/ directory to Streamlit applications.
 """
 
-import os
 import logging
+import os
 from typing import Optional, List
+
 import streamlit as st
 
 logger = logging.getLogger(__name__)

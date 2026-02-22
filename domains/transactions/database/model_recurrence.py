@@ -2,9 +2,11 @@
 Modèle de Récurrence
 """
 
-from pydantic import BaseModel, Field, field_validator
 from datetime import date as DateType
 from typing import Optional, Literal
+
+# noinspection PyUnresolvedReferences
+from pydantic import BaseModel, Field
 
 
 class Recurrence(BaseModel):
@@ -12,32 +14,31 @@ class Recurrence(BaseModel):
     Modèle représentant une transaction récurrente (abonnement, loyer, etc.)
     Correspond à la table 'recurrences'
     """
-    
+
     id: Optional[int] = Field(None, description="ID unique de la récurrence")
-    
+
     type: Literal["Revenu", "Dépense"] = Field(..., description="Type de transaction")
-    
-    @field_validator('type', mode='before')
+
     @classmethod
     def capitalize_type(cls, v: str) -> str:
         if isinstance(v, str):
             return v.capitalize()
         return v
-    
+
     categorie: str = Field(..., description="Catégorie principale")
     sous_categorie: Optional[str] = Field(None, description="Sous-catégorie optionnelle")
-    
+
     montant: float = Field(..., gt=0, description="Montant de la récurrence")
-    
+
     frequence: str = Field(..., description="Fréquence (Mensuel, Annuel, etc.)")
-    
+
     date_debut: DateType = Field(..., description="Date de début de la récurrence")
     date_fin: Optional[DateType] = Field(None, description="Date de fin (si arrêtée)")
-    
+
     description: Optional[str] = Field(None, description="Description ou notes")
-    
+
     statut: str = Field("active", description="Statut (active, inactive, archivée)")
-    
+
     date_creation: Optional[str] = Field(None, description="Date de création de l'enregistrement")
     date_modification: Optional[str] = Field(None, description="Date de dernière modification")
 
@@ -73,10 +74,10 @@ class Recurrence(BaseModel):
         """
         from dateutil.relativedelta import relativedelta
         import logging
-        
+
         occurrences = []
         current_date = self.date_debut
-        
+
         # Si date_fin définie et passée, on s'arrête à date_fin
         limit_date = end_date
         if self.date_fin and self.date_fin < limit_date:
@@ -92,7 +93,7 @@ class Recurrence(BaseModel):
             'trimestriel': relativedelta(months=3),
             'trimestrielle': relativedelta(months=3),
         }
-        
+
         delta = freq_map.get(self.frequence.lower())
         if not delta:
             logging.warning(f"Fréquence inconnue pour récurrence ID {self.id}: {self.frequence}")
@@ -111,7 +112,7 @@ class Recurrence(BaseModel):
                 'source': 'recurrence_generated'
             })
             current_date += delta
-            
+
         return occurrences
 
     class Config:

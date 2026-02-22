@@ -1,0 +1,33 @@
+[project]
+name = "gestion-financiere"
+version = "4.0"
+description = "Financial Management Application"
+requires-python = ">=3.10"
+dependencies = [
+    "pandas",
+    "streamlit",
+    "numpy",
+    "plotly",
+    "matplotlib",
+    "Pillow",
+    "opencv-python",
+    "pyyaml",
+    "pdfminer.six",
+    "rapidocr-onnxruntime",
+    "python-dateutil",
+    "psutil",
+    "pydantic",
+    "requests",
+    "pyjwt",
+    "cryptography",
+    "ollama>=0.6.1",
+
+]
+
+[project.optional-dependencies]
+dev = [
+    "pandas-stubs~=2.3.3",
+]
+test = [
+    "pytest",
+]

@@ -1,7 +1,8 @@
 """Database schema initialization and migration."""
 
-import sqlite3
 import logging
+import sqlite3
+
 from shared.database.connection import get_db_connection, close_connection
 
 logger = logging.getLogger(__name__)
@@ -23,21 +24,48 @@ def init_transaction_table(db_path: str = None) -> None:
 
         # Create the table with the correct schema
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS transactions (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                type TEXT NOT NULL,
-                categorie TEXT NOT NULL,
-                sous_categorie TEXT,
-                description TEXT,
-                montant REAL NOT NULL,
-                date TEXT NOT NULL,
-                source TEXT DEFAULT 'Manuel',
-                recurrence TEXT,
-                date_fin TEXT,
-                compte_iban TEXT,
-                external_id TEXT UNIQUE
-            )
-        """)
+                       CREATE TABLE IF NOT EXISTS transactions
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           type
+                           TEXT
+                           NOT
+                           NULL,
+                           categorie
+                           TEXT
+                           NOT
+                           NULL,
+                           sous_categorie
+                           TEXT,
+                           description
+                           TEXT,
+                           montant
+                           REAL
+                           NOT
+                           NULL,
+                           date
+                           TEXT
+                           NOT
+                           NULL,
+                           source
+                           TEXT
+                           DEFAULT
+                           'Manuel',
+                           recurrence
+                           TEXT,
+                           date_fin
+                           TEXT,
+                           compte_iban
+                           TEXT,
+                           external_id
+                           TEXT
+                           UNIQUE
+                       )
+                       """)
 
         # Update the table if it exists with old schema
         # Add 'source' column if missing
@@ -69,7 +97,8 @@ def init_transaction_table(db_path: str = None) -> None:
 
         try:
             cursor.execute("ALTER TABLE transactions ADD COLUMN external_id TEXT")
-            cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_external_id ON transactions(external_id)")
+            cursor.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_external_id ON transactions(external_id)")
             logger.info("Added 'external_id' column to transactions table")
         except sqlite3.OperationalError:
             pass  # Column already exists
@@ -106,18 +135,44 @@ def init_attachments_table(db_path: str = None) -> None:
         cursor = conn.cursor()
 
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS transaction_attachments (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                transaction_id INTEGER NOT NULL,
-                file_path TEXT NOT NULL,
-                file_name TEXT NOT NULL,
-                file_type TEXT,
-                upload_date TEXT NOT NULL,
-                size INTEGER,
-                FOREIGN KEY(transaction_id) REFERENCES transactions(id) ON DELETE CASCADE
-            )
-        """)
-        
+                       CREATE TABLE IF NOT EXISTS transaction_attachments
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           transaction_id
+                           INTEGER
+                           NOT
+                           NULL,
+                           file_path
+                           TEXT
+                           NOT
+                           NULL,
+                           file_name
+                           TEXT
+                           NOT
+                           NULL,
+                           file_type
+                           TEXT,
+                           upload_date
+                           TEXT
+                           NOT
+                           NULL,
+                           size
+                           INTEGER,
+                           FOREIGN
+                           KEY
+                       (
+                           transaction_id
+                       ) REFERENCES transactions
+                       (
+                           id
+                       ) ON DELETE CASCADE
+                           )
+                       """)
+
         # Index pour recherche rapide par transaction
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_attachments_tx_id ON transaction_attachments(transaction_id)")
 
@@ -131,7 +186,6 @@ def init_attachments_table(db_path: str = None) -> None:
         raise
     finally:
         close_connection(conn)
-
 
 
 def migrate_transaction_table() -> None:
@@ -156,37 +210,61 @@ def migrate_transaction_table() -> None:
 
             # Create new table with correct schema
             cursor.execute("""
-                CREATE TABLE IF NOT EXISTS transactions_new (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    type TEXT NOT NULL,
-                    categorie TEXT NOT NULL,
-                    sous_categorie TEXT,
-                    description TEXT,
-                    montant REAL NOT NULL,
-                    date TEXT NOT NULL,
-                    source TEXT DEFAULT 'Manuel',
-                    recurrence TEXT,
-                    date_fin TEXT
-                )
-            """)
+                           CREATE TABLE IF NOT EXISTS transactions_new
+                           (
+                               id
+                               INTEGER
+                               PRIMARY
+                               KEY
+                               AUTOINCREMENT,
+                               type
+                               TEXT
+                               NOT
+                               NULL,
+                               categorie
+                               TEXT
+                               NOT
+                               NULL,
+                               sous_categorie
+                               TEXT,
+                               description
+                               TEXT,
+                               montant
+                               REAL
+                               NOT
+                               NULL,
+                               date
+                               TEXT
+                               NOT
+                               NULL,
+                               source
+                               TEXT
+                               DEFAULT
+                               'Manuel',
+                               recurrence
+                               TEXT,
+                               date_fin
+                               TEXT
+                           )
+                           """)
 
             # Copy data mapping old names to new
             cursor.execute("""
-                INSERT INTO transactions_new
-                (id, type, categorie, sous_categorie, description, montant, date, source, recurrence, date_fin)
-                SELECT
-                    id,
-                    type,
-                    "Catégorie" AS categorie,
-                    "Sous-catégorie" AS sous_categorie,
-                    description,
-                    montant,
-                    "Date" AS date,
+                           INSERT INTO transactions_new
+                           (id, type, categorie, sous_categorie, description, montant, date, source, recurrence,
+                            date_fin)
+                           SELECT id,
+                                  type,
+                                  "Catégorie"      AS categorie,
+                                  "Sous-catégorie" AS sous_categorie,
+                                  description,
+                                  montant,
+                                  "Date" AS date,
                     COALESCE("Source", 'Manuel') AS source,
                     COALESCE("Récurrence", 'Aucune') AS recurrence,
                     date_fin
-                FROM transactions
-            """)
+                           FROM transactions
+                           """)
 
             # Drop old table
             cursor.execute("DROP TABLE transactions")
@@ -218,21 +296,21 @@ def create_indexes() -> None:
 
         # Index on date for chronological queries
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_transactions_date
-            ON transactions(date DESC)
-        """)
+                       CREATE INDEX IF NOT EXISTS idx_transactions_date
+                           ON transactions(date DESC)
+                       """)
 
         # Index on type for filtering
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_transactions_type
-            ON transactions(type)
-        """)
+                       CREATE INDEX IF NOT EXISTS idx_transactions_type
+                           ON transactions(type)
+                       """)
 
         # Index on categorie for filtering
         cursor.execute("""
-            CREATE INDEX IF NOT EXISTS idx_transactions_categorie
-            ON transactions(categorie)
-        """)
+                       CREATE INDEX IF NOT EXISTS idx_transactions_categorie
+                           ON transactions(categorie)
+                       """)
 
         conn.commit()
         logger.info("Database indexes created successfully")

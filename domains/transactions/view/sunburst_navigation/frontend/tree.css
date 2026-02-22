@@ -12,6 +12,7 @@ html {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
+/*noinspection ALL*/
 #tree-container {
     width: 100%;
     height: 100%;
@@ -20,11 +21,13 @@ html {
 }
 
 /* SVG Nodes */
+/*noinspection ALL*/
 .node {
     cursor: move;
     transition: transform 0.2s ease;
 }
 
+/*noinspection ALL*/
 .node:hover {
     filter: brightness(1.2);
 }
@@ -33,6 +36,7 @@ html {
     transition: all 0.2s ease;
 }
 
+/*noinspection ALL*/
 .node.dragging {
     opacity: 0.7;
 }
@@ -44,6 +48,7 @@ html {
 }
 
 /* Links (branches) */
+/*noinspection ALL*/
 .link {
     fill: none;
     stroke: #475569;
@@ -52,6 +57,7 @@ html {
     transition: all 0.3s ease;
 }
 
+/*noinspection ALL*/
 .link:hover {
     stroke: #64748b;
     opacity: 0.9;
@@ -59,6 +65,7 @@ html {
 }
 
 /* Delete zone */
+/*noinspection ALL*/
 .delete-zone {
     transition: all 0.3s ease;
 }
@@ -102,25 +109,30 @@ html {
 }
 
 /* Scrollbar styling */
+/*noinspection ALL*/
 #tree-container::-webkit-scrollbar {
     width: 12px;
     height: 12px;
 }
 
+/*noinspection ALL*/
 #tree-container::-webkit-scrollbar-track {
     background: #1e293b;
 }
 
+/*noinspection ALL*/
 #tree-container::-webkit-scrollbar-thumb {
     background: #475569;
     border-radius: 6px;
 }
 
+/*noinspection ALL*/
 #tree-container::-webkit-scrollbar-thumb:hover {
     background: #64748b;
 }
 
 /* Tooltip */
+/*noinspection ALL*/
 .tooltip {
     position: absolute;
     background-color: rgba(30, 41, 59, 0.95);
@@ -136,21 +148,22 @@ html {
     backdrop-filter: blur(10px);
 }
 
-.tooltip.visible {
-    opacity: 1;
-}
+/*noinspection ALL*/
 
+/*noinspection ALL*/
 .tooltip-label {
     font-weight: 600;
     color: #10b981;
     margin-bottom: 4px;
 }
 
+/*noinspection ALL*/
 .tooltip-amount {
     color: #e2e8f0;
     font-family: 'Courier New', monospace;
 }
 
+/*noinspection ALL*/
 .tooltip-percentage {
     color: #94a3b8;
     font-size: 11px;
@@ -158,6 +171,7 @@ html {
 }
 
 /* Controls */
+/*noinspection ALL*/
 .controls {
     position: absolute;
     top: 20px;
@@ -167,6 +181,7 @@ html {
     z-index: 100;
 }
 
+/*noinspection ALL*/
 .control-btn {
     background-color: rgba(30, 41, 59, 0.9);
     border: 1px solid rgba(148, 163, 184, 0.3);
@@ -180,22 +195,26 @@ html {
     backdrop-filter: blur(10px);
 }
 
+/*noinspection ALL*/
 .control-btn:hover {
     background-color: rgba(51, 65, 85, 0.9);
     border-color: rgba(148, 163, 184, 0.5);
     transform: translateY(-1px);
 }
 
+/*noinspection ALL*/
 .control-btn:active {
     transform: translateY(0);
 }
 
+/*noinspection ALL*/
 .control-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
 /* Breadcrumb */
+/*noinspection ALL*/
 .breadcrumb {
     position: absolute;
     top: 20px;
@@ -210,33 +229,39 @@ html {
     max-width: 60%;
 }
 
+/*noinspection ALL*/
 .breadcrumb-text {
     color: #10b981;
     font-weight: 500;
 }
 
 /* Animation classes */
+/*noinspection ALL*/
 .node-enter {
     opacity: 0;
     transform: scale(0);
 }
 
+/*noinspection ALL*/
 .node-enter-active {
     opacity: 1;
     transform: scale(1);
     transition: opacity 0.5s, transform 0.5s;
 }
 
+/*noinspection ALL*/
 .node-exit {
     opacity: 1;
 }
 
+/*noinspection ALL*/
 .node-exit-active {
     opacity: 0;
     transition: opacity 0.3s;
 }
 
 /* Loading state */
+/*noinspection ALL*/
 .loading {
     position: absolute;
     top: 50%;

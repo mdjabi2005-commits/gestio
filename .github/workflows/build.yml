@@ -1,53 +1,553 @@
-name: Build Release
+name: 🚀 Build, Sign & Release Gestio
 
 on:
   push:
-    branches:
-      - main
-    paths:
-      - '**.py'                              # Fichiers Python
-      - '.github/workflows/build.yml'       # Le workflow lui-même
-  workflow_dispatch:      # Lancement manuel depuis GitHub Actions
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write   # Requis pour l'authentification OIDC Azure (sans secret long-terme)
+
+# ── Variables globales ────────────────────────────────────────────────────────
+env:
+  PYTHON_VERSION: "3.12"
+  APP_NAME: "GestioV4"
+  # Azure Key Vault — valeurs injectées depuis GitHub Secrets
+  # (configurées via : Settings → Secrets → Actions)
+  AZURE_VAULT_URI:      ${{ secrets.AZURE_VAULT_URI }}       # https://gestio-kv.vault.azure.net/
+  AZURE_CLIENT_ID:      ${{ secrets.AZURE_CLIENT_ID }}       # App Registration client ID
+  AZURE_TENANT_ID:      ${{ secrets.AZURE_TENANT_ID }}       # Azure Tenant ID
+  AZURE_CLIENT_SECRET:  ${{ secrets.AZURE_CLIENT_SECRET }}   # App Registration secret
+  CERT_NAME:            gestio-codesign                       # Nom du certificat dans Key Vault
+  TIMESTAMP_URL:        http://timestamp.digicert.com         # Serveur de timestamp RFC 3161
+
+jobs:
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # BUILD MULTI-PLATEFORME — strategy: matrix
+  # ══════════════════════════════════════════════════════════════════════════
+  build:
+    name: 🔨 Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: Windows
+            artifact: GestioV4-Windows
+          - os: macos-latest
+            name: macOS
+            artifact: GestioV4-macOS
+          - os: ubuntu-22.04
+            name: Linux
+            artifact: GestioV4-Linux
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: 📦 Setup uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: 📦 Dépendances système Linux
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            libgl1 libglib2.0-0 libfuse2 patchelf \
+            desktop-file-utils \
+            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+            libxcb-randr0 libxcb-render-util0 libxcb-xinerama0
+
+      - name: 📦 Installer les dépendances (uv sync --frozen)
+        run: uv sync --frozen --no-dev
+
+      - name: 📦 Installer PyInstaller
+        run: uv pip install pyinstaller
+
+      - name: 🎨 Générer les icônes
+        run: uv run python resources/icons/generate_icons.py
+
+      - name: 🔨 PyInstaller — build onedir
+        run: uv run pyinstaller gestio.spec --noconfirm
+
+      # ═══════════════════════════════════════════════════════════════════════
+      # WINDOWS — Signature + Inno Setup
+      # ═══════════════════════════════════════════════════════════════════════
+      - name: 🔐 Installer AzureSignTool
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          # AzureSignTool = outil CLI qui signe via Azure Key Vault sans télécharger le certificat
+          dotnet tool install --global AzureSignTool
+
+      - name: 🔐 Signer GestioV4.exe
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          AzureSignTool sign `
+            --azure-key-vault-url        "$env:AZURE_VAULT_URI" `
+            --azure-key-vault-client-id  "$env:AZURE_CLIENT_ID" `
+            --azure-key-vault-tenant-id  "$env:AZURE_TENANT_ID" `
+            --azure-key-vault-client-secret "$env:AZURE_CLIENT_SECRET" `
+            --azure-key-vault-certificate   "$env:CERT_NAME" `
+            --timestamp-rfc3161          "$env:TIMESTAMP_URL" `
+            --timestamp-digest           sha256 `
+            --file-digest                sha256 `
+            --description                "Gestio - Gestion Financiere Personnelle" `
+            --description-url            "https://github.com/djabi/gestio" `
+            "dist\GestioV4\GestioV4.exe"
+
+      - name: 🔐 Signer toutes les DLL du build
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          # Récupérer toutes les DLL signables (exclure les DLL système Microsoft déjà signées)
+          $dlls = Get-ChildItem -Path "dist\GestioV4" -Recurse -Include "*.dll", "*.pyd" |
+                  Where-Object { $_.Length -gt 0 } |
+                  Select-Object -ExpandProperty FullName
+
+          if ($dlls.Count -eq 0) {
+            Write-Host "Aucune DLL trouvée."
+            exit 0
+          }
+
+          Write-Host "📋 Signature de $($dlls.Count) fichiers..."
+
+          # AzureSignTool accepte plusieurs fichiers en une seule invocation
+          AzureSignTool sign `
+            --azure-key-vault-url           "$env:AZURE_VAULT_URI" `
+            --azure-key-vault-client-id     "$env:AZURE_CLIENT_ID" `
+            --azure-key-vault-tenant-id     "$env:AZURE_TENANT_ID" `
+            --azure-key-vault-client-secret "$env:AZURE_CLIENT_SECRET" `
+            --azure-key-vault-certificate   "$env:CERT_NAME" `
+            --timestamp-rfc3161             "$env:TIMESTAMP_URL" `
+            --timestamp-digest              sha256 `
+            --file-digest                   sha256 `
+            --continue-on-error `
+            @dlls
+
+      - name: 🪟 Inno Setup — créer l'installeur
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $url = "https://jrsoftware.org/download.php/is.exe"
+          Invoke-WebRequest -Uri $url -OutFile "$env:TEMP\innosetup.exe"
+          Start-Process -FilePath "$env:TEMP\innosetup.exe" -ArgumentList "/VERYSILENT /NORESTART" -Wait
+          New-Item -ItemType Directory -Force -Path "dist\installer" | Out-Null
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" gestio.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: 🔐 Signer l'installeur Inno Setup
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "dist\installer\Gestio-Setup-*.exe" | Select-Object -First 1
+          AzureSignTool sign `
+            --azure-key-vault-url           "$env:AZURE_VAULT_URI" `
+            --azure-key-vault-client-id     "$env:AZURE_CLIENT_ID" `
+            --azure-key-vault-tenant-id     "$env:AZURE_TENANT_ID" `
+            --azure-key-vault-client-secret "$env:AZURE_CLIENT_SECRET" `
+            --azure-key-vault-certificate   "$env:CERT_NAME" `
+            --timestamp-rfc3161             "$env:TIMESTAMP_URL" `
+            --timestamp-digest              sha256 `
+            --file-digest                   sha256 `
+            --description                   "Gestio Installer" `
+            "$($installer.FullName)"
+
+      - name: 📤 Upload artifact Windows
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/installer/Gestio-Setup-*.exe
+          if-no-files-found: error
+
+      # ═══════════════════════════════════════════════════════════════════════
+      # MACOS — .dmg
+      # ═══════════════════════════════════════════════════════════════════════
+      - name: 🍎 Créer le .dmg macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install create-dmg
+          create-dmg \
+            --volname "Gestio V4" \
+            --volicon "resources/icons/gestio.icns" \
+            --window-pos 200 120 --window-size 600 400 \
+            --icon-size 100 \
+            --icon "Gestio.app" 175 190 \
+            --hide-extension "Gestio.app" \
+            --app-drop-link 425 190 \
+            --no-internet-enable \
+            "dist/Gestio-macOS.dmg" \
+            "dist/Gestio.app"
+
+      - name: 📤 Upload artifact macOS
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/Gestio-macOS.dmg
+          if-no-files-found: error
+
+      # ═══════════════════════════════════════════════════════════════════════
+      # LINUX — AppImage
+      # ═══════════════════════════════════════════════════════════════════════
+      - name: 🐧 Créer l'AppImage Linux
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          wget -q "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" \
+               -O /tmp/appimagetool
+          chmod +x /tmp/appimagetool
+
+          APPDIR="dist/GestioV4.AppDir"
+          mkdir -p "$APPDIR/usr/bin" "$APPDIR/usr/share/icons/hicolor/512x512/apps"
+          cp -r dist/GestioV4/* "$APPDIR/usr/bin/"
+          cp resources/icons/gestio.png "$APPDIR/usr/share/icons/hicolor/512x512/apps/gestio.png"
+          cp resources/icons/gestio.png "$APPDIR/gestio.png"
+
+          cat > "$APPDIR/gestio.desktop" << 'EOF'
+          [Desktop Entry]
+          Name=Gestio
+          Comment=Gestion Financière Personnelle
+          Exec=GestioV4
+          Icon=gestio
+          Type=Application
+          Categories=Finance;Office;
+          Terminal=false
+          EOF
+
+          cat > "$APPDIR/AppRun" << 'EOF'
+          #!/bin/bash
+          SELF=$(readlink -f "$0")
+          HERE=$(dirname "$SELF")
+          exec "$HERE/usr/bin/GestioV4" "$@"
+          EOF
+          chmod +x "$APPDIR/AppRun"
+
+          ARCH=x86_64 /tmp/appimagetool "$APPDIR" "dist/Gestio-Linux.AppImage"
+
+      - name: 📤 Upload artifact Linux
+        if: matrix.os == 'ubuntu-22.04'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/Gestio-Linux.AppImage
+          if-no-files-found: error
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # RELEASE
+  # ══════════════════════════════════════════════════════════════════════════
+  release:
+    name: 📦 Créer la Release GitHub
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: 📥 Télécharger tous les artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./release
+          merge-multiple: true
+
+      - name: 📋 Lister les fichiers
+        run: ls -lh ./release/
+
+      - name: 🚀 Créer la Release GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "💰 Gestio ${{ github.ref_name }}"
+          body: |
+            ## 💰 Gestio ${{ github.ref_name }}
+
+            ### 📥 Téléchargements — aucune installation de Python requise
+
+            | Plateforme | Fichier | Instructions |
+            |---|---|---|
+            | 🪟 **Windows** | `Gestio-Setup-v*.exe` | Double-clic → assistant d'installation |
+            | 🍎 **macOS** | `Gestio-macOS.dmg` | Ouvrir → glisser dans Applications |
+            | 🐧 **Linux** | `Gestio-Linux.AppImage` | `chmod +x Gestio-Linux.AppImage && ./Gestio-Linux.AppImage` |
+
+            ### 🔒 Confidentialité
+            > Vos données financières sont stockées **uniquement sur votre machine**.
+            > Aucune donnée n'est transmise sur internet.
+
+            ### ✅ Signature numérique
+            > Le binaire Windows est signé numériquement via Azure Key Vault.
+            > SmartScreen et les antivirus reconnaissent l'éditeur **Djabi**.
+
+            ### ⚙️ Configuration minimale
+            - Windows 10 / macOS 11 / Ubuntu 20.04+
+            - 4 GB RAM (8 GB recommandé pour l'OCR)
+            - 500 MB d'espace disque
+          files: |
+            ./release/Gestio-Setup-*.exe
+            ./release/Gestio-macOS.dmg
+            ./release/Gestio-Linux.AppImage
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
 
 permissions:
   contents: write
 
+# ── Variables globales ────────────────────────────────────────────────────────
+env:
+  PYTHON_VERSION: "3.12"
+  APP_NAME: "GestioV4"
+
 jobs:
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # BUILD MULTI-PLATEFORME — strategy: matrix
+  # Windows  → PyInstaller onedir → Inno Setup → .exe installeur
+  # macOS    → PyInstaller onedir → .dmg
+  # Linux    → PyInstaller onedir → AppImage
+  # ══════════════════════════════════════════════════════════════════════════
   build:
-    runs-on: windows-latest
+    name: 🔨 Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false    # Si Windows échoue, Mac et Linux continuent
+      matrix:
+        include:
+
+          # ── Windows ───────────────────────────────────────────────────────
+          - os:        windows-latest
+            name:      Windows
+            artifact:  GestioV4-Windows
+            ext:       exe
+
+          # ── macOS ─────────────────────────────────────────────────────────
+          - os:        macos-latest
+            name:      macOS
+            artifact:  GestioV4-macOS
+            ext:       dmg
+
+          # ── Linux ─────────────────────────────────────────────────────────
+          - os:        ubuntu-22.04
+            name:      Linux
+            artifact:  GestioV4-Linux
+            ext:       AppImage
 
     steps:
-      - name: Checkout code
+      # ── 1. Checkout ────────────────────────────────────────────────────────
+      - name: 📥 Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      # ── 2. Python ──────────────────────────────────────────────────────────
+      - name: 🐍 Setup Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Install uv
+      # ── 3. uv ──────────────────────────────────────────────────────────────
+      - name: 📦 Setup uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Install dependencies
+      # ── 4. Dépendances système (Linux uniquement) ──────────────────────────
+      - name: 📦 Dépendances système Linux
+        if: matrix.os == 'ubuntu-22.04'
         run: |
-          uv pip install --system pyinstaller
-          uv pip install --system streamlit pandas altair plotly numpy matplotlib pillow opencv-python pdfminer.six rapidocr-onnxruntime psutil pydantic requests pyjwt cryptography pyyaml python-dateutil
+          sudo apt-get update -qq
+          sudo apt-get install -y \
+            libgl1 libglib2.0-0 \
+            libfuse2 \
+            patchelf \
+            desktop-file-utils \
+            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
+            libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
 
-      - name: Build executable
-        run: pyinstaller gestio.spec
+      # ── 5. Installer les dépendances Python via uv sync (uv.lock) ──────────
+      - name: 📦 Installer les dépendances (uv sync)
+        run: uv sync --frozen --no-dev
 
-      - name: Generate tag name
-        id: tag
+      # ── 6. Installer PyInstaller dans le venv uv ───────────────────────────
+      - name: 📦 Installer PyInstaller
+        run: uv pip install pyinstaller
+
+      # ── 7. Générer les icônes ──────────────────────────────────────────────
+      - name: 🎨 Générer les icônes
+        run: uv run python resources/icons/generate_icons.py
+
+      # ── 8. Build PyInstaller (onedir) ──────────────────────────────────────
+      - name: 🔨 PyInstaller — build onedir
+        run: uv run pyinstaller gestio.spec --noconfirm
+
+      # ═══════════════════════════════════════════════════════════════════════
+      # WINDOWS — Inno Setup → installeur .exe
+      # ═══════════════════════════════════════════════════════════════════════
+      - name: 🪟 Inno Setup — créer l'installeur
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
         run: |
-          $date = Get-Date -Format "yyyy.MM.dd"
-          $sha = "${{ github.sha }}".Substring(0, 7)
-          $tag = "v$date-$sha"
-          echo "TAG_NAME=$tag" >> $env:GITHUB_OUTPUT
+          # Télécharger et installer Inno Setup silencieusement
+          $url = "https://jrsoftware.org/download.php/is.exe"
+          Invoke-WebRequest -Uri $url -OutFile "$env:TEMP\innosetup.exe"
+          Start-Process -FilePath "$env:TEMP\innosetup.exe" -ArgumentList "/VERYSILENT /NORESTART" -Wait
 
-      - name: Create Release
+          # Créer le dossier de sortie
+          New-Item -ItemType Directory -Force -Path "dist\installer" | Out-Null
+
+          # Compiler le .iss
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" gestio.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: 📤 Upload artifact Windows
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/installer/Gestio-Setup-*.exe
+          if-no-files-found: error
+
+      # ═══════════════════════════════════════════════════════════════════════
+      # MACOS — create-dmg → .dmg
+      # ═══════════════════════════════════════════════════════════════════════
+      - name: 🍎 Créer le .dmg macOS
+        if: matrix.os == 'macos-latest'
+        run: |
+          brew install create-dmg
+
+          create-dmg \
+            --volname "Gestio V4" \
+            --volicon "resources/icons/gestio.icns" \
+            --window-pos 200 120 \
+            --window-size 600 400 \
+            --icon-size 100 \
+            --icon "Gestio.app" 175 190 \
+            --hide-extension "Gestio.app" \
+            --app-drop-link 425 190 \
+            --no-internet-enable \
+            "dist/Gestio-macOS.dmg" \
+            "dist/Gestio.app"
+
+      - name: 📤 Upload artifact macOS
+        if: matrix.os == 'macos-latest'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/Gestio-macOS.dmg
+          if-no-files-found: error
+
+      # ═══════════════════════════════════════════════════════════════════════
+      # LINUX — appimagetool → .AppImage
+      # ═══════════════════════════════════════════════════════════════════════
+      - name: 🐧 Créer l'AppImage Linux
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          # Télécharger appimagetool
+          wget -q "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage" \
+               -O /tmp/appimagetool
+          chmod +x /tmp/appimagetool
+
+          # Créer la structure AppDir
+          APPDIR="dist/GestioV4.AppDir"
+          mkdir -p "$APPDIR/usr/bin"
+          mkdir -p "$APPDIR/usr/share/icons/hicolor/512x512/apps"
+          mkdir -p "$APPDIR/usr/share/applications"
+
+          # Copier le build PyInstaller
+          cp -r dist/GestioV4/* "$APPDIR/usr/bin/"
+
+          # Icône
+          cp resources/icons/gestio.png \
+             "$APPDIR/usr/share/icons/hicolor/512x512/apps/gestio.png"
+          cp resources/icons/gestio.png "$APPDIR/gestio.png"
+
+          # Fichier .desktop
+          cat > "$APPDIR/gestio.desktop" << 'EOF'
+          [Desktop Entry]
+          Name=Gestio
+          Comment=Gestion Financière Personnelle
+          Exec=GestioV4
+          Icon=gestio
+          Type=Application
+          Categories=Finance;Office;
+          Terminal=false
+          EOF
+
+          cat > "$APPDIR/AppRun" << 'EOF'
+          #!/bin/bash
+          SELF=$(readlink -f "$0")
+          HERE=$(dirname "$SELF")
+          exec "$HERE/usr/bin/GestioV4" "$@"
+          EOF
+          chmod +x "$APPDIR/AppRun"
+
+          # Générer le .AppImage
+          ARCH=x86_64 /tmp/appimagetool "$APPDIR" "dist/Gestio-Linux.AppImage"
+
+      - name: 📤 Upload artifact Linux
+        if: matrix.os == 'ubuntu-22.04'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/Gestio-Linux.AppImage
+          if-no-files-found: error
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # RELEASE — après les 3 builds
+  # ══════════════════════════════════════════════════════════════════════════
+  release:
+    name: 📦 Créer la Release GitHub
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: 📥 Télécharger tous les artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./release
+          merge-multiple: true
+
+      - name: 📋 Lister les fichiers
+        run: ls -lh ./release/
+
+      - name: 🚀 Créer la Release GitHub
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.tag.outputs.TAG_NAME }}
-          name: "Release ${{ steps.tag.outputs.TAG_NAME }}"
-          files: dist/GestioV4.exe
-          draft: true
+          name: "💰 Gestio ${{ github.ref_name }}"
+          body: |
+            ## 💰 Gestio ${{ github.ref_name }}
+
+            ### 📥 Téléchargements — aucune installation de Python requise
+
+            | Plateforme | Fichier | Instructions |
+            |---|---|---|
+            | 🪟 **Windows** | `Gestio-Setup-v*.exe` | Double-clic → assistant d'installation |
+            | 🍎 **macOS** | `Gestio-macOS.dmg` | Ouvrir → glisser dans Applications |
+            | 🐧 **Linux** | `Gestio-Linux.AppImage` | `chmod +x Gestio-Linux.AppImage && ./Gestio-Linux.AppImage` |
+
+            ### 🔒 Confidentialité
+            > Vos données financières sont stockées **uniquement sur votre machine**.
+            > Aucune donnée n'est transmise sur internet.
+
+            ### ⚙️ Configuration minimale
+            - Windows 10 / macOS 11 / Ubuntu 20.04+
+            - 4 GB RAM minimum (8 GB recommandé pour l'OCR)
+            - 500 MB d'espace disque
+          files: |
+            ./release/Gestio-Setup-*.exe
+            ./release/Gestio-macOS.dmg
+            ./release/Gestio-Linux.AppImage
+          fail_on_unmatched_files: true
+          draft: false
+          prerelease: false

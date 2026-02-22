@@ -2,8 +2,9 @@
 Database schema initialization for Recurrences table.
 """
 
-import sqlite3
 import logging
+import sqlite3
+
 from shared.database.connection import get_db_connection, close_connection
 
 logger = logging.getLogger(__name__)
@@ -23,22 +24,50 @@ def init_recurrence_table(db_path: str = None) -> None:
 
         # Create the table with the correct schema
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS recurrences (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                type TEXT NOT NULL,
-                categorie TEXT NOT NULL,
-                sous_categorie TEXT,
-                montant REAL NOT NULL,
-                date_debut TEXT NOT NULL,
-                date_fin TEXT,
-                frequence TEXT NOT NULL,
-                description TEXT,
-                statut TEXT DEFAULT 'active',
-                date_creation TEXT,
-                date_modification TEXT
-            )
-        """)
-        
+                       CREATE TABLE IF NOT EXISTS recurrences
+                       (
+                           id
+                           INTEGER
+                           PRIMARY
+                           KEY
+                           AUTOINCREMENT,
+                           type
+                           TEXT
+                           NOT
+                           NULL,
+                           categorie
+                           TEXT
+                           NOT
+                           NULL,
+                           sous_categorie
+                           TEXT,
+                           montant
+                           REAL
+                           NOT
+                           NULL,
+                           date_debut
+                           TEXT
+                           NOT
+                           NULL,
+                           date_fin
+                           TEXT,
+                           frequence
+                           TEXT
+                           NOT
+                           NULL,
+                           description
+                           TEXT,
+                           statut
+                           TEXT
+                           DEFAULT
+                           'active',
+                           date_creation
+                           TEXT,
+                           date_modification
+                           TEXT
+                       )
+                       """)
+
         # Verify columns exist (for backward compatibility / evolution)
         # Add 'sous_categorie' if missing
         try:

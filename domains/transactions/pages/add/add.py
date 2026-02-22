@@ -1,3 +1,4 @@
+# noinspection GrazieInspection
 """
 Page d'Ajout de Transactions
 Interface unifiée pour ajouter des transactions.
@@ -5,24 +6,22 @@ Version simplifiée : OCR Batch -> Validation -> Rangement automatique.
 Refactorisé avec st.fragment pour pywebview.
 """
 
-import streamlit as st
+import concurrent.futures
 import logging
-from pathlib import Path
 from datetime import date
-import tempfile
-import shutil
+from pathlib import Path
 
+import streamlit as st
+
+from shared.ui.toast_components import toast_success, toast_error
+from ..import_page.import_page import import_transactions_page
+from ...database.model import Transaction
 from ...database.repository import transaction_repository
 from ...database.validation import TRANSACTION_CATEGORIES, TRANSACTION_TYPES
-from ...database.model import Transaction
-from ...ocr.services.ocr_service import OCRService
 from ...ocr.core.hardware_utils import get_optimal_batch_size
-from shared.ui.toast_components import toast_success, toast_error, toast_warning
-import concurrent.futures
-
+from ...ocr.services.ocr_service import OCRService
 # Integration nouveaux services
 from ...services.attachment_service import attachment_service
-from ..import_page.import_page import import_transactions_page
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +63,7 @@ def render_ocr_upload_fragment():
             progress_bar = st.progress(0)
             status_text = st.empty()
 
-            with st.spinner("Traitement en cours..."):
+            with st.spinner("Traitement en cours..."):  # type: ignore[attr-defined]
                 # Assurer que le dossier temp existe
                 TEMP_OCR_DIR.mkdir(exist_ok=True)
 
@@ -72,10 +71,12 @@ def render_ocr_upload_fragment():
                     paths = []
                     # Sauvegarde temporaire
                     for f in files_to_process:
-                        p = TEMP_OCR_DIR / f.name
+                        from streamlit.runtime.uploaded_file_manager import UploadedFile as _UF
+                        uf: _UF = f  # type: ignore[assignment]
+                        p = TEMP_OCR_DIR / uf.name
                         # Write bytes
-                        f.seek(0)
-                        p.write_bytes(f.read())
+                        uf.seek(0)
+                        p.write_bytes(uf.read())
                         paths.append(str(p))
 
                     # OCR
@@ -168,7 +169,8 @@ def render_ocr_validation_fragment():
                         f_desc = st.text_input("Description", value=trans.description or "", key=f"desc_{fname}")
 
                     with c2:
-                        f_amt = st.number_input("Montant (€)", value=float(trans.montant), step=0.01, key=f"amt_{fname}")
+                        f_amt = st.number_input("Montant (€)", value=float(trans.montant), step=0.01,
+                                                key=f"amt_{fname}")
                         f_date = st.date_input("Date", value=trans.date, key=f"date_{fname}")
 
                     sender = st.form_submit_button("💾 Valider et Ranger", use_container_width=True, type="primary")
@@ -182,7 +184,12 @@ def render_ocr_validation_fragment():
                             description=f_desc,
                             montant=f_amt,
                             date=f_date,
-                            source="ocr_batch"
+                            source="ocr_batch",
+                            recurrence=None,
+                            date_fin=None,
+                            compte_iban=None,
+                            external_id=None,
+                            id=None,
                         )
 
                         new_id = transaction_repository.add(final_t)
@@ -251,7 +258,12 @@ def render_pdf_fragment():
                             montant=amt,
                             date=dt,
                             description=t.description or "",
-                            source="pdf_import"
+                            source="pdf_import",
+                            recurrence=None,
+                            date_fin=None,
+                            compte_iban=None,
+                            external_id=None,
+                            id=None,
                         )
 
                         nid = transaction_repository.add(final_t)
@@ -340,9 +352,13 @@ def render_recurrence_fragment():
                 repo = RecurrenceRepository()
                 new_rec = Recurrence(
                     type=transaction_type, categorie=category, sous_categorie=subcategory,
-                    montant=amount, frequence=frequence, date_debut=date_debut.isoformat(),
-                    date_fin=date_fin.isoformat() if date_fin else None,
-                    description=f"Recurrence auto: {category}"
+                    montant=amount, frequence=frequence, date_debut=date_debut,
+                    date_fin=date_fin if date_fin else None,
+                    description=f"Recurrence auto: {category}",
+                    id=None,
+                    statut="active",
+                    date_creation=None,
+                    date_modification=None,
                 )
                 if repo.add_recurrence(new_rec):
                     toast_success("Récurrence créée !")
@@ -352,10 +368,12 @@ def render_recurrence_fragment():
             except Exception as e:
                 st.error(f"Erreur: {e}")
 
+
 # ============================================================
 # PAGE PRINCIPALE
 # ============================================================
 
+# noinspection GrazieInspection
 def interface_add_transaction():
     """Page principale d'ajout de transactions avec fragments."""
 
@@ -372,7 +390,11 @@ def interface_add_transaction():
     mode = st.selectbox(
         "📌 Mode d'ajout",
         options=["📸 Scan OCR (Image)", "📄 Import PDF", "📄 Import CSV/Excel", "🔁 Transaction Récurrente"],
-        index=["📸 Scan OCR (Image)", "📄 Import PDF", "📄 Import CSV/Excel", "🔁 Transaction Récurrente"].index(st.session_state.add_mode_selection) if st.session_state.add_mode_selection in ["📸 Scan OCR (Image)", "📄 Import PDF", "📄 Import CSV/Excel", "🔁 Transaction Récurrente"] else 0,
+        index=["📸 Scan OCR (Image)", "📄 Import PDF", "📄 Import CSV/Excel", "🔁 Transaction Récurrente"].index(
+            st.session_state.add_mode_selection) if st.session_state.add_mode_selection in ["📸 Scan OCR (Image)",
+                                                                                            "📄 Import PDF",
+                                                                                            "📄 Import CSV/Excel",
+                                                                                            "🔁 Transaction Récurrente"] else 0,
         key="mode_selector",
         help="Sélectionnez comment vous souhaitez ajouter vos transactions"
     )

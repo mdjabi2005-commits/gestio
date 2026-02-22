@@ -5,16 +5,18 @@ Délègue toute la persistance au Repository.
 """
 
 import logging
-import pandas as pd
 from datetime import date
 from typing import Optional
 
-from ..database.repository import transaction_repository
+import pandas as pd
+
 from ..database.model import Transaction
+from ..database.repository import transaction_repository
 
 logger = logging.getLogger(__name__)
 
 
+# noinspection PyProtectedMember
 class TransactionService:
     """
     Service couche métier pour les transactions.
@@ -39,11 +41,12 @@ class TransactionService:
             logger.error(f"Erreur get_transaction_by_id {tx_id}: {e}")
             return None
 
+    # noinspection PyProtectedMember
     def get_filtered_transactions_df(
-        self,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
-        category: Optional[str] = None
+            self,
+            start_date: Optional[date] = None,
+            end_date: Optional[date] = None,
+            category: Optional[str] = None
     ) -> pd.DataFrame:
         """
         Récupère les transactions filtrées sous forme de DataFrame (pour l'UI).

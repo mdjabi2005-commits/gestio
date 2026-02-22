@@ -3,10 +3,10 @@ Parser - Extraction de données structurées via Regex
 Fonctions pures qui appliquent des patterns sur du texte brut
 """
 
+import logging
 import re
 from datetime import datetime, date
 from typing import Optional, List
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +28,7 @@ def parse_amount(text: str, patterns: List[str]) -> Optional[float]:
         42.50
     """
     text_upper = text.upper()
-    
+
     for pattern in patterns:
         try:
             matches = re.findall(pattern, text_upper, re.IGNORECASE | re.MULTILINE)
@@ -45,7 +45,7 @@ def parse_amount(text: str, patterns: List[str]) -> Optional[float]:
         except (ValueError, IndexError) as e:
             logger.warning(f"Erreur parsing montant avec pattern '{pattern}': {e}")
             continue
-    
+
     logger.warning("Aucun montant trouvé dans le texte")
     return None
 
@@ -72,15 +72,15 @@ def parse_date(text: str, patterns: List[str]) -> Optional[date]:
             for match in matches:
                 # Si on a capturé jour, mois, année séparément (notre pattern flexible)
                 if len(match.groups()) >= 3:
-                     # On reconstruit une date propre: JJ/MM/AAAA
-                     date_str = f"{match.group(1)}/{match.group(2)}/{match.group(3)}"
+                    # On reconstruit une date propre: JJ/MM/AAAA
+                    date_str = f"{match.group(1)}/{match.group(2)}/{match.group(3)}"
                 else:
-                     # Sinon on prend le groupe 1 qui est censé être la date complète
-                     date_str = match.group(1)
-                
+                    # Sinon on prend le groupe 1 qui est censé être la date complète
+                    date_str = match.group(1)
+
                 # Normaliser les séparateurs (au cas où on passe ici avec un seul groupe mal formaté)
                 date_str = date_str.replace('-', '/').replace('.', '/').replace(' ', '/')
-                
+
                 # Essayer plusieurs formats
                 for fmt in ["%d/%m/%Y", "%d/%m/%y"]:
                     try:
@@ -90,11 +90,11 @@ def parse_date(text: str, patterns: List[str]) -> Optional[date]:
                     except ValueError:
                         continue
             # Si on arrive ici, ce match n'était pas une date valide, on essaie le prochain match
-                        
+
         except Exception as e:
             logger.warning(f"Erreur parsing date avec pattern '{pattern}': {e}")
             continue
-    
+
     logger.warning("Aucune date trouvée dans le texte")
     return None
 
@@ -114,7 +114,7 @@ def parse_pdf_revenue(text: str) -> Optional[dict]:
         Format: {'amount': float, 'date': date, 'description': str}
     """
     text_upper = text.upper()
-    
+
     # === PATTERNS SPÉCIFIQUES (Salaires, virements) ===
     specific_amount_patterns = [
         r"NET\s+(?:À\s+)?PAYER\s*:?\s*([\d\s]+[.,]\d{2})",
@@ -124,11 +124,11 @@ def parse_pdf_revenue(text: str) -> Optional[dict]:
         r"TOTAL\s*:?\s*([\d\s]+[.,]\d{2})\s*€",
         r"MONTANT\s+TOTAL\s*:?\s*([\d\s]+[.,]\d{2})"
     ]
-    
+
     # === PATTERNS GÉNÉRIQUES (Fallback) ===
     # Cherche n'importe quel montant avec € (prend le plus grand trouvé)
     generic_amount_pattern = r"([\d\s]+[.,]\d{2})\s*€"
-    
+
     # === PATTERNS DATES ===
     date_patterns = [
         r"DATE\s+(?:DE\s+)?(?:PAIEMENT|VIREMENT|LA\s+)?(?:FACTURE)?\s*:?\s*(\d{2}[/\-\.]\d{2}[/\-\.]\d{2,4})",
@@ -137,10 +137,10 @@ def parse_pdf_revenue(text: str) -> Optional[dict]:
         r"FACTURE\s+(?:ÉTABLIE)?\s*(?:LE)?\s*(\d{2}[/\-\.]\d{2}[/\-\.]\d{2,4})",
         r"(\d{2}[/\-\.]\d{2}[/\-\.]\d{2,4})"  # Date générique (en dernier)
     ]
-    
+
     # === EXTRACTION MONTANT (Stratégie en cascade) ===
     amount = parse_amount(text, specific_amount_patterns)
-    
+
     if amount is None:
         logger.info("Patterns spécifiques échoués, tentative pattern générique")
         # Fallback: chercher tous les montants avec € et prendre le plus grand
@@ -155,20 +155,20 @@ def parse_pdf_revenue(text: str) -> Optional[dict]:
                     amounts.append(float(cleaned))
                 except ValueError:
                     continue
-            
+
             if amounts:
                 amount = max(amounts)
                 logger.info(f"Montant extrait via pattern générique: {amount}€ (max de {len(amounts)} trouvés)")
-    
+
     if amount is None:
         logger.warning("Aucun montant trouvé dans le PDF de revenu")
         return None
-    
+
     # === EXTRACTION DATE (Optionnel) ===
     payment_date = parse_date(text, date_patterns)
     if not payment_date:
         logger.info("Aucune date trouvée, utilisation de la date du jour")
-    
+
     # === EXTRACTION DESCRIPTION (Mots-clés) ===
     description = "Revenu extrait du PDF"
     if "UBER" in text_upper:
@@ -179,14 +179,12 @@ def parse_pdf_revenue(text: str) -> Optional[dict]:
         description = "Salaire"
     elif "FACTURE" in text_upper:
         description = "Facture - Prestation"
-    
+
     result = {
         'amount': amount,
         'date': payment_date or date.today(),
         'description': description,
     }
-    
+
     logger.info(f"Revenu PDF parsé: {amount}€ le {payment_date or 'date du jour'} - {description}")
     return result
-
-

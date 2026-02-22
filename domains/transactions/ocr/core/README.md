@@ -1,10 +1,12 @@
 # Architecture OCR Core
 
-Ce module constitue la couche **bas niveau** du moteur de reconnaissance. Il encapsule les bibliothèques tierces pour fournir une abstraction propre au reste de l'application.
+Ce module constitue la couche **bas niveau** du moteur de reconnaissance. Il encapsule les bibliothèques tierces pour
+fournir une abstraction propre au reste de l'application.
 
 ## 🛠️ Stack Technique
 
 ### 1. RapidOCR (`rapidocr_onnxruntime`)
+
 - **Rôle** : Moteur OCR principal pour les images.
 - **Pourquoi ?** :
     - Plus léger et rapide que Tesseract.
@@ -13,6 +15,7 @@ Ce module constitue la couche **bas niveau** du moteur de reconnaissance. Il enc
 - **Fichier** : `rapidocr_engine.py`
 
 ### 2. PDFMiner (`pdfminer.six`)
+
 - **Rôle** : Extraction de texte depuis les PDF natifs (relevés bancaires).
 - **Pourquoi ?** :
     - Extraction précise de la structure (positions).
@@ -20,6 +23,7 @@ Ce module constitue la couche **bas niveau** du moteur de reconnaissance. Il enc
 - **Fichier** : `pdf_engine.py`
 
 ### 3. OpenCV (`opencv-python-headless`)
+
 - **Rôle** : Prétraitement d'image.
 - **Opérations** :
     - Redimensionnement (pour améliorer la détection des petits textes).
@@ -27,6 +31,7 @@ Ce module constitue la couche **bas niveau** du moteur de reconnaissance. Il enc
     - Désinclinaison (Deskewing).
 
 ### 4. Regex & Parsing
+
 - **Rôle** : Extraction structurée depuis le texte brut.
 - **Fichiers** : `parser.py`, `llm_parser.py` (expérimental).
 

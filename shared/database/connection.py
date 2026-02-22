@@ -1,8 +1,9 @@
 """Database connection management."""
 
-import sqlite3
 import logging
+import sqlite3
 from typing import Optional
+
 from config import DB_PATH
 
 # Default timeout
@@ -27,7 +28,7 @@ def get_db_connection(timeout: float = DATABASE_TIMEOUT, db_path: Optional[str] 
     """
     # Use custom path if provided (for tests), otherwise use production DB_PATH
     actual_db_path = db_path if db_path is not None else DB_PATH
-    
+
     try:
         conn = sqlite3.connect(actual_db_path, timeout=max(timeout, 30.0))
         conn.execute("PRAGMA foreign_keys = ON")  # Enable foreign keys
@@ -55,11 +56,11 @@ def close_connection(conn: Optional[sqlite3.Connection]) -> None:
 
 
 def execute_query(
-    query: str,
-    params: tuple = (),
-    fetch_one: bool = False,
-    fetch_all: bool = False,
-    commit: bool = False
+        query: str,
+        params: tuple = (),
+        fetch_one: bool = False,
+        fetch_all: bool = False,
+        commit: bool = False
 ):
     """
     Execute a database query with automatic connection management.

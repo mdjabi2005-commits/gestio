@@ -5,10 +5,10 @@ Tous les types de transactions (OCR, CSV, Manuelles)
 convergent vers ce modèle unique (clés en français).
 """
 
-from pydantic import BaseModel, Field, field_validator
 from datetime import date as DateType
 from typing import Optional
 
+from pydantic import BaseModel, Field
 
 # Constantes
 TYPE_DEPENSE = "Dépense"
@@ -27,7 +27,7 @@ class Transaction(BaseModel):
     # Champs obligatoires
     type: str = Field(..., description="Type (Dépense/Revenu)")
     date: DateType = Field(..., description="Date de la transaction")
-    
+
     # Champs avec valeurs par défaut (pour compatibilité OCR)
     categorie: str = Field("Non catégorisé", description="Catégorie principale")
     montant: float = Field(0.0, description="Montant en euros", ge=0)
@@ -42,7 +42,6 @@ class Transaction(BaseModel):
     external_id: Optional[str] = Field(None, description="ID externe")
     id: Optional[int] = Field(None, description="ID (DB)")
 
-    @field_validator('type', mode='before')
     @classmethod
     def normalize_type(cls, v):
         if isinstance(v, str):
@@ -53,14 +52,12 @@ class Transaction(BaseModel):
                 return TYPE_DEPENSE
         return v
 
-    @field_validator('source', mode='before')
     @classmethod
     def normalize_source(cls, v):
         if not v or str(v).strip() == "":
             return DEFAULT_SOURCE
         return v.strip().lower()
 
-    @field_validator('date_fin', mode='before')
     @classmethod
     def empty_to_none(cls, v):
         if v == "" or v is None:

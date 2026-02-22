@@ -3,15 +3,15 @@ Transaction Database Validation & Utilities
 Consolidates: validation, constants, converters, formatters, normalizer
 """
 
-import re
 import logging
-import pandas as pd
-from datetime import datetime
-from dateutil import parser
+import re
+from datetime import datetime, date
 from typing import Dict, List, Any, Optional, Type, Union
 
-logger = logging.getLogger(__name__)
+import pandas as pd
+from dateutil import parser
 
+logger = logging.getLogger(__name__)
 
 # ==============================
 # TRANSACTION SCHEMA CONSTANTS
@@ -21,7 +21,7 @@ TRANSACTION_TYPES = ["Dépense", "Revenu", "Transfert+", "Transfert-"]
 
 TRANSACTION_CATEGORIES = [
     "Alimentation",
-    "Voiture", 
+    "Voiture",
     "Logement",
     "Loisirs",
     "Santé",
@@ -56,9 +56,9 @@ def normalize_text(text: Any) -> str:
 # ==============================
 
 def safe_convert(
-    value: Any,
-    convert_type: Type = float,
-    default: Union[float, int, str] = 0.0
+        value: Any,
+        convert_type: Type = float,
+        default: Union[float, int, str] = 0.0
 ) -> Union[float, int, str]:
     """
     Safely convert a value with automatic format detection.
@@ -109,9 +109,9 @@ def safe_convert(
 
 
 def safe_date_convert(
-    date_str: Any,
-    default: Optional[datetime] = None
-) -> datetime:
+        date_str: Any,
+        default: Optional[datetime] = None
+) -> datetime | date:
     """
     Safely convert date string with multiple format support.
     
@@ -164,6 +164,7 @@ def validate_required(value: Any, field_name: str) -> List[str]:
     return []
 
 
+# noinspection PyBroadException
 def validate_transaction(data: Dict[str, Any]) -> tuple[bool, List[str]]:
     """
     Validate transaction data against SQLite schema.
@@ -174,24 +175,25 @@ def validate_transaction(data: Dict[str, Any]) -> tuple[bool, List[str]]:
     Returns: (is_valid, errors)
     """
     errors = []
-    
+
     # Type validation
     transaction_type = data.get('type', '')
     if transaction_type not in TRANSACTION_TYPES:
         errors.append(f"Type doit être parmi: {', '.join(TRANSACTION_TYPES)}")
-    
+
     # Amount validation
     try:
         amount = float(data.get('amount', 0))
         errors.extend(validate_amount(amount))
     except (ValueError, TypeError):
         errors.append("Montant invalide")
-    
+
     # Category validation
     errors.extend(validate_required(data.get('category'), "Catégorie"))
-    
+
     # Date validation (optional but cannot be future)
     if data.get('date'):
+        # noinspection PyBroadException
         try:
             date_val = data.get('date')
             if isinstance(date_val, str):
@@ -200,9 +202,9 @@ def validate_transaction(data: Dict[str, Any]) -> tuple[bool, List[str]]:
                 errors.append("Date ne peut pas être dans le futur")
         except Exception:
             errors.append("Format de date invalide")
-    
+
     # Source validation (optional)
     if data.get('source') and data.get('source') not in TRANSACTION_SOURCES:
         errors.append(f"Source doit être parmi: {', '.join(TRANSACTION_SOURCES)}")
-    
+
     return len(errors) == 0, errors

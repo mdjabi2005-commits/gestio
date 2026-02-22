@@ -1,47 +1,75 @@
-# 🚀 Build Gestio V4
+# 🚀 Build & Distribution — Gestio V4
 
-## 📦 Deux configurations
+## 📦 Stratégie par plateforme
 
-### 1️⃣ **Tests locaux** (rapide)
+| Plateforme | Pipeline | Résultat final | Prérequis utilisateur |
+|---|---|---|---|
+| 🪟 **Windows** | PyInstaller `onedir` → Inno Setup | `Gestio-Setup-v4.0.exe` | **Aucun** — assistant d'installation |
+| 🍎 **macOS** | PyInstaller `onedir` → `create-dmg` | `Gestio-macOS.dmg` | **Aucun** — glisser dans Applications |
+| 🐧 **Linux** | PyInstaller `onedir` → `appimagetool` | `Gestio-Linux.AppImage` | **Aucun** — fichier portable |
+
+---
+
+## 🔑 Prérequis de build (une seule fois)
+
 ```bash
-pyinstaller gestio-dev.spec
-```
-- ✅ Build rapide (~2-3 min)
-- 📁 Résultat : `dist/GestioV4/` (dossier avec fichiers)
-- 🎯 Usage : tester l'application compilée
+# Installer uv (si pas déjà fait)
+curl -LsSf https://astral.sh/uv/install.sh | sh   # Mac/Linux
+# ou
+powershell -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
 
-### 2️⃣ **Distribution** (production)
+# Synchroniser l'environnement depuis uv.lock
+uv sync --frozen
+
+# Ajouter PyInstaller (hors uv.lock, outil de build uniquement)
+uv pip install pyinstaller
+```
+
+> ⚠️ Placer les icônes dans `resources/icons/` avant de builder.
+> Voir `resources/icons/README.md` pour les formats requis.
+
+---
+
+## 🔨 Build manuel
+
 ```bash
-pyinstaller gestio.spec
+# Build onedir (résultat : dist/GestioV4/)
+uv run pyinstaller gestio.spec --noconfirm
+
+# Windows uniquement — générer l'installeur avec Inno Setup
+iscc gestio.iss
+# Résultat : dist/installer/Gestio-Setup-v4.0.exe
 ```
-- ⏱️ Build plus long (~5-10 min)
-- 📄 Résultat : `dist/GestioV4.exe` (un seul fichier)
-- 🎯 Usage : distribuer aux utilisateurs
 
-## 🧪 Tester en local
+---
 
-1. Build rapide :
-   ```bash
-   pyinstaller gestio-dev.spec
-   ```
+## 🤖 Release automatique — GitHub Actions
 
-2. Lancer :
-   ```bash
-   dist\GestioV4\GestioV4.exe
-   ```
+Le workflow `.github/workflows/build.yml` utilise une **`strategy: matrix`** pour
+builder les 3 plateformes **en parallèle** sur les runners GitHub.
 
-## 📤 Distribution
+```
+tag v1.0.0
+    │
+    ├── 🪟 windows-latest  → PyInstaller → Inno Setup → Gestio-Setup-v1.0.0.exe
+    ├── 🍎 macos-latest    → PyInstaller → create-dmg → Gestio-macOS.dmg
+    └── 🐧 ubuntu-22.04    → PyInstaller → appimagetool → Gestio-Linux.AppImage
+                │
+                └── release job → GitHub Release avec les 3 fichiers
+```
 
-1. Build final :
-   ```bash
-   pyinstaller gestio.spec
-   ```
+### Déclencher une release
 
-2. Distribuer :
-   - Fichier : `dist/GestioV4.exe`
-   - Taille : ~150-300 MB
-   - Autonome : aucune dépendance
+```bash
+git add .
+git commit -m "feat: version 1.0.0"
+git tag v1.0.0
+git push origin v1.0.0   # ← déclenche le workflow
+```
 
-## 🔧 GitHub Actions
+---
 
-Pour automatiser la release sur GitHub, créez `.github/workflows/build.yml` (à faire plus tard).
+## 🔒 Note confidentialité
+
+Les données de l'utilisateur sont stockées **uniquement sur sa machine** (`~/analyse/` ou `~/Gestio/analyse/` sur Windows).
+Aucune donnée n'est transmise sur internet lors de l'utilisation.

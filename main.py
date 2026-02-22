@@ -13,6 +13,7 @@ import streamlit as st
 
 # Initialize logging system FIRST (before any other imports)
 from config.logging_config import setup_logging
+
 setup_logging()
 
 # ==============================
@@ -53,8 +54,8 @@ st.markdown("""
 # IMPORTS - Configuration
 # ==============================
 from config import (
-    DATA_DIR, DB_PATH, TO_SCAN_DIR, SORTED_DIR,
-    REVENUS_A_TRAITER, REVENUS_TRAITES
+    DB_PATH, TO_SCAN_DIR,
+    REVENUS_A_TRAITER
 )
 
 # ==============================
@@ -65,12 +66,11 @@ from domains.transactions.database.schema import (
     migrate_transaction_table
 )
 from domains.transactions.database.schema_table_recurrence import init_recurrence_table
-from domains.transactions import TransactionRepository
 
 # ==============================
 # IMPORTS - UI
 # ==============================
-from shared.ui import load_all_styles, refresh_and_rerun, toast_success
+from shared.ui import load_all_styles, refresh_and_rerun
 
 # ==============================
 # IMPORTS - Pages
@@ -98,9 +98,11 @@ try:
 
     # Init attachments table
     from domains.transactions.database.schema import init_attachments_table
+
     init_attachments_table()
     # Auto-generate missing recurring transactions
     from domains.transactions.recurrence import backfill_all_recurrences
+
     created = backfill_all_recurrences()
     if created:
         logger.info(f"Recurrence backfill: {created} transactions created")
@@ -115,15 +117,18 @@ except Exception as e:
 # ==============================
 load_all_styles()
 
+
 # ==============================
 # MAIN APPLICATION
 # ==============================
+# noinspection PyShadowingNames
 def main():
     """Main application router."""
+    # noinspection PyShadowingNames
     try:
         # Sidebar Branding
         st.sidebar.title("💰 Gestio V4")
-        
+
         # Navigation Setup (Native Streamlit)
         # Group pages by functionality
         pages = {
@@ -136,12 +141,12 @@ def main():
                 st.Page(interface_recurrences, title="Récurrences", icon="🔄", url_path="recurrences"),
             ]
         }
-        
+
         pg = st.navigation(pages)
-        
+
         # Sidebar Utilities
         st.sidebar.markdown("---")
-        
+
         # Quick Refresh
         if st.sidebar.button("🔄 Rafraîchir", use_container_width=True):
             refresh_and_rerun()
@@ -165,6 +170,7 @@ def main():
         trace_id = log_error(e, "Application V4 failed")
         st.error(f"ERREUR CRITIQUE [TraceID: {trace_id}]: L'application V4 a rencontré une erreur.")
         st.exception(e)
+
 
 # ==============================
 # APPLICATION ENTRY POINT

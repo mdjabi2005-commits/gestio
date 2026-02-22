@@ -1,7 +1,9 @@
 # Logic Flow - Dashboard (View Transaction)
 
 ## Overview
-The central dashboard for visualizing financial health, consolidating historical transactions and future recurrence projections.
+
+The central dashboard for visualizing financial health, consolidating historical transactions and future recurrence
+projections.
 
 ```mermaid
 graph TD
@@ -43,21 +45,25 @@ graph TD
 
 ## Data Types / Structures
 
-| Data | Type | Description |
-| :--- | :--- | :--- |
-| **Historical DF** | `pd.DataFrame` | Raw transactions from DB. Columns: `id`, `date`, `amount`, `category`, `type`... |
-| **Future DF** | `pd.DataFrame` | Projected transactions generated from active recurrences. |
-| **Global DF** | `pd.DataFrame` | Combined dataset used for all visualizations. |
-| **Sunburst Dict** | `dict` | Nested dictionary structure `{label, value, children: []}` specifically formatted for the Sunburst component. |
+| Data              | Type           | Description                                                                                                   |
+|:------------------|:---------------|:--------------------------------------------------------------------------------------------------------------|
+| **Historical DF** | `pd.DataFrame` | Raw transactions from DB. Columns: `id`, `date`, `amount`, `category`, `type`...                              |
+| **Future DF**     | `pd.DataFrame` | Projected transactions generated from active recurrences.                                                     |
+| **Global DF**     | `pd.DataFrame` | Combined dataset used for all visualizations.                                                                 |
+| **Sunburst Dict** | `dict`         | Nested dictionary structure `{label, value, children: []}` specifically formatted for the Sunburst component. |
 
 ## AI Logic Summary
-1.  **Dual Data Retrieval**: The dashboard pulls two distinct datasets:
-    *   **Historical**: Real transactions from `TransactionRepository` (returned as a DataFrame).
-    *   **Future**: Projected transactions generated from `RecurrenceRepository` (converted to a DataFrame).
-2.  **Unification**: These two DataFrames are concatenated into `GlobalDF`. This allows the dashboard to show a continuous timeline from past to future.
-3.  **Filtering**: User inputs (Date Range slider, Category dropdowns) are applied to `GlobalDF` to produce `FilteredDF`. All downstream metrics depend on this filtered set.
-4.  **Visualization Rendering**:
-    *   **KPIs**: Sums and aggregates are calculated from `FilteredDF`.
-    *   **Sunburst**: A hierarchical dictionary is built from `FilteredDF` groupings.
-    *   **Data Table**: Displays `FilteredDF` and supports inline editing.
-5.  **Edit Cycle**: If a user edits a cell in the table, an update request (Dict) is sent to `TransactionRepository.update_transaction` on the backend, triggering a refresh of the Historical data.
+
+1. **Dual Data Retrieval**: The dashboard pulls two distinct datasets:
+    * **Historical**: Real transactions from `TransactionRepository` (returned as a DataFrame).
+    * **Future**: Projected transactions generated from `RecurrenceRepository` (converted to a DataFrame).
+2. **Unification**: These two DataFrames are concatenated into `GlobalDF`. This allows the dashboard to show a
+   continuous timeline from past to future.
+3. **Filtering**: User inputs (Date Range slider, Category dropdowns) are applied to `GlobalDF` to produce `FilteredDF`.
+   All downstream metrics depend on this filtered set.
+4. **Visualization Rendering**:
+    * **KPIs**: Sums and aggregates are calculated from `FilteredDF`.
+    * **Sunburst**: A hierarchical dictionary is built from `FilteredDF` groupings.
+    * **Data Table**: Displays `FilteredDF` and supports inline editing.
+5. **Edit Cycle**: If a user edits a cell in the table, an update request (Dict) is sent to
+   `TransactionRepository.update_transaction` on the backend, triggering a refresh of the Historical data.

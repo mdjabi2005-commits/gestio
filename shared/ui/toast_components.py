@@ -3,13 +3,13 @@
 This module contains toast notifications, badges, and transaction display components.
 """
 
-import os
-import logging
 import hashlib
-from typing import Dict, Any, Optional, List, Tuple
+import logging
+import os
+from typing import Dict, Any, Optional
+
 import streamlit as st
 import streamlit.components.v1 as components
-import pandas as pd
 from PIL import Image
 
 logger = logging.getLogger(__name__)
@@ -54,7 +54,7 @@ def show_toast(message: str, toast_type: str = "success", duration: int = 3000) 
             box-shadow:0 4px 20px rgba(0,0,0,0.15);
             border-left:4px solid {config['color']};
             z-index:9999;
-            animation:slideIn 0.3s ease-out, fadeOut {duration/1000}s {(duration-1000)/1000}s forwards;">
+            animation:slideIn 0.3s ease-out, fadeOut {duration / 1000}s {(duration - 1000) / 1000}s forwards;">
             <span style="font-size:18px;margin-right:8px;">{config['icon']}</span>
             {message}
         </div>
@@ -200,7 +200,7 @@ def get_badge_icon(transaction: Dict[str, Any]) -> str:
 # 📋 TRANSACTION DISPLAY COMPONENTS
 # ==============================
 
-def afficher_carte_transaction(transaction: Dict[str, Any], idx: Optional[int] = None) -> None:
+def afficher_carte_transaction(transaction: Dict[str, Any]) -> None:
     """
     Display a transaction card with details and associated documents.
 
@@ -217,7 +217,6 @@ def afficher_carte_transaction(transaction: Dict[str, Any], idx: Optional[int] =
             - type: 'revenu' or 'dépense'
             - montant: Amount
             - source: Transaction source (OCR, PDF, etc.)
-        idx: Optional index for the transaction (not used but kept for compatibility)
 
     Example:
         >>> tx = {
@@ -300,11 +299,11 @@ def afficher_documents_associes(transaction: Dict[str, Any], context: Optional[s
     """
     # Utilisation du nouveau AttachmentService
     from domains.transactions.services.attachment_service import attachment_service
-    
+
     # 1. Récupérer les nouvelles pièces jointes (DB)
     attachments = attachment_service.get_attachments(transaction.get("id"))
     fichiers = [att.file_path for att in attachments]
-    
+
     # 2. (Optionnel) Fallback Legacy si aucune pièce jointe DB
     # On pourrait réimplémenter une recherche disque basique ici si nécessaire
     # mais pour l'instant on se concentre sur le nouveau système.
@@ -335,7 +334,7 @@ def afficher_documents_associes(transaction: Dict[str, Any], context: Optional[s
         return
 
     # Display each file in tabs
-    tabs = st.tabs([f"Document {i+1}" for i in range(len(fichiers))])
+    tabs = st.tabs([f"Document {i + 1}" for i in range(len(fichiers))])
 
     for i, (tab, fichier) in enumerate(zip(tabs, fichiers)):
         with tab:
@@ -345,7 +344,7 @@ def afficher_documents_associes(transaction: Dict[str, Any], context: Optional[s
                 # Display the image
                 try:
                     image = Image.open(fichier)
-                    st.image(image, caption=f"🧾 {nom_fichier}", use_column_width=True)
+                    st.image(image, caption=f"🧾 {nom_fichier}", use_container_width=True)
 
                 except Exception as e:
                     toast_error(f"Impossible d'afficher l'image: {e}")
@@ -376,9 +375,6 @@ def afficher_documents_associes(transaction: Dict[str, Any], context: Optional[s
                         )
                 except Exception as e:
                     toast_error(f"Impossible d'afficher le document PDF: {e}")
-
-
-
 
 # ==============================
 # Note: Category navigation components moved to domains/transactions/ui/category_navigator.py

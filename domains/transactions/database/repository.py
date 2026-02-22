@@ -3,14 +3,15 @@ Transaction Repository
 Gestion des données pour le domaine Transactions.
 """
 
-import pandas as pd
 import logging
 import sqlite3
+from datetime import date
 from typing import List, Optional, Dict
-from datetime import date, datetime
 
-from .model import Transaction
+import pandas as pd
+
 from shared.database.connection import get_db_connection, close_connection
+from .model import Transaction
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +49,8 @@ class TransactionRepository:
     def __init__(self, db_path: Optional[str] = None):
         self.db_path = db_path
 
-    def _normaliser_dict(self, data: Dict) -> Dict:
+    @staticmethod
+    def _normaliser_dict(data: Dict) -> Dict:
         """Convertit les clés EN en FR pour uniformité."""
         result = {}
         for key, value in data.items():
@@ -56,7 +58,8 @@ class TransactionRepository:
             result[new_key] = value
         return result
 
-    def _map_db_to_dict(self, row: dict) -> dict:
+    @staticmethod
+    def _map_db_to_dict(row: dict) -> dict:
         """Mapping ligne DB vers dict (clés FR)."""
         return {
             "id": row["id"],
@@ -97,14 +100,16 @@ class TransactionRepository:
         finally:
             close_connection(conn)
 
-    def _get_empty_df(self) -> pd.DataFrame:
+    @staticmethod
+    def _get_empty_df() -> pd.DataFrame:
         return pd.DataFrame(columns=[
             "id", "type", "categorie", "sous_categorie", "description",
             "montant", "date", "source", "recurrence", "date_fin",
             "compte_iban", "external_id"
         ])
 
-    def _valider(self, transaction: Dict) -> None:
+    @staticmethod
+    def _valider(transaction: Dict) -> None:
         """Valide les champs obligatoires."""
         errors = []
 
@@ -124,7 +129,8 @@ class TransactionRepository:
         if errors:
             raise ValueError(f"Validation échouée: {'; '.join(errors)}")
 
-    def _préparer(self, transaction: Dict) -> Dict:
+    @staticmethod
+    def _préparer(transaction: Dict) -> Dict:
         """Prepare les données pour la DB."""
         # Type
         type_val = transaction.get("type", TYPE_DÉPENSE)
@@ -224,16 +230,15 @@ class TransactionRepository:
             conn = get_db_connection(db_path=self.db_path)
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO transactions (
-                    type, categorie, sous_categorie, description, montant, date,
-                    source, recurrence, date_fin, compte_iban, external_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                data["type"], data["categorie"], data["sous_categorie"],
-                data["description"], data["montant"], data["date"],
-                data["source"], data["recurrence"], data["date_fin"],
-                data["compte_iban"], data["external_id"]
-            ))
+                           INSERT INTO transactions (type, categorie, sous_categorie, description, montant, date,
+                                                     source, recurrence, date_fin, compte_iban, external_id)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                           """, (
+                               data["type"], data["categorie"], data["sous_categorie"],
+                               data["description"], data["montant"], data["date"],
+                               data["source"], data["recurrence"], data["date_fin"],
+                               data["compte_iban"], data["external_id"]
+                           ))
 
             new_id = cursor.lastrowid
             conn.commit()
@@ -267,18 +272,25 @@ class TransactionRepository:
             conn = get_db_connection(db_path=self.db_path)
             cursor = conn.cursor()
             cursor.execute("""
-                UPDATE transactions SET
-                    type = ?, categorie = ?, sous_categorie = ?,
-                    description = ?, montant = ?, date = ?,
-                    source = ?, recurrence = ?, date_fin = ?,
-                    compte_iban = ?, external_id = ?
-                WHERE id = ?
-            """, (
-                data["type"], data["categorie"], data["sous_categorie"],
-                data["description"], data["montant"], data["date"],
-                data["source"], data["recurrence"], data["date_fin"],
-                data["compte_iban"], data["external_id"], tx_id
-            ))
+                           UPDATE transactions
+                           SET type           = ?,
+                               categorie      = ?,
+                               sous_categorie = ?,
+                               description    = ?,
+                               montant        = ?,
+                               date           = ?,
+                               source         = ?,
+                               recurrence     = ?,
+                               date_fin       = ?,
+                               compte_iban    = ?,
+                               external_id    = ?
+                           WHERE id = ?
+                           """, (
+                               data["type"], data["categorie"], data["sous_categorie"],
+                               data["description"], data["montant"], data["date"],
+                               data["source"], data["recurrence"], data["date_fin"],
+                               data["compte_iban"], data["external_id"], tx_id
+                           ))
 
             conn.commit()
             return cursor.rowcount > 0
@@ -309,7 +321,8 @@ class TransactionRepository:
         finally:
             close_connection(conn)
 
-    def get_filtered(self, start_date: Optional[date] = None, end_date: Optional[date] = None, category: Optional[str] = None) -> pd.DataFrame:
+    def get_filtered(self, start_date: Optional[date] = None, end_date: Optional[date] = None,
+                     category: Optional[str] = None) -> pd.DataFrame:
         """Récupère les transactions filtrées."""
         conn = None
         try:
@@ -371,23 +384,23 @@ class TransactionRepository:
                 ids = [transaction_id]
             else:
                 ids = transaction_id
-            
+
             if not ids:
                 return True
-            
+
             conn = get_db_connection(db_path=self.db_path)
             cursor = conn.cursor()
-            
+
             # Utiliser IN clause (fonctionne pour 1 ou N IDs)
             placeholders = ','.join('?' * len(ids))
             query = f"DELETE FROM transactions WHERE id IN ({placeholders})"
             cursor.execute(query, ids)
-            
+
             conn.commit()
             deleted_count = cursor.rowcount
             logger.info(f"{deleted_count} transaction(s) supprimée(s)")
             return True
-            
+
         except sqlite3.Error as e:
             logger.error(f"Erreur delete: {e}")
             if conn:

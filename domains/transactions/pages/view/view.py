@@ -3,22 +3,21 @@ Page de visualisation des transactions (Dashboard)
 Refactorisé pour utiliser les composants modulaires avec st.fragment (pour pywebview).
 """
 
-import streamlit as st
-import pandas as pd
 from datetime import date
 
-from ...database import transaction_repository, TRANSACTION_CATEGORIES, TRANSACTION_TYPES
-from ...services.transaction_service import transaction_service
-from shared.ui.toast_components import toast_error
-from ...database.model import Transaction
+import pandas as pd
+import streamlit as st
 
+from shared.ui.toast_components import toast_error
+from ...database import transaction_repository
+from ...services.transaction_service import transaction_service
 # Imports des composants
 # Assuming 'view' folder with components is a sibling of 'pages' inside 'transactions'
 from ...view.components.calendar_component import render_calendar, get_calendar_selected_dates
 from ...view.components.charts import render_evolution_chart
-from ...view.sunburst_navigation import sunburst_navigation
 from ...view.components.kpi_metrics import render_kpi_cards
 from ...view.components.transaction_table import render_transaction_table
+from ...view.sunburst_navigation import sunburst_navigation
 
 
 # ============================================================
@@ -159,7 +158,7 @@ def _get_filtered_data() -> pd.DataFrame:
 
     # 1. Filtre Date (liste de dates sélectionnées)
     selected_dates = filters.get("selected_dates", [])
-    
+
     if selected_dates:
         # Filtrer pour afficher uniquement les dates sélectionnées
         filtered_df = filtered_df[filtered_df['date'].isin(selected_dates)]
@@ -192,9 +191,11 @@ def _load_all_transactions():
     return transaction_service.get_filtered_transactions_df()
 
 
+# noinspection PyBroadException
 @st.cache_data(ttl=300)  # Cache pendant 5 minutes
 def _load_occurrences():
     """Charge les occurrences de récurrences avec cache."""
+    # noinspection PyBroadException
     try:
         from ...database.repository_recurrence import RecurrenceRepository
         recurrence_repo = RecurrenceRepository()
@@ -213,7 +214,7 @@ def _load_occurrences():
             df['id'] = df.apply(lambda x: f"rec_{x['recurrence_id']}_{x['date']}", axis=1)
             return df
         return pd.DataFrame()
-    except Exception as e:
+    except Exception:
         return pd.DataFrame()
 
 
@@ -223,15 +224,14 @@ def _build_hierarchy(df: pd.DataFrame) -> dict:
         return {}
 
     # Structure attendue par le JS: {code: {label, amount, color, children: [codes]}}
-    hierarchy = {}
-
-    # Racine
-    hierarchy['TR'] = {
+    hierarchy = {'TR': {
         'label': 'Total',
         'total': float(df['amount'].sum()),
         'color': '#64748b',
         'children': []
-    }
+    }}
+
+    # Racine
 
     # Grouper par Type
     for type_name in ["Dépense", "Revenu"]:
@@ -300,7 +300,8 @@ def interface_voir_transactions():
             if all_df is not None and not all_df.empty:
                 if 'type' in all_df.columns:
                     all_df['type'] = all_df['type'].astype(str).str.capitalize()
-                    all_df['type'] = all_df['type'].replace({'Revenus': 'Revenu', 'Dépenses': 'Dépense', 'Depense': 'Dépense'})
+                    all_df['type'] = all_df['type'].replace(
+                        {'Revenus': 'Revenu', 'Dépenses': 'Dépense', 'Depense': 'Dépense'})
 
                 if 'category' in all_df.columns:
                     all_df['category'] = all_df['category'].astype(str).str.capitalize()

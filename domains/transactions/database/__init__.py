@@ -4,6 +4,8 @@ Consolidates all database-related logic for transactions domain.
 """
 
 from .model import Transaction
+from .repository import TransactionRepository, transaction_repository, CATÉGORIES, TYPES_TRANSACTION
+from .schema import init_transaction_table, migrate_transaction_table, create_indexes, init_attachments_table
 from .validation import (
     TRANSACTION_TYPES,
     TRANSACTION_CATEGORIES,
@@ -15,8 +17,6 @@ from .validation import (
     safe_convert,
     safe_date_convert,
 )
-from .repository import TransactionRepository, transaction_repository, CATÉGORIES, TYPES_TRANSACTION
-from .schema import init_transaction_table, migrate_transaction_table, create_indexes, init_attachments_table
 
 __all__ = [
     # Model

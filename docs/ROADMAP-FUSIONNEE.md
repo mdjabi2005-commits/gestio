@@ -7,6 +7,7 @@
 **Objectif :** Transformer l'app actuelle en produit professionnel via le GitHub Student Pack
 
 **Analyse du code actuel :**
+
 - **Architecture** : DDD (Domain-Driven Design) bien structuré
 - **UI** : Streamlit avec CSS custom (responsive.css, theme_v2.css)
 - **OCR** : RapidOCR + EasyOCR avec détection hardware (hardware_utils.py)
@@ -15,12 +16,12 @@
 
 ---
 
-| Pilier | État Actuel | Problème |
-|--------|-------------|----------|
-| Performance | OCR synchrone | Bloque l'UI Streamlit |
-| Intelligence Locale | Catégorisation manuelle | Pas de NLP local |
-| Sécurité | SQLite non chiffré | Données financières vulnérables |
-| Mobile | CSS responsive basique | Pas de PWA, pas installable |
+| Pilier              | État Actuel             | Problème                        |
+|---------------------|-------------------------|---------------------------------|
+| Performance         | OCR synchrone           | Bloque l'UI Streamlit           |
+| Intelligence Locale | Catégorisation manuelle | Pas de NLP local                |
+| Sécurité            | SQLite non chiffré      | Données financières vulnérables |
+| Mobile              | CSS responsive basique  | Pas de PWA, pas installable     |
 
 ---
 
@@ -35,11 +36,13 @@ Dans `domains/transactions/ocr/services/ocr_service.py`, le traitement OCR est *
 raw_text = self.ocr_engine.extract_text(image_path)
 ```
 
-Le fichier `hardware_utils.py` détecte bien les 14 cœurs mais **n'est jamais utilisé** pour paralléliser le travail. L'OCR tourne sur 1 seul thread et freeze l'interface pendant le scan.
+Le fichier `hardware_utils.py` détecte bien les 14 cœurs mais **n'est jamais utilisé** pour paralléliser le travail.
+L'OCR tourne sur 1 seul thread et freeze l'interface pendant le scan.
 
 ## Compétence à acquérir
 
 **Multiprocessing & Concurrence Python** :
+
 - `concurrent.futures.ProcessPoolExecutor` pour paralléliser les tâches CPU-bound (OCR)
 - `asyncio` pour les I/O non-bloquantes
 - Pattern Producer/Consumer avec queues
@@ -47,11 +50,11 @@ Le fichier `hardware_utils.py` détecte bien les 14 cœurs mais **n'est jamais u
 
 ## Ressource Pack
 
-| Formation | Cours précis | Lien |
-|-----------|-------------|------|
-| **Educative** | "Python Concurrent Programming" | [S'inscrire](https://www.educative.io/github) |
-| **Educative** | "Building Data Science Web Apps with Streamlit" - Chapitre Async | [S'inscrire](https://www.educative.io/github) |
-| **DataCamp** | "Python Programming" - Chapitre Parallel | [S'inscrire](https://www.datacamp.com/github-students) |
+| Formation     | Cours précis                                                     | Lien                                                   |
+|---------------|------------------------------------------------------------------|--------------------------------------------------------|
+| **Educative** | "Python Concurrent Programming"                                  | [S'inscrire](https://www.educative.io/github)          |
+| **Educative** | "Building Data Science Web Apps with Streamlit" - Chapitre Async | [S'inscrire](https://www.educative.io/github)          |
+| **DataCamp**  | "Python Programming" - Chapitre Parallel                         | [S'inscrire](https://www.datacamp.com/github-students) |
 
 ## Exercice pratique
 
@@ -73,7 +76,8 @@ def process_ocr_background(file_paths: list):
     return results
 ```
 
-**Métrique de validation :** L'UI reste fluide pendant le traitement d'un ticket avec une progress bar et le traitement utilise 12+ cœurs CPU.
+**Métrique de validation :** L'UI reste fluide pendant le traitement d'un ticket avec une progress bar et le traitement
+utilise 12+ cœurs CPU.
 
 ---
 
@@ -88,13 +92,16 @@ Dans `domains/transactions/database/model.py`, la catégorisation est **entière
 categorie: str = Field("Non catégorisé", description="Catégorie principale")
 ```
 
-Le parser LLM existe (`llm_parser.py`) mais n'est pas intégré pour l'auto-catégorisation. L'utilisateur doit manuellement sélectionner :
+Le parser LLM existe (`llm_parser.py`) mais n'est pas intégré pour l'auto-catégorisation. L'utilisateur doit
+manuellement sélectionner :
+
 - Catégorie principale (Alimentation, Transport, etc.)
 - Sous-catégorie
 
 ## Compétence à acquérir
 
 **NLP Local & Small Language Models (SLM)** :
+
 - Fine-tuning de modèles légère (DistilBERT, TinyLlama)
 - Inference locale avec ONNX Runtime
 - Hugging Face Transformers offline
@@ -102,22 +109,22 @@ Le parser LLM existe (`llm_parser.py`) mais n'est pas intégré pour l'auto-cat�
 
 ## Ressource Pack
 
-| Formation | Cours précis | Lien |
-|-----------|-------------|------|
-| **Educative** | "Natural Language Processing with Python" | [S'inscrire](https://www.educative.io/github) |
-| **Educative** | "Machine Learning Engineering" - Chapitre ML local | [S'inscrire](https://www.educative.io/github) |
-| **Azure for Students** | 100$ crédit pour tester des modèles plus lourds | [S'inscrire](https://azure.microsoft.com/fr-fr/free/students/) |
+| Formation              | Cours précis                                       | Lien                                                           |
+|------------------------|----------------------------------------------------|----------------------------------------------------------------|
+| **Educative**          | "Natural Language Processing with Python"          | [S'inscrire](https://www.educative.io/github)                  |
+| **Educative**          | "Machine Learning Engineering" - Chapitre ML local | [S'inscrire](https://www.educative.io/github)                  |
+| **Azure for Students** | 100$ crédit pour tester des modèles plus lourds    | [S'inscrire](https://azure.microsoft.com/fr-fr/free/students/) |
 
-| Modèle | Usage | Lien |
-|--------|-------|------|
-| **DistilBERT-base-uncased-finetuned-sst-2** | Classification sentiments (50MB) | [Hugging Face](https://huggingface.co/) |
-| **TinyLlama-1.1B** | SLM local (1GB) | [Hugging Face](https://huggingface.co/) |
-| **bert-base-uncased** | Classification personnalisée | [Hugging Face](https://huggingface.co/) |
-| **facebook/bart-large-mnli** | Zero-shot classification | [Hugging Face](https://huggingface.co/) |
-| **cardiffnlp/twitter-roberta-base-sentiment-latest** | Sentiment analysis | [Hugging Face](https://huggingface.co/) |
+| Modèle                                               | Usage                            | Lien                                    |
+|------------------------------------------------------|----------------------------------|-----------------------------------------|
+| **DistilBERT-base-uncased-finetuned-sst-2**          | Classification sentiments (50MB) | [Hugging Face](https://huggingface.co/) |
+| **TinyLlama-1.1B**                                   | SLM local (1GB)                  | [Hugging Face](https://huggingface.co/) |
+| **bert-base-uncased**                                | Classification personnalisée     | [Hugging Face](https://huggingface.co/) |
+| **facebook/bart-large-mnli**                         | Zero-shot classification         | [Hugging Face](https://huggingface.co/) |
+| **cardiffnlp/twitter-roberta-base-sentiment-latest** | Sentiment analysis               | [Hugging Face](https://huggingface.co/) |
 
-| Outil | Usage | Lien |
-|-------|-------|------|
+| Outil        | Usage                       | Lien                                |
+|--------------|-----------------------------|-------------------------------------|
 | **Deepnote** | Prototyper les notebooks ML | [S'inscrire](https://deepnote.com/) |
 
 ## Exercice pratique
@@ -145,7 +152,8 @@ def auto_categorize(description: str, categories: list) -> str:
     return result['labels'][0]  # Catégorie suggérée
 ```
 
-**Métrique de validation :** Ajouter une transaction → Le système suggère automatiquement "Alimentation" avec 85%+ de confiance, sans appel cloud.
+**Métrique de validation :** Ajouter une transaction → Le système suggère automatiquement "Alimentation" avec 85%+ de
+confiance, sans appel cloud.
 
 ---
 
@@ -161,11 +169,13 @@ conn = sqlite3.connect(actual_db_path, timeout=max(timeout, 30.0))
 # Pas de chiffrement, pas de mot de passe
 ```
 
-Les données financières sensibles (montants, IBAN, descriptions) sont stockées en **plain text**. N'importe qui avec accès au fichier `.db` peut lire toutes les données.
+Les données financières sensibles (montants, IBAN, descriptions) sont stockées en **plain text**. N'importe qui avec
+accès au fichier `.db` peut lire toutes les données.
 
 ## Compétence à acquérir
 
 **Chiffrement de base de données locale** :
+
 - SQLite avec extension `sqlcipher` ou `SQLite Encryption Extension`
 - Clé de chiffrement dérivée du mot de passe utilisateur (PBKDF2)
 - Stockage sécurisé des credentials (1Password pour dev)
@@ -173,17 +183,17 @@ Les données financières sensibles (montants, IBAN, descriptions) sont stockée
 
 ## Ressource Pack
 
-| Formation | Cours précis | Lien |
-|-----------|-------------|------|
+| Formation     | Cours précis                                      | Lien                                          |
+|---------------|---------------------------------------------------|-----------------------------------------------|
 | **Educative** | "Database Design with SQLite" - Chapitre Security | [S'inscrire](https://www.educative.io/github) |
-| **Educative** | "Python Security Cookbook" | [S'inscrire](https://www.educative.io/github) |
-| **1Password** | Gestionnaire de mots de passe (1 an gratuit) | [Activer](https://1password.com/) |
+| **Educative** | "Python Security Cookbook"                        | [S'inscrire](https://www.educative.io/github) |
+| **1Password** | Gestionnaire de mots de passe (1 an gratuit)      | [Activer](https://1password.com/)             |
 
-| Outil | Usage | Lien |
-|-------|-------|------|
-| **sqlcipher** | Chiffrement AES-256 pour SQLite | [Site](https://www.zetetic.net/sqlcipher/) |
-| **cryptography** | Librairie Python pour clés | [PyPI](https://pypi.org/project/cryptography/) |
-| **keyring** | Stockage sécurisé des credentials | [PyPI](https://pypi.org/project/keyring/) |
+| Outil            | Usage                             | Lien                                           |
+|------------------|-----------------------------------|------------------------------------------------|
+| **sqlcipher**    | Chiffrement AES-256 pour SQLite   | [Site](https://www.zetetic.net/sqlcipher/)     |
+| **cryptography** | Librairie Python pour clés        | [PyPI](https://pypi.org/project/cryptography/) |
+| **keyring**      | Stockage sécurisé des credentials | [PyPI](https://pypi.org/project/keyring/)      |
 
 ## Exercice pratique
 
@@ -217,6 +227,7 @@ def encrypt_database(db_path: str, password: str):
 ```
 
 **Métrique de validation :**
+
 - Ouvrir le fichier `.db` avec un éditeur → Les données sont illisibles
 - Lancer l'app → Demande un mot de passe → Déchiffre et fonctionne normalement
 
@@ -236,6 +247,7 @@ Le fichier `resources/styles/responsive.css` contient des styles de base :
 ```
 
 **Problèmes identifiés :**
+
 - Pas de PWA (Progressive Web App) - impossible d'installer sur mobile
 - Navigation non optimisée pour petit écran
 - Les tableaux de données ne sont pas responsives
@@ -244,6 +256,7 @@ Le fichier `resources/styles/responsive.css` contient des styles de base :
 ## Compétence à acquérir
 
 **PWA & Responsive Design Avancé** :
+
 - Manifest PWA (`manifest.json`)
 - Service Workers pour offline-first
 - Meta tags pour mobile
@@ -252,13 +265,13 @@ Le fichier `resources/styles/responsive.css` contient des styles de base :
 
 ## Ressource Pack
 
-| Formation | Cours précis | Lien |
-|-----------|-------------|------|
-| **FrontendMasters** | "Introduction to HTML/CSS" | [S'inscrire](https://frontendmasters.com/github-students/) |
-| **FrontendMasters** | "Designing UI/UX" | [S'inscrire](https://frontendmasters.com/github-students/) |
-| **FrontendMasters** | "Progressive Web Apps" | [S'inscrire](https://frontendmasters.com/github-students/) |
-| **Scrimba** | "Build Python Web Apps" | [S'inscrire](https://scrimba.com/github) |
-| **Educative** | "Progressive Web Apps in React" | [S'inscrire](https://www.educative.io/github) |
+| Formation           | Cours précis                    | Lien                                                       |
+|---------------------|---------------------------------|------------------------------------------------------------|
+| **FrontendMasters** | "Introduction to HTML/CSS"      | [S'inscrire](https://frontendmasters.com/github-students/) |
+| **FrontendMasters** | "Designing UI/UX"               | [S'inscrire](https://frontendmasters.com/github-students/) |
+| **FrontendMasters** | "Progressive Web Apps"          | [S'inscrire](https://frontendmasters.com/github-students/) |
+| **Scrimba**         | "Build Python Web Apps"         | [S'inscrire](https://scrimba.com/github)                   |
+| **Educative**       | "Progressive Web Apps in React" | [S'inscrire](https://www.educative.io/github)              |
 
 ## Exercice pratique
 
@@ -292,13 +305,14 @@ const CACHE_NAME = 'gestio-v1';
 const urlsToCache = ['/', '/index.html', '/static/css/main.css'];
 
 self.addEventListener('install', event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
-  );
+    event.waitUntil(
+        caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+    );
 });
 ```
 
 **Métrique de validation :**
+
 - Ouvrir sur mobile → Message "Ajouter à l'écran d'accueil"
 - Installer → Appears comme une app native avec icône
 - Mode avion → L'app fonctionne avec les données en cache
@@ -346,23 +360,27 @@ self.addEventListener('install', event => {
 # Checklist de Validation
 
 ## Mois 1 - Performance
+
 - [ ] ProcessPoolExecutor implémenté
 - [ ] Progress bar Streamlit fonctionnelle
 - [ ] Benchmark : 10 tickets traités en < 5 secondes (vs 30s avant)
 
 ## Mois 2 - IA Locale
+
 - [ ] Dataset de 50+ transactions labelisées créé
 - [ ] Modèle fine-tuné et exporté ONNX
 - [ ] Fonction `auto_categorize()` intégrée
 - [ ] Précision > 80% sur les suggestions
 
 ## Mois 3 - Sécurité
+
 - [ ] Base SQLite chiffrée
 - [ ] Écran de déverrouillage au démarrage
 - [ ] Clé dérivées avec PBKDF2 (100K itérations)
 - [ ] Données illisibles avec hex editor
 
 ## Mois 4 - Mobile PWA
+
 - [ ] Manifest.json créé
 - [ ] Service Worker enregistré
 - [ ] Test sur mobile : "Ajouter à l'écran d'accueil"
@@ -373,16 +391,19 @@ self.addEventListener('install', event => {
 # Checklist d'Activation
 
 ## Cette semaine
+
 - [ ] Activer le **GitHub Student Pack** : https://education.github.com/pack/
 - [ ] S'inscrire à **Educative** : https://www.educative.io/github
 - [ ] S'inscrire à **FrontendMasters** : https://frontendmasters.com/github-students/
 
 ## Ce mois
+
 - [ ] Commencer **Educative** → "Python Concurrent Programming"
 - [ ] Commencer **FrontendMasters** → "Progressive Web Apps"
 - [ ] Activer **1Password** (via le Pack)
 
 ## Prochains mois
+
 - [ ] Explorer **Hugging Face** pour les modèles NLP
 - [ ] Activer **Azure for Students** pour les tests ML
 - [ ] Configurer **Deepnote** pour les prototypes
@@ -391,21 +412,23 @@ self.addEventListener('install', event => {
 
 # Ressources Rapides
 
-| Action | Lien |
-|--------|------|
-| **Activer GitHub Student Pack** | https://education.github.com/pack/ |
-| **Educative - 6 mois** | https://www.educative.io/github |
-| **DataCamp - 3 mois** | https://www.datacamp.com/github-students |
-| **FrontendMasters - 6 mois** | https://frontendmasters.com/github-students/ |
-| **1Password - 1 an** | https://1password.com/ |
-| **Azure for Students - 100$** | https://azure.microsoft.com/fr-fr/free/students/ |
-| **Hugging Face Models** | https://huggingface.co/models |
-| **Deepnote** | https://deepnote.com/ |
+| Action                          | Lien                                             |
+|---------------------------------|--------------------------------------------------|
+| **Activer GitHub Student Pack** | https://education.github.com/pack/               |
+| **Educative - 6 mois**          | https://www.educative.io/github                  |
+| **DataCamp - 3 mois**           | https://www.datacamp.com/github-students         |
+| **FrontendMasters - 6 mois**    | https://frontendmasters.com/github-students/     |
+| **1Password - 1 an**            | https://1password.com/                           |
+| **Azure for Students - 100$**   | https://azure.microsoft.com/fr-fr/free/students/ |
+| **Hugging Face Models**         | https://huggingface.co/models                    |
+| **Deepnote**                    | https://deepnote.com/                            |
 
 ---
 
 # ==============================================================
+
 # AUDIT TECHNIQUE & COMPLÉMENTS V4 (Ajouté le 19/02/2026)
+
 # ==============================================================
 
 ## Synthèse des manques identifiés
@@ -414,11 +437,11 @@ self.addEventListener('install', event => {
 
 ### 🛠️ Pilier 0 : Refactoring de la Dette Technique (Prioritaire)
 
-| Composant | Problème Identifié dans le Code | Solution Cible |
-| :--- | :--- | :--- |
-| **`launcher.py`** | Mélange Tkinter/Streamlit, fragile, 265 lignes de dette. Force l'utilisation d'une fenêtre Tkinter obsolète. | **Suppression totale**. Remplacement par un script `run.py` (3 lignes) pour un lancement natif dans le navigateur par défaut (Chrome/Edge). |
-| **`ocr_service.py`** | Synchrone, bloque l'UI, utilise 1 cœur sur 14. Aucun worker pool configuré. | **Multiprocessing**. Utilisation de `ProcessPoolExecutor` (12 cœurs). Séparation I/O et CPU. |
-| **`pattern_manager.py`** | Regex statiques uniquement. Ne gère pas les variations de tickets. 0 Intelligence. | **Architecture Twin Heuristic**. Garder Regex pour Date/Monnaie. Déléguer "Marchand" à une IA locale (SLM TinyLlama). |
+| Composant                | Problème Identifié dans le Code                                                                              | Solution Cible                                                                                                                              |
+|:-------------------------|:-------------------------------------------------------------------------------------------------------------|:--------------------------------------------------------------------------------------------------------------------------------------------|
+| **`launcher.py`**        | Mélange Tkinter/Streamlit, fragile, 265 lignes de dette. Force l'utilisation d'une fenêtre Tkinter obsolète. | **Suppression totale**. Remplacement par un script `run.py` (3 lignes) pour un lancement natif dans le navigateur par défaut (Chrome/Edge). |
+| **`ocr_service.py`**     | Synchrone, bloque l'UI, utilise 1 cœur sur 14. Aucun worker pool configuré.                                  | **Multiprocessing**. Utilisation de `ProcessPoolExecutor` (12 cœurs). Séparation I/O et CPU.                                                |
+| **`pattern_manager.py`** | Regex statiques uniquement. Ne gère pas les variations de tickets. 0 Intelligence.                           | **Architecture Twin Heuristic**. Garder Regex pour Date/Monnaie. Déléguer "Marchand" à une IA locale (SLM TinyLlama).                       |
 
 ### 🛡️ Pilier 5 : Qualité Industrielle (CI/CD)
 

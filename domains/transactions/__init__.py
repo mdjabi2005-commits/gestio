@@ -22,4 +22,3 @@ __all__ = [
     "TRANSACTION_CATEGORIES",
     "TRANSACTION_SOURCES",
 ]
-

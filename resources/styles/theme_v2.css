@@ -1,4 +1,6 @@
-/* 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/*
    THEME V2 - GLOBAL DARK MODE & GLASSMORPHISM
    Extracted from Portfolio App for Global Application
 */
@@ -15,11 +17,11 @@
     --secondary: hsl(222, 18%, 12%);
     --accent: hsl(160, 84%, 39%);
     --border: hsl(222, 15%, 14%);
+    --ring: hsl(217, 91%, 60%);
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
 /* Global App Background */
+/*noinspection ALL,CssUnusedSymbol*/
 .stApp {
     background: var(--background);
     color: var(--foreground);
@@ -29,6 +31,7 @@
    Apply to root container and inputs, but let inheritance work.
    This avoids overriding icon fonts (ligatures) on generic spans/divs.
 */
+/*noinspection ALL,CssUnusedSymbol*/
 .stApp {
     font-family: "Inter", sans-serif !important;
 }
@@ -42,6 +45,7 @@ button {
 }
 
 /* Protect Material Icons / Symbols explicitly just in case */
+/*noinspection ALL,CssUnusedSymbol*/
 .material-icons,
 .material-symbols-rounded,
 .material-symbols-outlined,
@@ -50,7 +54,7 @@ button {
 }
 
 /* BUTTONS V2 */
-.stButton>button {
+.stButton > button {
     border-radius: 0.5rem;
     font-weight: 500;
     padding: 0.5rem 1rem;
@@ -60,36 +64,37 @@ button {
     transition: all 0.2s;
 }
 
-.stButton>button:hover {
+.stButton > button:hover {
     background: var(--muted);
     border-color: var(--muted-foreground);
     color: var(--foreground);
 }
 
-.stButton>button:focus {
+.stButton > button:focus {
     box-shadow: 0 0 0 2px var(--ring);
 }
 
 /* Primary Button (Streamlit default primary) */
-.stButton>button[kind="primary"] {
+.stButton > button[kind="primary"] {
     background: var(--primary);
     color: var(--primary-foreground);
     border: none;
 }
 
-.stButton>button[kind="primary"]:hover {
+.stButton > button[kind="primary"]:hover {
     background: hsl(217, 91%, 50%);
     /* Slightly darker */
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
 }
 
 /* Secondary/Ghost Button */
-.stButton>button[kind="secondary"] {
+.stButton > button[kind="secondary"] {
     background: transparent;
     border: 1px solid var(--border);
 }
 
 /* Container principal adjustment */
+/*noinspection ALL,CssUnusedSymbol*/
 .block-container {
     padding-top: 1rem !important;
     max-width: 1280px;
@@ -120,7 +125,7 @@ h3 {
 }
 
 /* Progress bars */
-.stProgress>div>div {
+.stProgress > div > div {
     background: var(--accent);
     border-radius: 999px;
 }

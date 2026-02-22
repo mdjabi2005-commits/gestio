@@ -1,6 +1,6 @@
 /**
  * D3.js Interactive Financial Tree - Full Drag & Drop
- * 
+ *
  * Features:
  * - Drag rectangles to reorganize categories
  * - Drop on empty space to create new category

@@ -5,7 +5,7 @@ Translates technical exceptions into user-friendly toast notifications.
 Uses standard UI components (toasts) instead of intrusive static blocks.
 """
 
-from .toast_components import toast_error, toast_warning
+# noinspection PyUnresolvedReferences
 from shared.exceptions import (
     DatabaseError,
     OCRError,
@@ -15,7 +15,9 @@ from shared.exceptions import (
     ConfigurationError,
     GestioException
 )
+
 from config.logging_config import get_logger
+from .toast_components import toast_error, toast_warning
 
 logger = get_logger(__name__)
 
@@ -34,9 +36,9 @@ def show_friendly_error(error: Exception) -> None:
         ...     show_friendly_error(e)
     """
     logger.error(f"User error caught: {error}", exc_info=True)
-    
+
     msg = str(error).lower()
-    
+
     # 1. Database Errors
     if isinstance(error, DatabaseError):
         if "locked" in msg:
@@ -65,7 +67,7 @@ def show_friendly_error(error: Exception) -> None:
             toast_error("📁 Fichier introuvable")
         else:
             toast_error(f"📁 Erreur fichier: {error}")
-            
+
     # 5. Generic Service/Gestio Errors
     elif isinstance(error, (ServiceError, GestioException)):
         toast_error(f"⚙️ Erreur interne: {error}")

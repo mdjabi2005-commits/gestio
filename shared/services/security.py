@@ -1,5 +1,6 @@
 import hashlib
 
+
 def hash_iban(iban: str) -> str:
     """
     Hash l'IBAN pour la sécurité tout en gardant un identifiant unique (SHA-256).

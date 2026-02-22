@@ -3,10 +3,10 @@ pandas
 numpy
 plotly
 matplotlib
-PIL
-cv2
+Pillow
+opencv-python
 pyyaml
-pdfminer
+pdfminer.six
 rapidocr-onnxruntime
 python-dateutil
 psutil

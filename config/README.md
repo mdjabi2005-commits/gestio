@@ -13,6 +13,7 @@ Ce dossier centralise **toute la configuration de l'application** : chemins de f
 **Rôle** : Point d'entrée du module de configuration. Exporte les constantes de chemins pour un accès facile.
 
 **Exports principaux** :
+
 ```python
 from .paths import (
     DATA_DIR, DB_PATH, TO_SCAN_DIR, SORTED_DIR,
@@ -22,6 +23,7 @@ from .paths import (
 ```
 
 **Utilisation** :
+
 ```python
 from config import DB_PATH
 ```
@@ -35,6 +37,7 @@ from config import DB_PATH
 #### Configuration des chemins
 
 **Répertoire racine** :
+
 ```python
 DATA_DIR = str(Path.home() / "analyse")
 # Emplacement : C:\Users\<user>\analyse (ou /home/<user>/analyse sur Linux)
@@ -42,11 +45,13 @@ DATA_DIR = str(Path.home() / "analyse")
 ```
 
 **Base de données** :
+
 ```python
 DB_PATH = os.path.join(DATA_DIR, "finances.db")
 ```
 
 **Dossiers gérés** :
+
 - `tickets_a_scanner` : Pour les tickets à traiter
 - `tickets_tries` : Archives des tickets
 - `revenus_a_traiter` / `revenus_traites` : Fiches de paie
@@ -64,6 +69,7 @@ Tous les dossiers sont créés automatiquement au démarrage.
 **Rôle** : Configuration avancée du système de logging.
 
 **Fonctionnalités** :
+
 - **Double sortie** :
     - **Fichiers** : Logs complets avec stack traces (erreurs détaillées).
     - **Console** : Logs épurés pour une meilleure lisibilité.
@@ -80,5 +86,6 @@ Tous les dossiers sont créés automatiquement au démarrage.
 
 ## ⚠️ NotesImportantes
 
-- La configuration **OCR** et **Database** (catégories) n'est plus gérée ici mais directement dans les domaines respectifs ou via la base de données.
+- La configuration **OCR** et **Database** (catégories) n'est plus gérée ici mais directement dans les domaines
+  respectifs ou via la base de données.
 - `ui_config.py` a été supprimé car obsolète.

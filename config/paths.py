@@ -7,7 +7,6 @@ _home = Path.home()
 # TEST MODE - Switch between production and test databases
 TEST_MODE = os.getenv('TEST_MODE', 'false').lower() == 'true'
 
-
 # Folder paths - Switches based on TEST_MODE
 if TEST_MODE:
     DATA_DIR = str(_home / "test")

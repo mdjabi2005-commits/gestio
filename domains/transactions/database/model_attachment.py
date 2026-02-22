@@ -2,9 +2,12 @@
 Modèle pour les pièces jointes des transactions.
 """
 
-from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
+
+# noinspection PyUnresolvedReferences
+from pydantic import BaseModel, Field
+
 
 class TransactionAttachment(BaseModel):
     """

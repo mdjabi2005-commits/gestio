@@ -3,15 +3,14 @@ OCR Service - Orchestration complète du flux OCR -> Transaction
 Service unifié pour extraire données depuis Images (tickets) ou PDF (relevés)
 """
 
-from datetime import date
-from typing import Optional
-from pathlib import Path
 import logging
+from datetime import date
+from pathlib import Path
 
+from .pattern_manager import PatternManager
+from ..core.parser import parse_amount, parse_date, parse_pdf_revenue
 from ..core.rapidocr_engine import RapidOCREngine
 from ..core.text_utils import clean_ocr_text
-from ..core.parser import parse_amount, parse_date, parse_pdf_revenue
-from .pattern_manager import PatternManager
 from ...database.model import Transaction
 
 # Import conditionnel du moteur PDF
@@ -31,16 +30,17 @@ class OCRService:
     - PDF de relevés (pdfminer.six)
     Et conversion en Transaction unifiée
     """
-    
+
     def __init__(self):
         """Initialise l'OCR Service avec ses dépendances"""
         """Initialise l'OCR Service avec ses dépendances"""
         self.ocr_engine = RapidOCREngine()
         self.pattern_manager = PatternManager()
-        
+
         logger.info("OCRService unifié initialisé")
-    
-    def _detect_file_type(self, file_path: str) -> str:
+
+    @staticmethod
+    def _detect_file_type(file_path: str) -> str:
         """
         Détecte le type de fichier à traiter.
         
@@ -58,8 +58,7 @@ class OCRService:
         else:
             logger.warning(f"Type de fichier inconnu: {ext}, traitement comme image")
             return 'image'
-    
-    
+
     def process_document(self, file_path: str) -> Transaction:
         """
         Traite un document (image ou PDF) et retourne une Transaction.
@@ -76,19 +75,19 @@ class OCRService:
             FileNotFoundError: Si fichier n'existe pas
         """
         path = Path(file_path)
-        
+
         if not path.exists():
             from config.logging_config import log_error
             err = FileNotFoundError(f"Le fichier n'existe pas: {file_path}")
             log_error(err, "Fichier introuvable pour OCR")
             raise err
-        
+
         try:
             # Détection automatique du type
             file_type = self._detect_file_type(file_path)
-            
+
             logger.info(f"Traitement document démarré: {path.name} (type: {file_type})")
-            
+
             if file_type == 'pdf':
                 return self._process_pdf(file_path)
             else:
@@ -98,7 +97,8 @@ class OCRService:
             log_error(e, f"Echec traitement document {path.name}")
             raise
 
-    def _process_pdf(self, pdf_path: str) -> Transaction:
+    @staticmethod
+    def _process_pdf(pdf_path: str) -> Transaction:
         """
         Traite un PDF de relevé de revenus.
         
@@ -120,9 +120,9 @@ class OCRService:
             from config.logging_config import log_error
             log_error(err, "Dépendance manquante: pdfminer.six")
             raise err
-        
+
         logger.info(f"Extraction PDF démarrée: {pdf_path}")
-        
+
         # 1. Extraction du texte
         try:
             text = pdf_engine.extract_text_from_pdf(pdf_path)
@@ -130,27 +130,33 @@ class OCRService:
             from config.logging_config import log_error
             log_error(e, f"Erreur extraction texte PDF {Path(pdf_path).name}")
             raise ValueError(f"Impossible d'extraire le texte du PDF: {e}")
-        
+
         # 2. Parsing spécifique revenus
         parsed_data = parse_pdf_revenue(text)
-        
+
         if parsed_data is None:
             from config.logging_config import log_error
             err = ValueError("Données non trouvées dans le PDF (parsing échoué)")
             log_error(err, f"Echec parsing contenu PDF {Path(pdf_path).name}")
             raise err
-        
+
         # 3. Construction Transaction
         try:
             transaction = Transaction(
                 type="Revenu",
-                categorie="Revenu",  # Par défaut, l'utilisateur modifiera si besoin
+                categorie="Revenu",
                 montant=parsed_data['amount'],
                 date=parsed_data['date'],
                 description=parsed_data['description'],
-                source="pdf"
+                source="pdf",
+                sous_categorie=None,
+                recurrence=None,
+                date_fin=None,
+                compte_iban=None,
+                external_id=None,
+                id=None,
             )
-            
+
             logger.info(f"✅ Transaction PDF créée avec succès: {transaction.montant}€ ({transaction.description})")
             return transaction
         except Exception as e:
@@ -169,39 +175,45 @@ class OCRService:
             5. Construction Transaction
         """
         logger.info(f"Traitement ticket démarré: {Path(image_path).name}")
-        
+
         try:
             # 1. Extraction texte via OCR
             raw_text = self.ocr_engine.extract_text(image_path)
-            
+
             # 2. Nettoyage
             cleaned_text = clean_ocr_text(raw_text)
-            
+
             # 3. Récupération des patterns
             amount_patterns = self.pattern_manager.get_amount_patterns()
             date_patterns = self.pattern_manager.get_date_patterns()
-            
+
             # 4. Parsing
             amount = parse_amount(cleaned_text, amount_patterns)
             transaction_date = parse_date(cleaned_text, date_patterns)
-            
+
             # 5. Validation
             if amount is None:
                 from config.logging_config import log_error
                 err = ValueError("Montant non trouvé dans le ticket")
                 log_error(err, f"Echec extraction montant ticket {Path(image_path).name}")
                 raise err
-            
+
             # 6. Construction Transaction unifiée
             transaction = Transaction(
-                type="Dépense",  # Par défaut pour un ticket
-                categorie="Non catégorisé",  # L'utilisateur choisira
+                type="Dépense",
+                categorie="Non catégorisé",
                 montant=amount,
-                date=transaction_date or date.today(),  # Fallback sur aujourd'hui
+                date=transaction_date or date.today(),
                 description="",
-                source="ocr"
+                source="ocr",
+                sous_categorie=None,
+                recurrence=None,
+                date_fin=None,
+                compte_iban=None,
+                external_id=None,
+                id=None,
             )
-            
+
             logger.info(f"✅ Transaction Ticket créée avec succès: {amount}€ ({transaction.date or 'date inconnue'})")
             return transaction
 
