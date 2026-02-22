@@ -38,13 +38,10 @@ CONTENT = (
     "PrivilegesRequiredOverridesAllowed=commandline\r\n"
     "OutputDir=dist\\installer\r\n"
     "OutputBaseFilename=Gestio-Setup-v{#AppVersion}\r\n"
-    "SetupIconFile=resources\\icons\\gestio.ico\r\n"
-    "UninstallDisplayIcon={app}\\{#AppExeName}\r\n"
-    "Compression=lzma2/ultra64\r\n"
+    "Compression=lzma\r\n"
     "SolidCompression=yes\r\n"
     "LZMANumBlockThreads=4\r\n"
     "WizardStyle=modern\r\n"
-    "WizardSmallImageFile=resources\\icons\\gestio.ico\r\n"
     "ShowLanguageDialog=no\r\n"
     "LanguageDetectionMethod=locale\r\n"
     "MinVersion=10.0\r\n"
@@ -59,11 +56,10 @@ CONTENT = (
     "\r\n"
     "[Files]\r\n"
     'Source: "dist\\GestioV4\\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pyc,__pycache__"\r\n'
-    'Source: "resources\\icons\\gestio.ico"; DestDir: "{app}\\resources\\icons"; Flags: ignoreversion\r\n'
     "\r\n"
     "[Icons]\r\n"
-    'Name: "{group}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"; IconFilename: "{app}\\resources\\icons\\gestio.ico"; Comment: "Gestio - Gestion Financiere Personnelle"\r\n'
-    'Name: "{autodesktop}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"; IconFilename: "{app}\\resources\\icons\\gestio.ico"; Tasks: desktopicon\r\n'
+    'Name: "{group}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"\r\n'
+    'Name: "{autodesktop}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"; Tasks: desktopicon\r\n'
     'Name: "{userstartup}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"; Tasks: startupicon\r\n'
     "\r\n"
     "[Tasks]\r\n"
