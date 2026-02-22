@@ -48,10 +48,6 @@ jobs:
         uses: astral-sh/setup-uv@v5
 
       - name: Install dependencies
-        run: uv sync --frozen --no-dev
-
-      - name: Install PyInstaller
-        if: matrix.os == 'windows-latest'
         run: uv sync --frozen --no-dev --group build
 
       - name: Generate icons
@@ -92,10 +88,7 @@ jobs:
       - name: Install AzureSignTool
         if: matrix.os == 'windows-latest'
         shell: pwsh
-        run: |
-          dotnet tool install --global AzureSignTool
-          # Attendre la propagation RBAC Azure (2 min max)
-          Start-Sleep -Seconds 30
+        run: dotnet tool install --global AzureSignTool
 
       - name: Sign GestioV4.exe
         if: matrix.os == 'windows-latest'
@@ -136,16 +129,23 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          # Generer gestio.iss en ASCII pur
-          if (Test-Path "gestio.iss") { Remove-Item "gestio.iss" -Force }
+          # Generer gestio.iss en ASCII pur (ecrase tout fichier corrompu du checkout)
           uv run python scripts/generate_iss.py
           $bytes = [System.IO.File]::ReadAllBytes("gestio.iss")
           $bad = $bytes | Where-Object { $_ -gt 127 }
           if ($bad.Count -gt 0) { Write-Error "gestio.iss non-ASCII !"; exit 1 }
           Write-Host "gestio.iss OK - $($bytes.Count) octets, 100% ASCII"
 
-          # Installer Inno Setup via winget (pre-installe sur runners Windows GitHub)
-          winget install --exact --id JRSoftware.InnoSetup --silent --accept-package-agreements --accept-source-agreements
+          # Installer Inno Setup via choco avec retry
+          $maxRetries = 3
+          for ($i = 1; $i -le $maxRetries; $i++) {
+            choco install innosetup --no-progress --yes
+            if ($LASTEXITCODE -eq 0) { break }
+            Write-Host "Tentative $i/$maxRetries echouee, nouvelle tentative..."
+            Start-Sleep -Seconds 10
+          }
+          if ($LASTEXITCODE -ne 0) { Write-Error "Impossible d'installer Inno Setup"; exit 1 }
+
           New-Item -ItemType Directory -Force -Path "dist\installer" | Out-Null
           & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" gestio.iss
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
