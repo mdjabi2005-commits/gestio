@@ -2,9 +2,11 @@ name: Build Sign and Release Gestio
 
 on:
   push:
+    branches:
+      - main          # Build automatique a chaque push sur main (sans release)
     tags:
-      - "v*.*.*"
-  workflow_dispatch:
+      - "v*.*.*"      # Build + Release sur les tags versionnés
+  workflow_dispatch:  # Lancement manuel depuis l'onglet Actions sur GitHub
 
 permissions:
   contents: write
