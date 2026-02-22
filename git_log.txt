@@ -1,0 +1,3 @@
+﻿a616b38 fix: generer gestio.iss depuis Python en CI, plus jamais commite
+fcb293f fix: gestio.iss ASCII pur + verification ASCII dans CI avant Inno Setup
+a15b1ea fix: gestio.iss ASCII pur + verification ASCII dans CI avant Inno Setup
