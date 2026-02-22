@@ -8,6 +8,7 @@ Usage :
     uv run python resources/icons/generate_icons.py
 """
 
+
 import io
 import struct
 from pathlib import Path
