@@ -32,8 +32,7 @@ class OCRService:
     """
 
     def __init__(self):
-        """Initialise l'OCR Service avec ses dépendances"""
-        """Initialise l'OCR Service avec ses dépendances"""
+        """Initialise l'OCR Service avec ses dépendances."""
         self.ocr_engine = RapidOCREngine()
         self.pattern_manager = PatternManager()
 
@@ -145,7 +144,7 @@ class OCRService:
             transaction = Transaction(
                 type="Revenu",
                 categorie="Revenu",
-                montant=parsed_data['amount'],
+                montant=parsed_data['montant'],
                 date=parsed_data['date'],
                 description=parsed_data['description'],
                 source="pdf",

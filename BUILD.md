@@ -2,11 +2,11 @@
 
 ## 📦 Stratégie par plateforme
 
-| Plateforme | Pipeline | Résultat final | Prérequis utilisateur |
-|---|---|---|---|
-| 🪟 **Windows** | PyInstaller `onedir` → Inno Setup | `Gestio-Setup-v4.0.exe` | **Aucun** — assistant d'installation |
-| 🍎 **macOS** | PyInstaller `onedir` → `create-dmg` | `Gestio-macOS.dmg` | **Aucun** — glisser dans Applications |
-| 🐧 **Linux** | PyInstaller `onedir` → `appimagetool` | `Gestio-Linux.AppImage` | **Aucun** — fichier portable |
+| Plateforme     | Pipeline                              | Résultat final          | Prérequis utilisateur                 |
+|----------------|---------------------------------------|-------------------------|---------------------------------------|
+| 🪟 **Windows** | PyInstaller `onedir` → Inno Setup     | `Gestio-Setup-v4.0.exe` | **Aucun** — assistant d'installation  |
+| 🍎 **macOS**   | PyInstaller `onedir` → `create-dmg`   | `Gestio-macOS.dmg`      | **Aucun** — glisser dans Applications |
+| 🐧 **Linux**   | PyInstaller `onedir` → `appimagetool` | `Gestio-Linux.AppImage` | **Aucun** — fichier portable          |
 
 ---
 
@@ -71,5 +71,6 @@ git push origin v1.0.0   # ← déclenche le workflow
 
 ## 🔒 Note confidentialité
 
-Les données de l'utilisateur sont stockées **uniquement sur sa machine** (`~/analyse/` ou `~/Gestio/analyse/` sur Windows).
+Les données de l'utilisateur sont stockées **uniquement sur sa machine** (`~/analyse/` ou `~/Gestio/analyse/` sur
+Windows).
 Aucune donnée n'est transmise sur internet lors de l'utilisation.

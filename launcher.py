@@ -79,9 +79,24 @@ if "--run-streamlit" in sys.argv:
     os.environ["STREAMLIT_BROWSER_GATHER_USAGE_STATS"] = "false"
     os.environ["STREAMLIT_GLOBAL_DEVELOPMENT_MODE"] = "false"
 
+    # ── Thème Gestio (palette identique au site web) ──────────────────────────
+    # Défini ici en env vars pour garantir le bon thème même en mode PyInstaller
+    # où le .streamlit/config.toml pourrait ne pas être trouvé automatiquement.
+    os.environ["STREAMLIT_THEME_BASE"]                    = "dark"
+    os.environ["STREAMLIT_THEME_PRIMARY_COLOR"]           = "#10B981"  # Vert émeraude
+    os.environ["STREAMLIT_THEME_BACKGROUND_COLOR"]        = "#111827"  # Charcoal
+    os.environ["STREAMLIT_THEME_SECONDARY_BACKGROUND_COLOR"] = "#1E293B"  # Slate foncé
+    os.environ["STREAMLIT_THEME_TEXT_COLOR"]              = "#F8FAFC"  # Blanc cassé
+    os.environ["STREAMLIT_THEME_FONT"]                    = "sans serif"
+    # ──────────────────────────────────────────────────────────────────────────
+
+    # Passer explicitement le config.toml pour que Streamlit le trouve toujours
+    config_path = str(BASE_DIR / ".streamlit" / "config.toml")
+
     sys.argv = ["streamlit", "run", str(MAIN_APP),
                 "--server.headless", "true",
-                "--browser.gatherUsageStats", "false"]
+                "--browser.gatherUsageStats", "false",
+                "--global.configFilePath", config_path]
     stcli.main()
     sys.exit(0)
 
@@ -335,4 +350,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

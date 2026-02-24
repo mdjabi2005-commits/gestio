@@ -12,13 +12,26 @@ from .database import (
     TRANSACTION_TYPES,
     TRANSACTION_CATEGORIES,
     TRANSACTION_SOURCES,
+    SOURCE_DEFAULT,
+    TYPE_DEPENSE,
+    TYPE_REVENU,
 )
+from .services.transaction_service import transaction_service, TransactionService
 
 __all__ = [
+    # Model
     "Transaction",
-    "transaction_repository",
-    "TransactionRepository",
+    # Constants
     "TRANSACTION_TYPES",
     "TRANSACTION_CATEGORIES",
     "TRANSACTION_SOURCES",
+    "SOURCE_DEFAULT",
+    "TYPE_DEPENSE",
+    "TYPE_REVENU",
+    # Repository (accès direct si besoin interne)
+    "transaction_repository",
+    "TransactionRepository",
+    # Service (point d'entrée recommandé pour l'UI)
+    "transaction_service",
+    "TransactionService",
 ]

@@ -84,4 +84,3 @@ class RecurrenceError(GestioException):
 
     def __init__(self, message: str, context: dict = None):
         super().__init__(message, error_code="RECURRENCE_ERROR", context=context)
-

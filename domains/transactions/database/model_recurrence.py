@@ -2,7 +2,7 @@
 Modèle de Récurrence
 """
 
-from datetime import date as DateType
+from datetime import date
 from typing import Optional, Literal
 
 # noinspection PyUnresolvedReferences
@@ -32,8 +32,8 @@ class Recurrence(BaseModel):
 
     frequence: str = Field(..., description="Fréquence (Mensuel, Annuel, etc.)")
 
-    date_debut: DateType = Field(..., description="Date de début de la récurrence")
-    date_fin: Optional[DateType] = Field(None, description="Date de fin (si arrêtée)")
+    date_debut: date = Field(..., description="Date de début de la récurrence")
+    date_fin: Optional[date] = Field(None, description="Date de fin (si arrêtée)")
 
     description: Optional[str] = Field(None, description="Description ou notes")
 
@@ -61,7 +61,7 @@ class Recurrence(BaseModel):
         """Calcule le coût mensuel ramené."""
         return self.cout_annuel / 12
 
-    def generate_occurrences(self, end_date: DateType) -> list:
+    def generate_occurrences(self, end_date: date) -> list:
         """
         Génère les occurrences passées jusqu'à une date donnée.
         Inclut la première occurrence (date_debut).

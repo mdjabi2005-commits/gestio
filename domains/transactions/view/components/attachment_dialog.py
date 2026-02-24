@@ -4,7 +4,6 @@ Composant Modal pour la gestion des pièces jointes.
 
 import streamlit as st
 
-from domains.transactions.services.attachment_service import attachment_service
 from shared.ui.toast_components import toast_success, toast_error
 
 
@@ -13,6 +12,7 @@ def open_attachment_dialog(transaction_id: int):
     """
     Affiche une modale pour gérer les fichiers d'une transaction.
     """
+    from domains.transactions.services.attachment_service import attachment_service
     st.write(f"Transaction ID: **{transaction_id}**")
 
     # 1. Upload Nouveau Fichier
@@ -24,12 +24,10 @@ def open_attachment_dialog(transaction_id: int):
 
     if uploaded_files:
         if st.button("Envoyer", type="primary"):
-            success_count = 0
-            for f in uploaded_files:
-                from streamlit.runtime.uploaded_file_manager import UploadedFile as _UF
-                uf: _UF = f  # type: ignore[assignment]
-                if attachment_service.add_attachment(transaction_id, uf, uf.name):
-                    success_count += 1
+            success_count = sum(
+                1 for f in uploaded_files
+                if attachment_service.add_attachment(transaction_id, f, f.name)  # type: ignore[union-attr]
+            )
 
             if success_count > 0:
                 toast_success(f"{success_count} fichier(s) ajouté(s) !")

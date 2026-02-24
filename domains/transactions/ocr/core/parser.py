@@ -111,7 +111,7 @@ def parse_pdf_revenue(text: str) -> Optional[dict]:
         
     Returns:
         Dictionnaire avec les données extraites, ou None si aucun montant trouvé
-        Format: {'amount': float, 'date': date, 'description': str}
+        Format: {'montant': float, 'date': date, 'description': str}
     """
     text_upper = text.upper()
 
@@ -181,7 +181,7 @@ def parse_pdf_revenue(text: str) -> Optional[dict]:
         description = "Facture - Prestation"
 
     result = {
-        'amount': amount,
+        'montant': amount,
         'date': payment_date or date.today(),
         'description': description,
     }

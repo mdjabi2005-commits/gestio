@@ -33,7 +33,7 @@ def render_evolution_chart(df: pd.DataFrame, height: int = 400) -> None:
     # Grouper par mois et type (Assurons nous que le type est normalisé ici aussi par sécurité)
     df_copy["type"] = df_copy["type"].astype(str).str.capitalize()
 
-    df_evolution = df_copy.groupby(["mois_str", "type"])["amount"].sum().unstack(fill_value=0)
+    df_evolution = df_copy.groupby(["mois_str", "type"])["montant"].sum().unstack(fill_value=0)
     df_evolution = df_evolution.reindex(
         sorted(df_evolution.index, key=lambda x: pd.to_datetime(x, format='%b %Y'))
     )
@@ -93,9 +93,9 @@ def render_evolution_chart(df: pd.DataFrame, height: int = 400) -> None:
     fig.update_layout(
         title=dict(
             text='Évolution Revenus, Dépenses et Solde',
-            font=dict(size=16, color='white')
+            font=dict(size=14, color='white')
         ),
-        xaxis_title='Mois',
+        xaxis_title='',
         yaxis_title='Montant (€)',
         height=height,
         hovermode='x unified',
@@ -103,26 +103,33 @@ def render_evolution_chart(df: pd.DataFrame, height: int = 400) -> None:
         legend=dict(
             orientation="h",
             yanchor="bottom",
-            y=-0.25,
+            y=-0.35,
             xanchor="center",
             x=0.5,
-            font=dict(size=12, color="white"),
+            font=dict(size=11, color="white"),
             bgcolor="rgba(0,0,0,0)",
             bordercolor="white",
             borderwidth=1
         ),
-        margin=dict(t=40, b=80, l=40, r=40),
+        margin=dict(t=40, b=100, l=50, r=20),
         paper_bgcolor='#1E1E1E',
         plot_bgcolor='#1E1E1E',
         font=dict(color='white'),
-        xaxis=dict(showgrid=False, color='white'),
+        xaxis=dict(
+            showgrid=False,
+            color='white',
+            tickangle=-30,
+            tickfont=dict(size=10),
+            automargin=True,
+        ),
         yaxis=dict(
             showgrid=True,
             gridcolor='rgba(255,255,255,0.1)',
             zeroline=True,
             zerolinewidth=2,
             zerolinecolor='rgba(255,255,255,0.3)',
-            color='white'
+            color='white',
+            tickfont=dict(size=10),
         )
     )
 
