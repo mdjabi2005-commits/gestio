@@ -6,7 +6,7 @@ from datetime import date
 from typing import Optional, Literal
 
 # noinspection PyUnresolvedReferences
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class Recurrence(BaseModel):
@@ -18,6 +18,18 @@ class Recurrence(BaseModel):
     id: Optional[int] = Field(None, description="ID unique de la récurrence")
 
     type: Literal["Revenu", "Dépense"] = Field(..., description="Type de transaction")
+
+    @field_validator("type", mode="before")
+    @classmethod
+    def normalize_type(cls, v: str) -> str:
+        if not isinstance(v, str):
+            return v
+        normalized = v.strip().lower()
+        if normalized == "revenu":
+            return "Revenu"
+        if normalized in {"depense", "dépense"}:
+            return "Dépense"
+        return v
 
     @classmethod
     def capitalize_type(cls, v: str) -> str:

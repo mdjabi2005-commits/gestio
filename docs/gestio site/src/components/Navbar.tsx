@@ -1,41 +1,21 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import GestioLogo from "./GestioLogo";
 import { Download, Menu, X } from "lucide-react";
 
 const navLinks = [
-	{ label: "Fonctionnalités", page: "/", anchor: "fonctionnalites" },
-	{ label: "Sécurité", page: "/", anchor: "securite" },
-	{ label: "Aperçu", page: "/", anchor: "captures" },
-	{ label: "Guides", page: "/guides", anchor: null },
-	{ label: "FAQ", page: "/faq", anchor: null },
+	{ label: "Fonctionnalités", to: "/fonctionnalites" },
+	{ label: "Sécurité", to: "/securite" },
+	{ label: "Aperçu", to: "/apercu" },
+	{ label: "Guides", to: "/guides" },
+	{ label: "FAQ", to: "/faq" },
 ];
-
-const scrollToAnchor = (anchor: string) => {
-  requestAnimationFrame(() => {
-    const el = document.getElementById(anchor);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-  });
-};
 
 const Navbar = () => {
 	const [open, setOpen] = useState(false);
 	const location = useLocation();
-	const navigate = useNavigate();
 
-	const handleAnchor = (page: string, anchor: string, closeMobile = false) => {
-		if (closeMobile) setOpen(false);
-
-		if (location.pathname !== page) {
-			// On change de page → on passe l'ancre en state, Index.tsx s'en charge
-			navigate(page, { state: { anchor } });
-		} else {
-			// Déjà sur la bonne page → scroll direct
-			scrollToAnchor(anchor);
-		}
-	};
-
-	const isActive = (page: string) => location.pathname === page;
+	const isActive = (path: string) => location.pathname === path;
 
 	return (
 		<>
@@ -54,29 +34,15 @@ const Navbar = () => {
 					<ul className="hidden md:flex gap-8 list-none m-0 p-0">
 						{navLinks.map((l) => (
 							<li key={l.label}>
-								{l.anchor ? (
-									<button
-										onClick={() => handleAnchor(l.page, l.anchor!)}
-										className={`transition-colors text-[0.9375rem] font-medium bg-transparent border-none cursor-pointer p-0 ${
-											isActive(l.page)
-												? "text-primary"
-												: "text-muted-foreground hover:text-primary"
+								<Link
+									to={l.to}
+									className={`transition-colors text-[0.9375rem] font-medium no-underline ${isActive(l.to)
+										? "text-primary"
+										: "text-muted-foreground hover:text-primary"
 										}`}
-									>
-										{l.label}
-									</button>
-								) : (
-									<Link
-										to={l.page}
-										className={`transition-colors text-[0.9375rem] font-medium no-underline ${
-											isActive(l.page)
-												? "text-primary"
-												: "text-muted-foreground hover:text-primary"
-										}`}
-									>
-										{l.label}
-									</Link>
-								)}
+								>
+									{l.label}
+								</Link>
 							</li>
 						))}
 					</ul>
@@ -112,26 +78,17 @@ const Navbar = () => {
 						<X className="w-8 h-8 text-foreground" />
 					</button>
 
-					{navLinks.map((l) =>
-						l.anchor ? (
-							<button
-								key={l.label}
-								onClick={() => handleAnchor(l.page, l.anchor!, true)}
-								className="text-2xl font-semibold text-foreground bg-transparent border-none cursor-pointer"
-							>
-								{l.label}
-							</button>
-						) : (
-							<Link
-								key={l.label}
-								to={l.page}
-								onClick={() => setOpen(false)}
-								className="text-2xl font-semibold text-foreground no-underline"
-							>
-								{l.label}
-							</Link>
-						)
-					)}
+					{navLinks.map((l) => (
+						<Link
+							key={l.label}
+							to={l.to}
+							onClick={() => setOpen(false)}
+							className={`text-2xl font-semibold no-underline ${isActive(l.to) ? "text-primary" : "text-foreground"
+								}`}
+						>
+							{l.label}
+						</Link>
+					))}
 
 					<Link
 						to="/telecharger"
@@ -148,3 +105,5 @@ const Navbar = () => {
 };
 
 export default Navbar;
+
+

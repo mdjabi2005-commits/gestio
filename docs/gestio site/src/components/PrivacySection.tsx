@@ -1,6 +1,6 @@
 import { X, Check } from "lucide-react";
 import Reveal from "./Reveal";
-import privacyVisual from "@/assets/privacy_visual.png";
+import appVisual from "@/assets/app_screenshot_2.png";
 
 const negatives = [
   "Pas de création de compte",
@@ -49,8 +49,8 @@ const PrivacySection = () => (
         <Reveal delay={200}>
           <div className="flex justify-center">
             <img
-              src={privacyVisual}
-              alt="Sécurité et vie privée"
+              src={appVisual}
+              alt="Tableau de bord Gestio – Sunburst et KPIs"
               className="w-full max-w-[400px] rounded-3xl shadow-[0_32px_64px_rgba(0,0,0,0.4)]"
               loading="lazy"
             />
