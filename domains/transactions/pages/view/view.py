@@ -11,8 +11,6 @@ import streamlit as st
 from shared.ui.toast_components import toast_error
 from ...database import transaction_repository
 from ...services.transaction_service import transaction_service
-# Imports des composants
-# Assuming 'view' folder with components is a sibling of 'pages' inside 'transactions'
 from ...view.components.calendar_component import render_calendar, get_calendar_selected_dates
 from ...view.components.charts import render_evolution_chart
 from ...view.components.kpi_metrics import render_kpi_cards
@@ -43,7 +41,7 @@ def render_sunburst():
         hierarchy = _build_hierarchy(all_df)
 
         if hierarchy:
-            selection = sunburst_navigation(hierarchy, key="main_sunburst", height=350)
+            selection = sunburst_navigation(hierarchy, key="main_sunburst", height=550)
 
             if selection and selection.get('codes'):
                 selected_codes = selection.get('codes', [])
@@ -120,8 +118,6 @@ def render_table():
     Fragment pour le tableau et le graphique.
     Contient les interactions (edit, delete).
     """
-    st.subheader("📋 Détails")
-
     # Appliquer les filtres
     filtered_df = _get_filtered_data()
 
@@ -129,15 +125,18 @@ def render_table():
         st.info("Aucune transaction à afficher.")
         return
 
-    col_chart, col_table = st.columns([1, 1])
+    col_chart, col_table = st.columns([1.1, 0.9])
 
-    # C. Graphique Évolution
+    # C. Graphique Évolution — titre ici pour aligner avec "Transactions (Éditable)"
     with col_chart:
-        render_evolution_chart(filtered_df, height=400)
+        st.subheader("📋 Détails")
+        render_evolution_chart(filtered_df, height=420)
 
     # D. Tableau Éditable
     with col_table:
         render_transaction_table(filtered_df, transaction_repository)
+
+
 
 
 # ============================================================
@@ -171,12 +170,12 @@ def _get_filtered_data() -> pd.DataFrame:
     # 3. Filtre Catégorie
     selected_categories = filters.get("selected_categories", set())
     if selected_categories:
-        filtered_df = filtered_df[filtered_df['category'].isin(selected_categories)]
+        filtered_df = filtered_df[filtered_df['categorie'].isin(selected_categories)]
 
     # 4. Filtre Sous-catégorie
     selected_subcategories = filters.get("selected_subcategories", set())
     if selected_subcategories:
-        filtered_df = filtered_df[filtered_df['subcategory'].isin(selected_subcategories)]
+        filtered_df = filtered_df[filtered_df['sous_categorie'].isin(selected_subcategories)]
 
     return filtered_df
 
@@ -186,14 +185,14 @@ def _get_filtered_data() -> pd.DataFrame:
 # ============================================================
 
 @st.cache_data(ttl=60)  # Cache pendant 60 secondes
-def _load_all_transactions():
+def _load_all_transactions() -> pd.DataFrame:
     """Charge toutes les transactions avec cache."""
-    return transaction_service.get_filtered_transactions_df()
+    return transaction_service.get_filtered()
 
 
 # noinspection PyBroadException
 @st.cache_data(ttl=300)  # Cache pendant 5 minutes
-def _load_occurrences():
+def _load_occurrences() -> pd.DataFrame:
     """Charge les occurrences de récurrences avec cache."""
     # noinspection PyBroadException
     try:
@@ -210,7 +209,10 @@ def _load_occurrences():
 
         if occurrences_data:
             df = pd.DataFrame(occurrences_data)
-            df['date'] = pd.to_datetime(df['date']).dt.date
+            # Correction : .apply() au lieu de .dt.date (ligne 213)
+            df['date'] = pd.to_datetime(df['date']).apply(
+                lambda x: x.date() if pd.notna(x) else None
+            )
             df['id'] = df.apply(lambda x: f"rec_{x['recurrence_id']}_{x['date']}", axis=1)
             return df
         return pd.DataFrame()
@@ -223,24 +225,21 @@ def _build_hierarchy(df: pd.DataFrame) -> dict:
     if df.empty:
         return {}
 
-    # Structure attendue par le JS: {code: {label, amount, color, children: [codes]}}
-    hierarchy = {'TR': {
+    # Clés FR : montant au lieu de amount
+    hierarchy: dict = {'TR': {
         'label': 'Total',
-        'total': float(df['amount'].sum()),
+        'total': float(df['montant'].sum()),
         'color': '#64748b',
         'children': []
     }}
 
-    # Racine
-
-    # Grouper par Type
     for type_name in ["Dépense", "Revenu"]:
         type_df = df[df['type'].str.lower() == type_name.lower()]
         if type_df.empty:
             continue
 
         type_code = f"TYPE_{type_name.upper()}"
-        type_total = float(type_df['amount'].sum())
+        type_total = float(type_df['montant'].sum())
 
         hierarchy[type_code] = {
             'label': type_name,
@@ -250,11 +249,11 @@ def _build_hierarchy(df: pd.DataFrame) -> dict:
         }
         hierarchy['TR']['children'].append(type_code)
 
-        # Grouper par Catégorie
-        if 'category' in df.columns:
-            for cat_name, cat_df in type_df.groupby("category"):
+        # Clés FR : categorie
+        if 'categorie' in df.columns:
+            for cat_name, cat_df in type_df.groupby("categorie"):
                 cat_code = f"{type_code}_CAT_{str(cat_name).upper().replace(' ', '_')}"
-                cat_total = float(cat_df['amount'].sum())
+                cat_total = float(cat_df['montant'].sum())
 
                 hierarchy[cat_code] = {
                     'label': str(cat_name),
@@ -264,17 +263,16 @@ def _build_hierarchy(df: pd.DataFrame) -> dict:
                 }
                 hierarchy[type_code]['children'].append(cat_code)
 
-                # Grouper par Sous-catégorie
-                if 'subcategory' in df.columns:
-                    for sub_name, sub_df in cat_df.groupby("subcategory"):
+                # Clés FR : sous_categorie
+                if 'sous_categorie' in df.columns:
+                    for sub_name, sub_df in cat_df.groupby("sous_categorie"):
                         if pd.notna(sub_name):
                             sub_code = f"{cat_code}_SUB_{str(sub_name).upper().replace(' ', '_')}"
-                            sub_total = float(sub_df['amount'].sum())
+                            sub_total = float(sub_df['montant'].sum())
 
                             if sub_total > 0:
                                 hierarchy[sub_code] = {
                                     'label': str(sub_name),
-                                    'amount': sub_total,
                                     'total': sub_total,
                                     'color': '#fbbf24' if type_name == 'Dépense' else '#2dd4bf',
                                     'children': []
@@ -289,26 +287,29 @@ def _build_hierarchy(df: pd.DataFrame) -> dict:
 # ============================================================
 
 def interface_voir_transactions():
-    """Page principale du Dashboard Financier avec fragments."""
+    """Page principale du Dashboard Financier."""
 
-    # Initialiser les données globales en session_state (une seule fois)
+    # Charger les données UNE SEULE FOIS dans session_state
+    # st.spinner est en dehors du cache_data pour éviter l'erreur AbstractContextManager
     if "all_transactions_df" not in st.session_state:
-        with st.spinner("Chargement des transactions..."):
+        spinner = st.spinner("Chargement des transactions...")
+        spinner.__enter__()  # type: ignore[union-attr]
+        try:
             all_df = _load_all_transactions()
 
-            # Normalisation des données
             if all_df is not None and not all_df.empty:
                 if 'type' in all_df.columns:
                     all_df['type'] = all_df['type'].astype(str).str.capitalize()
                     all_df['type'] = all_df['type'].replace(
-                        {'Revenus': 'Revenu', 'Dépenses': 'Dépense', 'Depense': 'Dépense'})
-
-                if 'category' in all_df.columns:
-                    all_df['category'] = all_df['category'].astype(str).str.capitalize()
+                        {'Revenus': 'Revenu', 'Dépenses': 'Dépense', 'Depense': 'Dépense'}
+                    )
+                if 'categorie' in all_df.columns:
+                    all_df['categorie'] = all_df['categorie'].astype(str).str.capitalize()
 
             st.session_state.all_transactions_df = all_df
+        finally:
+            spinner.__exit__(None, None, None)  # type: ignore[union-attr]
 
-    # Vérifier si les données sont chargées
     all_df = st.session_state.get("all_transactions_df")
 
     if all_df is None:
@@ -319,10 +320,8 @@ def interface_voir_transactions():
         st.info("Aucune transaction enregistrée. Commencez par en ajouter !")
         return
 
-    # Afficher les fragments
     st.header("📊 Tableau de Bord Financier")
 
-    # Zone de filtres: Calendrier (hors fragment) + Sunburst (fragment)
     col_sunburst, col_calendar = st.columns([2, 1])
 
     with col_sunburst:
@@ -332,7 +331,6 @@ def interface_voir_transactions():
         st.subheader("📅 Période")
         render_calendar(all_df, key="main_calendar")
 
-    # Stocker les filtres complets (dates + sunburst)
     sunburst_filters = st.session_state.get("view_filters_sunburst", {})
     selected_dates = get_calendar_selected_dates(key="main_calendar")
 
@@ -344,11 +342,6 @@ def interface_voir_transactions():
     }
 
     st.markdown("---")
-
-    # Fragment 2: KPIs
     render_kpis()
-
     st.markdown("---")
-
-    # Fragment 3: Tableau + Graphique
     render_table()

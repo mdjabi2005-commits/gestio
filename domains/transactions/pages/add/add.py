@@ -16,12 +16,11 @@ import streamlit as st
 from shared.ui.toast_components import toast_success, toast_error
 from ..import_page.import_page import import_transactions_page
 from ...database.model import Transaction
-from ...database.repository import transaction_repository
-from ...database.validation import TRANSACTION_CATEGORIES, TRANSACTION_TYPES
+from ...database.constants import TRANSACTION_CATEGORIES, TRANSACTION_TYPES
 from ...ocr.core.hardware_utils import get_optimal_batch_size
-from ...ocr.services.ocr_service import OCRService
-# Integration nouveaux services
 from ...services.attachment_service import attachment_service
+from ...services.transaction_service import transaction_service
+
 
 logger = logging.getLogger(__name__)
 
@@ -69,17 +68,14 @@ def render_ocr_upload_fragment():
 
                 with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
                     paths = []
-                    # Sauvegarde temporaire
                     for f in files_to_process:
-                        from streamlit.runtime.uploaded_file_manager import UploadedFile as _UF
-                        uf: _UF = f  # type: ignore[assignment]
-                        p = TEMP_OCR_DIR / uf.name
-                        # Write bytes
-                        uf.seek(0)
-                        p.write_bytes(uf.read())
+                        p = TEMP_OCR_DIR / f.name  # type: ignore[union-attr]
+                        f.seek(0)  # type: ignore[union-attr]
+                        p.write_bytes(f.read())  # type: ignore[union-attr]
                         paths.append(str(p))
 
                     # OCR
+                    from ...ocr.services.ocr_service import OCRService
                     param_map = {executor.submit(OCRService().process_ticket, p): Path(p).name for p in paths}
 
                     for i, future in enumerate(concurrent.futures.as_completed(param_map)):
@@ -184,7 +180,7 @@ def render_ocr_validation_fragment():
                             description=f_desc,
                             montant=f_amt,
                             date=f_date,
-                            source="ocr_batch",
+                            source="ocr",
                             recurrence=None,
                             date_fin=None,
                             compte_iban=None,
@@ -192,7 +188,7 @@ def render_ocr_validation_fragment():
                             id=None,
                         )
 
-                        new_id = transaction_repository.add(final_t)
+                        new_id = transaction_service.add(final_t)
 
                         if new_id:
                             # 2. Attacher et Ranger le fichier
@@ -208,10 +204,9 @@ def render_ocr_validation_fragment():
                             if success:
                                 toast_success("Ticket validé et rangé !")
                                 st.session_state.ocr_batch[fname]["saved"] = True
-                                # Utiliser rerun scope fragment si disponible
                                 st.rerun()
                             else:
-                                st.error("Transaction sauvée mais erreur lors du rangement du fichier.")
+                                toast_error("Transaction sauvée mais erreur lors du rangement du fichier.")
                         else:
                             toast_error("Erreur sauvegarde Transaction")
 
@@ -236,10 +231,11 @@ def render_pdf_fragment():
             temp_path.write_bytes(uploaded_file.read())
 
             try:
+                from ...ocr.services.ocr_service import OCRService
                 ocr = OCRService()
                 t = ocr.process_document(str(temp_path))
 
-                st.success("Données extraites !")
+                toast_success("Données extraites !")
 
                 with st.form("pdf_form"):
                     c1, c2 = st.columns(2)
@@ -258,7 +254,7 @@ def render_pdf_fragment():
                             montant=amt,
                             date=dt,
                             description=t.description or "",
-                            source="pdf_import",
+                            source="pdf",
                             recurrence=None,
                             date_fin=None,
                             compte_iban=None,
@@ -266,7 +262,7 @@ def render_pdf_fragment():
                             id=None,
                         )
 
-                        nid = transaction_repository.add(final_t)
+                        nid = transaction_service.add(final_t)
                         if nid:
                             attachment_service.add_attachment(
                                 transaction_id=nid,
@@ -282,7 +278,7 @@ def render_pdf_fragment():
                             toast_error("Erreur")
 
             except Exception as e:
-                st.error(f"Erreur extraction: {e}")
+                toast_error(f"Erreur extraction: {e}")
 
 
 # ============================================================
@@ -366,7 +362,7 @@ def render_recurrence_fragment():
                 else:
                     toast_error("Erreur")
             except Exception as e:
-                st.error(f"Erreur: {e}")
+                toast_error(f"Erreur: {e}")
 
 
 # ============================================================

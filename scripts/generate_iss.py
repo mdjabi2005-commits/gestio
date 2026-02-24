@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
-OUT  = ROOT / "gestio.iss"
+OUT = ROOT / "gestio.iss"
 
 CONTENT = (
     "; Gestio V4 - Script Inno Setup\r\n"
@@ -118,19 +118,20 @@ CONTENT = (
     "end;\r\n"
 )
 
+
 def main() -> None:
     # Ecriture en mode binaire = aucune conversion d'encodage possible
     OUT.write_bytes(CONTENT.encode("ascii"))
 
     # Verification stricte
     data = OUT.read_bytes()
-    bad  = [b for b in data if b > 127]
+    bad = [b for b in data if b > 127]
     if bad:
         print(f"ERREUR : {len(bad)} octets non-ASCII detectes !", file=sys.stderr)
         sys.exit(1)
 
     print(f"OK - gestio.iss genere ({len(data)} octets, 100% ASCII)")
 
+
 if __name__ == "__main__":
     main()
-

@@ -26,8 +26,8 @@ def render_kpi_cards(df):
         is_revenu = df['type'].str.lower() == 'revenu'
         is_depense = df['type'].str.lower() == 'dépense'
 
-        total_revenus = df[is_revenu]['amount'].sum()
-        total_depenses = df[is_depense]['amount'].sum()
+        total_revenus = df[is_revenu]['montant'].sum()
+        total_depenses = df[is_depense]['montant'].sum()
         solde = total_revenus - total_depenses
         count = len(df)
 

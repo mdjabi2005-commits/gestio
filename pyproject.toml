@@ -29,9 +29,7 @@ dependencies = [
 gestio = "launcher:main"
 
 [project.optional-dependencies]
-dev = [
-    "pandas-stubs~=2.3.3",
-]
+dev = []
 test = [
     "pytest",
 ]

@@ -2,8 +2,9 @@ from datetime import datetime, date
 
 import pandas as pd
 import streamlit as st
-
-from domains.transactions.database.repository import transaction_repository, CATÉGORIES
+from domains.transactions.database.constants import TRANSACTION_CATEGORIES
+from domains.transactions.database.repository import transaction_repository
+from shared.ui.toast_components import toast_success, toast_error, toast_warning
 
 
 # =========================================================
@@ -150,7 +151,7 @@ def import_transactions_page():
 
             if st.form_submit_button("Suivant →", type="primary"):
                 if date_col == "Aucune" or amount_col == "Aucune":
-                    st.error("Date et Montant requis")
+                    toast_error("Date et Montant requis")
                 else:
                     rows = []
                     for _, row in df.iterrows():
@@ -170,7 +171,7 @@ def import_transactions_page():
                         cat = "Autre"
                         if cat_col != "Aucune":
                             raw = str(row[cat_col]).strip().lower()
-                            for c in CATÉGORIES:
+                            for c in TRANSACTION_CATEGORIES:
                                 if c.lower() == raw:
                                     cat = c
                                     break
@@ -193,7 +194,7 @@ def import_transactions_page():
         _raw_draft = st.session_state.draft_df
 
         if _raw_draft is None:
-            st.error("Aucune donnée à éditer. Veuillez recommencer l'import.")
+            toast_error("Aucune donnée à éditer. Veuillez recommencer l'import.")
             st.session_state.import_step = "config"
             st.rerun()
 
@@ -216,7 +217,7 @@ def import_transactions_page():
             "date": st.column_config.DateColumn("Date", required=True, format="DD/MM/YYYY"),
             "type": st.column_config.SelectboxColumn("Type", options=["Revenu", "Dépense"], required=True),
             "montant": st.column_config.NumberColumn("Montant €", min_value=0.0, format="%.2f"),
-            "categorie": st.column_config.SelectboxColumn("Catégorie", options=CATÉGORIES, required=True),
+            "categorie": st.column_config.SelectboxColumn("Catégorie", options=TRANSACTION_CATEGORIES, required=True),
             "sous_categorie": st.column_config.TextColumn("Sous-Catégorie"),
             "description": st.column_config.TextColumn("Description"),
         }
@@ -260,9 +261,9 @@ def import_transactions_page():
 
                 prog.progress(int((counter + 1) / total * 100))
 
-            st.success(f"✅ {success} importées | ❌ {errors} erreurs")
+            toast_success(f"✅ {success} importées | ❌ {errors} erreurs")
             if errors > 0:
-                st.warning("Certaines lignes n'ont pas pu être importées.")
+                toast_warning("Certaines lignes n'ont pas pu être importées.")
 
             if st.button("Nouvel import"):
                 st.session_state.clear()

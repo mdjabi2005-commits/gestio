@@ -39,7 +39,7 @@ def generate_png(size: int = 512) -> Image.Image:
     margin = size // 16
     draw.ellipse(
         [margin, margin, size - margin, size - margin],
-        fill=(30, 30, 50, 255),       # Fond sombre
+        fill=(30, 30, 50, 255),  # Fond sombre
         outline=(59, 130, 246, 255),  # Bordure bleue (--primary)
         width=size // 32,
     )
@@ -48,7 +48,7 @@ def generate_png(size: int = 512) -> Image.Image:
     inner = size // 5
     draw.ellipse(
         [inner, inner, size - inner, size - inner],
-        fill=(16, 185, 129, 30),      # Vert très transparent
+        fill=(16, 185, 129, 30),  # Vert très transparent
     )
 
     # Symbole € centré
@@ -58,8 +58,8 @@ def generate_png(size: int = 512) -> Image.Image:
     # Tenter d'utiliser une police système, sinon fallback PIL default
     font = None
     font_candidates = [
-        "arialbd.ttf", "Arial Bold.ttf",      # Windows / macOS
-        "DejaVuSans-Bold.ttf",                 # Linux
+        "arialbd.ttf", "Arial Bold.ttf",  # Windows / macOS
+        "DejaVuSans-Bold.ttf",  # Linux
         "NotoSans-Bold.ttf",
     ]
     for candidate in font_candidates:
@@ -70,7 +70,7 @@ def generate_png(size: int = 512) -> Image.Image:
             continue
 
     if font is None:
-        # Fallback : police bitmap PIL (moins belle mais fonctionnelle)
+        # Fallback : police bitmap PIL (moins belle, mais fonctionnelle)
         font = ImageFont.load_default(size=font_size)
 
     # Centrer le symbole
@@ -157,10 +157,10 @@ def save_icns(img: Image.Image) -> Path:
 if __name__ == "__main__":
     print("\nGestio - Generation des icones\n")
 
-    img = generate_png(512)
-    save_png(img)
-    save_ico(img)
-    save_icns(img)
+    base_img = generate_png(512)
+    save_png(base_img)
+    save_ico(base_img)
+    save_icns(base_img)
 
     print(f"\nIcones generees dans : {OUT.resolve()}")
     print("  -> gestio.png  (Linux)")

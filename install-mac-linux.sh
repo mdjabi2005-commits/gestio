@@ -6,7 +6,7 @@
 set -e
 
 REPO="https://github.com/mdjabi2005-commits/gestion-financi-re.git"
-PORT=8501
+
 
 echo ""
 echo "Gestio — Installation"

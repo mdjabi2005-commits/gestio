@@ -25,7 +25,8 @@ Exemples :
 - `Logement` / `Loyer`
 - `Voiture` / `Essence`
 
-> **Note** : Les clés sont en français dans le code pour simplifier la migration depuis l'ancien système.
+> Les valeurs disponibles sont définies dans `database/constants.py` → `TRANSACTION_CATEGORIES`.
+> La catégorie est automatiquement normalisée en **Title Case** par Pydantic à l'instanciation.
 
 ### `montant`
 
@@ -35,14 +36,17 @@ Exemples :
 
 **Origine de la transaction**
 
-| Valeur            | Signification                              |
-|-------------------|--------------------------------------------|
-| `manual`          | Saisie manuelle                            |
-| `ocr_batch`       | Ticket scanné via OCR                      |
-| `pdf_import`      | Relevé PDF importé                         |
-| `import_v2`       | Import CSV/Excel                           |
-| `récurrente_auto` | Générée automatiquement par une récurrence |
-| `récurrente`      | Profuture (prévision)                      |
+| Valeur           | Signification                           |
+|------------------|-----------------------------------------|
+| `manual`         | Saisie manuelle                         |
+| `ocr`            | Ticket scanné via OCR                   |
+| `pdf`            | Relevé ou facture PDF                   |
+| `csv`            | Import CSV                              |
+| `import_v2`      | Import CSV/Excel via la page d'import   |
+| `ofx`            | Import fichier OFX/QFX bancaire         |
+| `enable_banking` | Import via API Enable Banking           |
+
+> Valeurs définies dans `database/constants.py` → `TRANSACTION_SOURCES`.
 
 ### `external_id`
 
@@ -129,25 +133,71 @@ Identifiants externes des virements (ID banque).
 
 ## 🔧 Conventions
 
-### Clés en français vs anglais
+### Langue des clés — Français partout
 
-| Emplacement      | Langue        | Raison                          |
-|------------------|---------------|---------------------------------|
-| Base de données  | 🇫🇷 Français | Migration depuis ancien système |
-| Modèles Pydantic | 🇫🇷 Français | Alignés sur la DB               |
-| UI (Streamlit)   | 🇬🇧 Anglais  | Meilleure DX                    |
-| README/Doc       | 🇫🇷 Français | Langue du projet                |
+Toutes les clés sont en **français** à tous les niveaux du code, sans exception.
+
+| Emplacement          | Langue        |
+|----------------------|---------------|
+| Base de données      | 🇫🇷 Français |
+| Modèles Pydantic     | 🇫🇷 Français |
+| Services             | 🇫🇷 Français |
+| Repositories         | 🇫🇷 Français |
+| Pages UI (Streamlit) | 🇫🇷 Français |
+| README / Doc         | 🇫🇷 Français |
+
+> **Règle absolue** : il n'existe aucun mapping EN → FR dans le code.
+> Si une source externe (CSV, API bancaire) utilise des clés anglaises,
+> c'est à la couche d'import de les renommer **avant** de construire l'objet métier.
+
+---
+
+### Validation des données — Pydantic est la seule source de vérité
+
+Toute validation et normalisation passe par `Transaction.model_validate(data)`.
+Il n'existe pas de validateur manuel en dehors du modèle Pydantic.
+
+| Règle                        | Où elle est définie               |
+|------------------------------|-----------------------------------|
+| Type valide (Dépense/Revenu) | `@field_validator("type")`        |
+| Montant > 0, arrondi 2 déc.  | `@field_validator("montant")`     |
+| Catégorie en Title Case      | `@field_validator("categorie")`   |
+| `""` → `None`                | `@field_validator("sous_categorie", "description")` |
+| Date non future              | `@model_validator(mode="after")`  |
+
+La méthode `to_db_dict()` sur le modèle retourne le dict prêt pour SQLite
+**sans utiliser `model_dump()`** — accès direct aux attributs.
+
+---
+
+### Constantes — `database/constants.py` est la seule source de vérité
+
+Toutes les constantes du domaine (`TRANSACTION_TYPES`, `TRANSACTION_CATEGORIES`,
+`TRANSACTION_SOURCES`, `SOURCE_DEFAULT`, etc.) sont définies **une seule fois**
+dans `database/constants.py` et importées depuis là partout ailleurs.
+
+---
+
+### Utilitaires de conversion — `shared/utils/converters.py`
+
+Les fonctions `safe_convert()`, `safe_date_convert()` et `normalize_text()`
+sont dans `shared/utils/converters.py`.
+Elles sont utilisées lors des imports CSV/OFX pour normaliser les valeurs
+brutes (montants européens `"1.234,56 €"`, dates `"15/01/2025"`) avant
+de construire les objets métier.
+
+---
 
 ### Pattern Repository
 
 ```
-Pages → Services → Repositories → SQL (SQLite)
+Pages UI → Services → Repositories → SQLite
 ```
 
-- **Pages** : UI, points d'entrée
-- **Services** : Logique métier, transformation
-- **Repositories** : Accès données, SQL
-- **Models** : Validation Pydantic
+- **Pages** : UI Streamlit, points d'entrée utilisateur. N'appellent **jamais** le repository directement.
+- **Services** : Logique métier, point d'entrée unique pour les pages (`transaction_service`).
+- **Repositories** : Accès SQL uniquement. Reçoivent des `Transaction` ou des dicts FR.
+- **Models** : Validation et normalisation Pydantic. `to_db_dict()` prépare pour SQLite.
 
 ---
 

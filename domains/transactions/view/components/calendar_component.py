@@ -2,12 +2,12 @@
 Calendar Component - Calendrier interactif
 
 Composant calendrier pour filtrer les transactions par date.
-Affiche une vue mensuelle avec les jours ayant des transactions marqués.
+Affiche une vue mensuelle avec les jours ayant des transactions marquées.
 """
 
 import calendar
 from datetime import date, timedelta
-from typing import Optional, Dict
+from typing import Optional, Dict, Literal
 
 import pandas as pd
 import streamlit as st
@@ -58,7 +58,7 @@ def render_calendar(
             "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"
         ]
         st.markdown(
-            f"<h3 style='text-align: center; margin: 0;'>{mois_noms[current_month.month]} {current_month.year}</h3>",
+            f"<h3 class='gestio-cal-title'>{mois_noms[current_month.month]} {current_month.year}</h3>",
             unsafe_allow_html=True
         )
 
@@ -75,11 +75,18 @@ def render_calendar(
     # Calculer les jours avec transactions
     days_with_transactions = _get_days_with_transactions(df, current_month)
 
+    # CSS ciblé pour compacter les boutons du calendrier
+    st.markdown("""
+<div class="gestio-calendar-grid"></div>
+""", unsafe_allow_html=True)
+
     # Afficher la grille du calendrier
     _render_calendar_grid(current_month, days_with_transactions, key)
 
-    # Sélection de plage de dates - version simplifiée
+    # Sélection de plage de dates — espace vertical pour descendre le sélecteur
+    st.markdown("<div style='margin-top: 1.5rem;'></div>", unsafe_allow_html=True)
     st.caption("📅 Sélection de plage (optionnel)")
+
     col_start, col_end = st.columns(2)
 
     with col_start:
@@ -100,7 +107,7 @@ def render_calendar(
             on_change=None
         )
 
-    # Bouton reset - sans use_container_width pour éviter les problèmes
+    # Bouton reset sans use_container_width pour éviter les problèmes
     # Afficher indicateur de sélection
     selected_dates = st.session_state.get(f"{key}_selected_dates", [])
     if selected_dates:
@@ -166,7 +173,7 @@ def _render_calendar_grid(month: date, days_info: Dict[int, Dict], key: str) -> 
     for i, jour in enumerate(jours):
         with cols[i]:
             st.markdown(
-                f"<div style='text-align: center; font-weight: bold; color: #888; font-size: 12px; padding: 4px; margin-bottom: 4px;'>{jour}</div>",
+                f"<div class='gestio-cal-header'>{jour}</div>",
                 unsafe_allow_html=True
             )
 
@@ -183,13 +190,13 @@ def _render_calendar_grid(month: date, days_info: Dict[int, Dict], key: str) -> 
             with cols[i]:
                 if day == 0:
                     # Cellule vide avec hauteur cohérente
-                    st.markdown("<div style='height: 40px; min-height: 40px;'></div>", unsafe_allow_html=True)
+                    st.markdown("<div class='gestio-cal-spacer'></div>", unsafe_allow_html=True)
                 else:
                     _render_day_cell(day, days_info.get(day), selected_dates, month, key)
 
         # Ajouter un petit espace entre les semaines pour éviter les chevauchements
         if week_idx < len(cal) - 1:
-            st.markdown("<div style='height: 4px;'></div>", unsafe_allow_html=True)
+            st.markdown("<div class='gestio-cal-week-gap'></div>", unsafe_allow_html=True)
 
 
 def _render_day_cell(
@@ -199,56 +206,81 @@ def _render_day_cell(
         month: date,
         key: str
 ) -> None:
-    """Affiche une cellule de jour avec interaction toggle."""
-
-    # Vérifier si ce jour est sélectionné
+    """Affiche une cellule de jour sous forme de capsule colorée cliquable."""
     current_date = month.replace(day=day)
     is_selected = current_date in selected_dates
     has_transactions = day_info is not None
 
-    # Déterminer le badge
-    if has_transactions:
-        if day_info["has_revenue"] and day_info["has_expense"]:
-            badge = "🟡"
-        elif day_info["has_revenue"]:
-            badge = "🟢"
-        else:
-            badge = "🔴"
-    else:
-        badge = ""
-
-    # Créer le label du bouton
-    label = f"{day} {badge}" if badge else str(day)
-
-    # Type de bouton selon l'état
-    if has_transactions:
-        button_type = "primary" if is_selected else "secondary"
-
-        # Bouton cliquable pour les jours avec transactions
-        if st.button(
-                label,
-                key=f"{key}_day_{day}",
-                type=button_type,
-                use_container_width=True,
-                help=f"{day_info['count']} transaction(s)" if has_transactions else None
-        ):
-            # Toggle: ajouter ou retirer de la liste
-            selected_dates_list = st.session_state[f"{key}_selected_dates"].copy()
-
-            if current_date in selected_dates_list:
-                selected_dates_list.remove(current_date)  # Retirer
-            else:
-                selected_dates_list.append(current_date)  # Ajouter
-
-            st.session_state[f"{key}_selected_dates"] = selected_dates_list
-            st.rerun()
-    else:
-        # Affichage simple pour les jours sans transactions
+    if not has_transactions:
+        # Jour sans transaction : numéro gris, non cliquable
         st.markdown(
-            f"<div style='text-align: center; padding: 8px; color: #666; font-size: 13px;'>{day}</div>",
+            f"<div style='text-align:center;padding:0.4rem 0;"
+            f"color:#64748b;font-size:0.875rem;line-height:1.8;'>{day}</div>",
             unsafe_allow_html=True
         )
+        return
 
+    # ── Couleur selon le type de transactions ─────────────────────
+    has_rev = day_info["has_revenue"]
+    has_exp = day_info["has_expense"]
+
+    if has_rev and has_exp:
+        color   = "#f59e0b"              # Ambre  — revenus + dépenses
+        bg_tint = "rgba(245,158,11,.18)"
+    elif has_rev:
+        color   = "#10b981"              # Vert   — revenus uniquement
+        bg_tint = "rgba(16,185,129,.18)"
+    else:
+        color   = "#ef4444"              # Rouge  — dépenses uniquement
+        bg_tint = "rgba(239,68,68,.18)"
+
+    bg           = color if is_selected else bg_tint
+    text_color   = "white" if is_selected else color
+    border_width = "2px"  if is_selected else "1px"
+    count        = day_info.get("count", 0)
+
+    # ── Marqueur CSS unique par cellule ───────────────────────────
+    # Technique : on injecte un marqueur <div class="..."> + une règle
+    # CSS :has() qui cible le bouton Streamlit immédiatement après.
+    marker = f"gc-{key}-d{day}".replace("_", "-")
+
+    st.markdown(f"""<style>
+div[data-testid="stVerticalBlock"]:has(.{marker}) div[data-testid="stButton"] > button {{
+    background:     {bg} !important;
+    border:         {border_width} solid {color} !important;
+    border-radius:  999px !important;
+    color:          {text_color} !important;
+    font-weight:    700 !important;
+    font-size:      0.875rem !important;
+    padding:        0.25rem 0 0.35rem !important;
+    line-height:    1.3 !important;
+    min-height:     unset !important;
+    box-shadow:     none !important;
+}}
+div[data-testid="stVerticalBlock"]:has(.{marker}) div[data-testid="stButton"] > button:hover {{
+    background:  {color} !important;
+    color:       white !important;
+    transform:   scale(1.1) !important;
+    box-shadow:  0 3px 12px {color}55 !important;
+}}
+</style><div class="{marker}"></div>""", unsafe_allow_html=True)
+
+    btn_type: Literal["primary", "secondary"] = "primary" if is_selected else "secondary"
+
+    if st.button(
+            f"{day}\n{'🟡' if (has_rev and has_exp) else '🟢' if has_rev else '🔴'}",
+            key=f"{key}_day_{day}",
+            type=btn_type,
+            use_container_width=True,
+            help=f"{'🟢' if has_rev and not has_exp else '🔴' if has_exp and not has_rev else '🟡'} {count} transaction(s)"
+    ):
+        selected_list = st.session_state[f"{key}_selected_dates"].copy()
+        if current_date in selected_list:
+            selected_list.remove(current_date)
+        else:
+            selected_list.append(current_date)
+        st.session_state[f"{key}_selected_dates"] = selected_list
+        st.rerun()
 
 def get_calendar_selected_dates(key: str = "calendar") -> list:
     """
@@ -257,7 +289,7 @@ def get_calendar_selected_dates(key: str = "calendar") -> list:
     Returns:
         Liste de dates sélectionnées, ou liste vide si aucune sélection (affiche tout)
     """
-    # Priorité 1: plage de dates personnalisée
+    # Priorité 1 : plage de dates personnalisée
     date_start = st.session_state.get(f"{key}_date_start")
     date_end = st.session_state.get(f"{key}_date_end")
 
@@ -279,13 +311,13 @@ def get_calendar_selected_dates(key: str = "calendar") -> list:
             current += timedelta(days=1)
         return dates
     elif date_end:
-        # Seulement date de fin: retourner juste cette date
+        # Seulement date de fin : retourner juste cette date
         return [date_end]
 
-    # Priorité 2: dates cliquées sur le calendrier
+    # Priorité 2 : dates cliqués sur le calendrier
     selected_dates = st.session_state.get(f"{key}_selected_dates", [])
     if selected_dates:
         return selected_dates
 
-    # Par défaut: liste vide = afficher toutes les transactions
+    # Par défaut : liste vide = afficher toutes les transactions
     return []
