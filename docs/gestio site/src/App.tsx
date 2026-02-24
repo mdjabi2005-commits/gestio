@@ -21,7 +21,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.PROD ? "/gestio" : "/"}>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/fonctionnalites" element={<FonctionnalitesPage />} />
