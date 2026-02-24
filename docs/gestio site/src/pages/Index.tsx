@@ -5,22 +5,20 @@ import HeroSection from "@/components/HeroSection";
 import FeaturesSection from "@/components/FeaturesSection";
 import PrivacySection from "@/components/PrivacySection";
 import ScreenshotsSection from "@/components/ScreenshotsSection";
+import GuidesSection from "@/components/GuidesSection";
+import FAQSection from "@/components/FAQSection";
 import FooterSection from "@/components/FooterSection";
 
 const Index = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Si on arrive ici depuis la navbar avec une ancre en state
     const anchor = (location.state as { anchor?: string } | null)?.anchor;
     if (!anchor) return;
-
-    // Attendre que le DOM soit peint avant de scroller
     const frame = requestAnimationFrame(() => {
       const el = document.getElementById(anchor);
       if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
     });
-
     return () => cancelAnimationFrame(frame);
   }, [location.state]);
 
@@ -32,6 +30,8 @@ const Index = () => {
         <FeaturesSection />
         <PrivacySection />
         <ScreenshotsSection />
+        <GuidesSection />
+        <FAQSection />
       </main>
       <FooterSection />
     </>
