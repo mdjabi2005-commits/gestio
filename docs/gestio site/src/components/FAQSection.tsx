@@ -12,6 +12,10 @@ const faqs = [
     a: "Toutes vos données sont stockées localement sur votre ordinateur, dans un fichier sécurisé. Aucune information n'est jamais envoyée vers nos serveurs ou un service tiers.",
   },
   {
+    q: "Le script d'installation pour macOS/Linux est-il sûr ?",
+    a: "Oui, totalement. Ce script officiel télécharge simplement le programme depuis les serveurs sécurisés de GitHub et l'installe à la bonne place, pour vous faire gagner du temps. Le code du script est transparent et consultable depuis le dépôt GitHub.",
+  },
+  {
     q: "Puis-je synchroniser mes données entre plusieurs appareils ?",
     a: "Actuellement, Gestio ne propose pas de synchronisation automatique entre appareils (pour préserver votre vie privée). Vous pouvez cependant exporter et importer manuellement vos données via la fonction d'export/import dans les paramètres.",
   },
