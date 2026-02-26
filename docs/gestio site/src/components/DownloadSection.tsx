@@ -35,7 +35,7 @@ const platforms = [
   },
 ];
 
-const INSTALL_SCRIPT = "curl -sSL https://github.com/mdjabi2005-commits/gestio/releases/latest/download/install_mac_linux.sh | bash";
+const INSTALL_SCRIPT = "curl -sSL https://github.com/mdjabi2005-commits/gestio/releases/download/v4.0.0/install-mac-linux.sh | bash";
 
 const DownloadSection = () => {
   const [copied, setCopied] = useState(false);
