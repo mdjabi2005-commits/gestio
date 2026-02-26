@@ -187,8 +187,17 @@ def render_transaction_table(filtered_df, transaction_repository):
                             toast_error(f"Erreur lors de la suppression: {deleted_ids}")
 
                     # 2. Modifications
+                    # Champs connus du modèle Transaction (+ id pour l'update)
+                    _KNOWN_FIELDS = {
+                        "id", "type", "categorie", "sous_categorie", "description",
+                        "montant", "date", "source", "recurrence", "date_fin",
+                        "compte_iban", "external_id"
+                    }
                     for row_idx, changes in edited_rows.items():
-                        updated_row = result.iloc[row_idx].drop("Supprimer").to_dict()
+                        updated_row = {
+                            k: v for k, v in result.iloc[row_idx].to_dict().items()
+                            if k in _KNOWN_FIELDS
+                        }
                         debug_logs.append(f"📝 Modification ligne {row_idx}: {updated_row}")
 
                         if updated_row.get('id'):
