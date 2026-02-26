@@ -40,7 +40,9 @@ def render_recurrence_kpis(recurrences_df: pd.DataFrame):
     today = datetime.now().date()
     potential_savings = 0
     if 'date_fin' in recurrences_df.columns:
-        recurrences_df['date_fin'] = pd.to_datetime(recurrences_df['date_fin'], errors='coerce').dt.date  # type: ignore[assignment]
+        recurrences_df['date_fin'] = pd.to_datetime(
+            recurrences_df['date_fin'], errors='coerce'
+        ).apply(lambda x: x.date() if pd.notna(x) else None)
         inactive = recurrences_df[
             (recurrences_df['date_fin'].notna()) &
             (recurrences_df['date_fin'] < today) &
@@ -174,7 +176,13 @@ def render_recurrence_table(recurrences_df: pd.DataFrame, repository: Recurrence
     to_delete = edited_df[edited_df["Supprimer"] == True]
 
     if not to_delete.empty:
-        st.warning(f"⚠️ Vous allez supprimer {len(to_delete)} récurrence(s).")
+        st.markdown(
+            f"<div class='gestio-cal-header' style='color:#F59E0B;padding:0.75rem 1rem;"
+            f"background:rgba(245,158,11,0.10);border-left:4px solid #F59E0B;"
+            f"border-radius:0.75rem;margin-bottom:0.5rem;'>"
+            f"⚠️ Vous allez supprimer <strong>{len(to_delete)}</strong> récurrence(s).</div>",
+            unsafe_allow_html=True
+        )
         if st.button("🗑️ Confirmer la suppression", type="primary"):
             try:
                 success_count = 0
@@ -222,19 +230,35 @@ def interface_recurrences():
             # Convertir les objets Pydantic en dict ET inclure les propriétés calculées
             data = []
             for r in all_recurrences:
-                d = r.model_dump()
-                # Ajouter les propriétés calculées
-                d['cout_annuel'] = r.cout_annuel
-                d['cout_mensuel'] = r.cout_mensuel
+                d = {
+                    "id": r.id,
+                    "type": r.type,
+                    "categorie": r.categorie,
+                    "sous_categorie": r.sous_categorie,
+                    "montant": r.montant,
+                    "frequence": r.frequence,
+                    "date_debut": r.date_debut,
+                    "date_fin": r.date_fin,
+                    "description": r.description,
+                    "statut": r.statut,
+                    "date_creation": r.date_creation,
+                    "date_modification": r.date_modification,
+                    "cout_annuel": r.cout_annuel,
+                    "cout_mensuel": r.cout_mensuel,
+                }
                 data.append(d)
 
             df = pd.DataFrame(data)
 
             # Convertir les dates
             if 'date_debut' in df.columns:
-                df['date_debut'] = pd.to_datetime(df['date_debut']).dt.date  # type: ignore[assignment]
+                df['date_debut'] = pd.to_datetime(df['date_debut']).apply(
+                    lambda x: x.date() if pd.notna(x) else None
+                )
             if 'date_fin' in df.columns:
-                df['date_fin'] = pd.to_datetime(df['date_fin'], errors='coerce').dt.date  # type: ignore[assignment]
+                df['date_fin'] = pd.to_datetime(df['date_fin'], errors='coerce').apply(
+                    lambda x: x.date() if pd.notna(x) else None
+                )
 
             render_recurrence_kpis(df)
             st.markdown("---")
@@ -250,7 +274,7 @@ def interface_recurrences():
     except Exception as e:
         from config.logging_config import log_error
         trace_id = log_error(e, "Erreur chargement page Récurrences")
-        st.error(f"Erreur lors du chargement de la page (TraceID: {trace_id})")
+        toast_error(f"Erreur lors du chargement de la page (TraceID: {trace_id})")
 
 
 if __name__ == "__main__":

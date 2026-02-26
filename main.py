@@ -9,6 +9,17 @@ Refactored modular version
 @date: 2025-11-17
 """
 
+import os
+
+# Thème Gestio — défini AVANT import streamlit pour garantir
+# la palette même si .streamlit/config.toml n'est pas trouvé.
+os.environ.setdefault("STREAMLIT_THEME_BASE",                       "dark")
+os.environ.setdefault("STREAMLIT_THEME_PRIMARY_COLOR",              "#10B981")
+os.environ.setdefault("STREAMLIT_THEME_BACKGROUND_COLOR",           "#111827")
+os.environ.setdefault("STREAMLIT_THEME_SECONDARY_BACKGROUND_COLOR", "#1E293B")
+os.environ.setdefault("STREAMLIT_THEME_TEXT_COLOR",                 "#F8FAFC")
+os.environ.setdefault("STREAMLIT_THEME_FONT",                       "sans serif")
+
 import streamlit as st
 
 # Initialize logging system FIRST (before any other imports)
@@ -26,29 +37,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# CSS pour supprimer les marges et occupe toute la largeur
-st.markdown("""
-<style>
-    .block-container {
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-        max-width: 100% !important;
-    }
-    div[data-testid="stVerticalBlock"] {
-        gap: 0.5rem;
-    }
-    /* Supprimer les marges latérales */
-    .stApp {
-        margin-left: 0rem !important;
-        margin-right: 0rem !important;
-    }
-    /* Container principal */
-    .main .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 # ==============================
 # IMPORTS - Configuration

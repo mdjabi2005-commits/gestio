@@ -1,15 +1,16 @@
 # 🔐 Guide — Signature numérique avec Azure Key Vault
 
-> ⚠️ **Toutes les commandes sont en PowerShell (Windows).** Pas de `\` pour les retours à la ligne — tout est sur une seule ligne ou avec le backtick `` ` ``.
+> ⚠️ **Toutes les commandes sont en PowerShell (Windows).** Pas de `\` pour les retours à la ligne — tout est sur une
+> seule ligne ou avec le backtick `` ` ``.
 
 ## Pourquoi signer ?
 
-| Sans signature | Avec signature |
-|---|---|
-| ❌ SmartScreen : "Éditeur inconnu" | ✅ SmartScreen : "Djabi" (vérifié) |
-| ❌ Détecté faux-positif par AV | ✅ Réputation immédiate auprès des AV |
-| ❌ UAC bloque le lancement | ✅ UAC affiche ton nom |
-| ❌ Bloqué sur réseaux d'entreprise | ✅ Autorisé |
+| Sans signature                    | Avec signature                       |
+|-----------------------------------|--------------------------------------|
+| ❌ SmartScreen : "Éditeur inconnu" | ✅ SmartScreen : "Djabi" (vérifié)    |
+| ❌ Détecté faux-positif par AV     | ✅ Réputation immédiate auprès des AV |
+| ❌ UAC bloque le lancement         | ✅ UAC affiche ton nom                |
+| ❌ Bloqué sur réseaux d'entreprise | ✅ Autorisé                           |
 
 ---
 
@@ -90,11 +91,11 @@ az ad sp create-for-rbac --name "gestio-github-actions" --role "Key Vault Certif
 > ⚠️ Champ **Name** → le nom (underscores uniquement, pas d'espaces)
 > ⚠️ Champ **Secret** → la valeur issue des commandes de l'Étape 4
 
-| Name (à taper) | Secret (valeur à coller) |
-|---|---|
-| `AZURE_VAULT_URI` | `https://<nom-du-vault>.vault.azure.net/` |
-| `AZURE_CLIENT_ID` | champ `appId` du résultat `az ad sp create-for-rbac` |
-| `AZURE_TENANT_ID` | champ `tenant` du résultat `az ad sp create-for-rbac` |
+| Name (à taper)        | Secret (valeur à coller)                                                          |
+|-----------------------|-----------------------------------------------------------------------------------|
+| `AZURE_VAULT_URI`     | `https://<nom-du-vault>.vault.azure.net/`                                         |
+| `AZURE_CLIENT_ID`     | champ `appId` du résultat `az ad sp create-for-rbac`                              |
+| `AZURE_TENANT_ID`     | champ `tenant` du résultat `az ad sp create-for-rbac`                             |
 | `AZURE_CLIENT_SECRET` | champ `password` du résultat `az ad sp create-for-rbac` ⚠️ visible une seule fois |
 
 ---
@@ -114,24 +115,24 @@ Vérifier dans GitHub Actions que les étapes "🔐 Signer" passent en vert.
 
 Une fois l'app signée et publiée, soumettre aux portails AV pour bâtir la réputation :
 
-| Antivirus | Portail | Délai |
-|---|---|---|
-| **Microsoft Defender** | https://www.microsoft.com/en-us/wdsi/filesubmission | 24-48h |
-| **Windows SmartScreen** | Inclus dans la soumission Defender | Automatique |
-| **Avast / AVG** | https://www.avast.com/false-positive-file-form.php | 2-5 jours |
-| **Kaspersky** | https://opentip.kaspersky.com/ | 2-5 jours |
-| **Malwarebytes** | https://forums.malwarebytes.com/forum/122-false-positives/ | 3-7 jours |
-| **ESET** | https://support.eset.com/en/submit-a-file | 2-5 jours |
-| **VirusTotal** | https://www.virustotal.com/gui/home/upload | Analyse immédiate |
+| Antivirus               | Portail                                                    | Délai             |
+|-------------------------|------------------------------------------------------------|-------------------|
+| **Microsoft Defender**  | https://www.microsoft.com/en-us/wdsi/filesubmission        | 24-48h            |
+| **Windows SmartScreen** | Inclus dans la soumission Defender                         | Automatique       |
+| **Avast / AVG**         | https://www.avast.com/false-positive-file-form.php         | 2-5 jours         |
+| **Kaspersky**           | https://opentip.kaspersky.com/                             | 2-5 jours         |
+| **Malwarebytes**        | https://forums.malwarebytes.com/forum/122-false-positives/ | 3-7 jours         |
+| **ESET**                | https://support.eset.com/en/submit-a-file                  | 2-5 jours         |
+| **VirusTotal**          | https://www.virustotal.com/gui/home/upload                 | Analyse immédiate |
 
 ### Procédure recommandée
 
 1. **VirusTotal d'abord** → uploader l'installeur signé → noter les AV qui détectent
 2. **Soumettre uniquement aux AV qui détectent**
 3. **Joindre** dans chaque soumission :
-   - Le fichier `.exe` signé
-   - Description : "Application Python compilée avec PyInstaller, signée avec certificat Azure Key Vault"
-   - Le lien GitHub public du projet (le code source rassure)
+    - Le fichier `.exe` signé
+    - Description : "Application Python compilée avec PyInstaller, signée avec certificat Azure Key Vault"
+    - Le lien GitHub public du projet (le code source rassure)
 4. **Attendre 5-7 jours** → les signatures sont mises à jour
 
 ---

@@ -5,6 +5,7 @@ Translates technical exceptions into user-friendly toast notifications.
 Uses standard UI components (toasts) instead of intrusive static blocks.
 """
 
+from config.logging_config import get_logger
 # noinspection PyUnresolvedReferences
 from shared.exceptions import (
     DatabaseError,
@@ -15,8 +16,6 @@ from shared.exceptions import (
     ConfigurationError,
     GestioException
 )
-
-from config.logging_config import get_logger
 from .toast_components import toast_error, toast_warning
 
 logger = get_logger(__name__)

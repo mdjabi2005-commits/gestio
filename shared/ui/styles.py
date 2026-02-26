@@ -164,7 +164,4 @@ def load_all_styles() -> None:
     Example:
         >>> load_all_styles()  # Loads all standard styles
     """
-    standard_styles = ['main.css', 'responsive.css', 'theme_v2.css']
-
-    for style_file in standard_styles:
-        apply_css(style_file)
+    apply_css('gestio.css')
