@@ -35,7 +35,7 @@ const platforms = [
   },
 ];
 
-const INSTALL_SCRIPT = "curl -sSL https://github.com/mdjabi2005/gestion-financiere/releases/latest/download/install_mac_linux.sh | bash";
+const INSTALL_SCRIPT = "curl -sSL https://github.com/mdjabi2005-commits/gestio/releases/latest/download/install_mac_linux.sh | bash";
 
 const DownloadSection = () => {
   const [copied, setCopied] = useState(false);
@@ -75,7 +75,7 @@ const DownloadSection = () => {
 
                 {p.type === "exe" ? (
                   <a
-                    href="https://github.com/mdjabi2005/gestion-financiere/releases/latest/download/Gestio-Setup.exe"
+                    href="https://github.com/mdjabi2005-commits/gestio/releases/download/v4.0.0/Gestio-Setup-v4.0.exe"
                     className="inline-flex items-center justify-center gap-2.5 w-full bg-gradient-primary text-primary-foreground px-8 py-4 rounded-xl font-semibold shadow-primary hover:-translate-y-1 hover:shadow-primary-hover transition-all no-underline shrink-0"
                   >
                     <Download className="w-5 h-5" />
@@ -84,15 +84,15 @@ const DownloadSection = () => {
                 ) : (
                   <div className="w-full shrink-0">
                     <p className="text-xs text-muted-foreground text-left mb-2 font-medium">Copier dans le terminal :</p>
-                    <div className="relative group/copy">
-                      <div className="bg-background border border-border rounded-xl p-3 pr-12 overflow-x-auto text-left flex items-center h-14">
-                        <code className="text-[0.75rem] text-foreground font-mono whitespace-nowrap opacity-90">
+                    <div className="relative">
+                      <div className="bg-background border border-border rounded-xl p-4 pr-12 text-left">
+                        <code className="text-[0.75rem] text-foreground font-mono break-all leading-relaxed opacity-90">
                           {INSTALL_SCRIPT}
                         </code>
                       </div>
                       <button
                         onClick={handleCopy}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center rounded-lg bg-muted text-foreground hover:bg-primary hover:text-primary-foreground transition-colors border border-border"
+                        className="absolute right-2 top-2 w-8 h-8 flex items-center justify-center rounded-lg bg-muted text-foreground hover:bg-primary hover:text-primary-foreground transition-colors border border-border shrink-0"
                         aria-label="Copier la commande"
                       >
                         {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
