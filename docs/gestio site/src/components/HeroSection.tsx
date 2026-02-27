@@ -10,6 +10,7 @@ const HeroSection = () => {
         muted
         loop
         playsInline
+        poster="/logo.png"
         src="/videos/hero_loop.mp4"
       />
       <div className="absolute inset-0 bg-gradient-to-b from-background/70 to-background/90" />
@@ -38,13 +39,13 @@ const HeroSection = () => {
             <Download className="w-5 h-5" />
             Télécharger gratuitement
           </Link>
-          <a
-            href="#fonctionnalites"
+          <Link
+            to="/fonctionnalites"
             className="inline-flex items-center gap-2.5 bg-card text-foreground border border-border px-8 py-4 rounded-xl font-semibold hover:bg-muted hover:border-primary transition-all no-underline"
           >
             <Play className="w-5 h-5" />
             Découvrir
-          </a>
+          </Link>
         </div>
 
         <div className="flex flex-col sm:flex-row justify-center gap-12 sm:gap-12 mt-16 pt-12 border-t border-border">
