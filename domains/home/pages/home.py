@@ -31,9 +31,7 @@ Utilisez la page **"Ajouter Transaction"** pour :
 - 📊 Importer un fichier CSV
 - 🔁 Créer une transaction récurrente
 """)
-        if st.button("➕ Ajouter une Transaction", type="primary", use_container_width=True):
-            st.session_state.requested_page = "➕ Ajouter Transaction"
-            st.rerun()
+        st.page_link("domains/transactions/pages/add/add.py", label="➕ Ajouter une Transaction", icon="➕", use_container_width=True)
 
     with col2:
         st.markdown("""
@@ -45,9 +43,7 @@ Consultez la page **"Voir Transactions"** pour :
 - ✏️ Modification directe des données
 - 🗑️ Suppression de transactions
 """)
-        if st.button("📊 Voir mes Transactions", type="secondary", use_container_width=True):
-            st.session_state.requested_page = "📊 Voir Transactions"
-            st.rerun()
+        st.page_link("domains/transactions/pages/view/view.py", label="📊 Voir mes Transactions", icon="📊", use_container_width=True)
 
     st.markdown("---")
 
