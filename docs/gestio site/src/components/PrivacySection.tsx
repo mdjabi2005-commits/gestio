@@ -1,6 +1,6 @@
 import { X, Check } from "lucide-react";
 import Reveal from "./Reveal";
-import appVisual from "@/assets/app_screenshot_2.png";
+import appVisual from "@/assets/privacy_visual.png";
 
 const negatives = [
   "Pas de création de compte",

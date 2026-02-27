@@ -90,6 +90,7 @@ const GuidesSection = () => {
                   <button
                     className="w-full p-6 flex items-center justify-between hover:bg-muted/50 transition-colors text-left"
                     onClick={() => setActiveIndex(isActive ? null : i)}
+                    aria-expanded={isActive}
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-9 h-9 bg-gradient-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-sm shrink-0">
