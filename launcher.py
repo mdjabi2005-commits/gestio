@@ -90,13 +90,13 @@ if "--run-streamlit" in sys.argv:
     os.environ["STREAMLIT_THEME_FONT"]                    = "sans serif"
     # ──────────────────────────────────────────────────────────────────────────
 
-    # Passer explicitement le config.toml pour que Streamlit le trouve toujours
-    config_path = str(BASE_DIR / ".streamlit" / "config.toml")
-
+    # La configuration est entièrement passée via les variables d'environnement
+    # ci-dessus (STREAMLIT_SERVER_*, STREAMLIT_THEME_*), donc pas besoin de
+    # référencer un fichier config.toml — et --global.configFilePath n'est
+    # pas une option CLI valide de Streamlit.
     sys.argv = ["streamlit", "run", str(MAIN_APP),
                 "--server.headless", "true",
-                "--browser.gatherUsageStats", "false",
-                "--global.configFilePath", config_path]
+                "--browser.gatherUsageStats", "false"]
     stcli.main()
     sys.exit(0)
 
