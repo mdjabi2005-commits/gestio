@@ -32,8 +32,7 @@ Utilisez la page **"Ajouter Transaction"** pour :
 - 🔁 Créer une transaction récurrente
 """)
         if st.button("➕ Ajouter une Transaction", type="primary", use_container_width=True):
-            from domains.transactions.pages.add.add import interface_add_transaction
-            st.switch_page(interface_add_transaction)
+            st.switch_page(st.session_state["pages"]["add"])
 
     with col2:
         st.markdown("""
@@ -46,8 +45,7 @@ Consultez la page **"Voir Transactions"** pour :
 - 🗑️ Suppression de transactions
 """)
         if st.button("📊 Voir mes Transactions", type="secondary", use_container_width=True):
-            from domains.transactions.pages.view.view import interface_voir_transactions
-            st.switch_page(interface_voir_transactions)
+            st.switch_page(st.session_state["pages"]["view"])
 
     st.markdown("---")
 

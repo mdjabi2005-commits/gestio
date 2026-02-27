@@ -119,15 +119,22 @@ def main():
 
         # Navigation Setup (Native Streamlit)
         # Group pages by functionality
+        page_accueil = st.Page(interface_accueil, title="Accueil", icon="🏠", default=True)
+        page_view = st.Page(interface_voir_transactions, title="Voir Transactions", icon="📊", url_path="view")
+        page_add = st.Page(interface_add_transaction, title="Ajouter Transaction", icon="➕", url_path="add")
+        page_recurrences = st.Page(interface_recurrences, title="Récurrences", icon="🔄", url_path="recurrences")
+
+        # Stocker les pages dans session_state pour switch_page()
+        st.session_state["pages"] = {
+            "accueil": page_accueil,
+            "view": page_view,
+            "add": page_add,
+            "recurrences": page_recurrences,
+        }
+
         pages = {
-            "Tableau de Bord": [
-                st.Page(interface_accueil, title="Accueil", icon="🏠", default=True),
-                st.Page(interface_voir_transactions, title="Voir Transactions", icon="📊", url_path="view"),
-            ],
-            "Saisie": [
-                st.Page(interface_add_transaction, title="Ajouter Transaction", icon="➕", url_path="add"),
-                st.Page(interface_recurrences, title="Récurrences", icon="🔄", url_path="recurrences"),
-            ]
+            "Tableau de Bord": [page_accueil, page_view],
+            "Saisie": [page_add, page_recurrences],
         }
 
         pg = st.navigation(pages)
