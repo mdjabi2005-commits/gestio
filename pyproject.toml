@@ -3,7 +3,7 @@ name = "gestion-financiere"
 version = "4.0"
 description = "Application de gestion financiere personnelle"
 readme = "README.md"
-license = { file = "LICENSE" }
+license = "MIT"
 requires-python = ">=3.10"
 dependencies = [
     "pandas",
@@ -39,3 +39,8 @@ build = [
     "pyinstaller>=6.0",  # Windows uniquement (PyInstaller + Inno Setup)
 ]
 
+[tool.setuptools.packages.find]
+include = ["domains*", "shared*", "config*", "resources*"]
+
+[tool.setuptools.package-data]
+"*" = ["*.yaml", "*.yml", "*.json", "*.css", "*.png", "*.ico"]
