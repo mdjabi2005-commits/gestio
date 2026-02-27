@@ -50,11 +50,11 @@ L'OCR tourne sur 1 seul thread et freeze l'interface pendant le scan.
 
 ## Ressource Pack
 
-| Formation     | Cours précis                                                     | Lien                                                   |
-|---------------|------------------------------------------------------------------|--------------------------------------------------------|
-| **Educative** | "Python Concurrent Programming"                                  | [S'inscrire](https://www.educative.io/github)          |
-| **Educative** | "Building Data Science Web Apps with Streamlit" - Chapitre Async | [S'inscrire](https://www.educative.io/github)          |
-| **DataCamp**  | "Python Programming" - Chapitre Parallel                         | [S'inscrire](https://www.datacamp.com/github-students) |
+| Formation     | Cours précis                                                     | Accès Pack Étudiant                                    | Lien direct au cours                                        |
+|---------------|------------------------------------------------------------------|--------------------------------------------------------|-------------------------------------------------------------|
+| **Educative** | "Python Concurrent Programming"                                  | [S'inscrire](https://www.educative.io/github)          | [Chercher sur Educative](https://www.educative.io/explore)  |
+| **Educative** | "Building Data Science Web Apps with Streamlit" - Chapitre Async | [S'inscrire](https://www.educative.io/github)          | [Chercher sur Educative](https://www.educative.io/explore)  |
+| **DataCamp**  | "Python Programming" - Chapitre Parallel                         | [S'inscrire](https://www.datacamp.com/github-students) | [Chercher sur DataCamp](https://www.datacamp.com/search)    |
 
 ## Exercice pratique
 
@@ -109,11 +109,11 @@ manuellement sélectionner :
 
 ## Ressource Pack
 
-| Formation              | Cours précis                                       | Lien                                                           |
-|------------------------|----------------------------------------------------|----------------------------------------------------------------|
-| **Educative**          | "Natural Language Processing with Python"          | [S'inscrire](https://www.educative.io/github)                  |
-| **Educative**          | "Machine Learning Engineering" - Chapitre ML local | [S'inscrire](https://www.educative.io/github)                  |
-| **Azure for Students** | 100$ crédit pour tester des modèles plus lourds    | [S'inscrire](https://azure.microsoft.com/fr-fr/free/students/) |
+| Formation              | Cours précis                                       | Accès Pack Étudiant                                            | Lien direct au cours / service                              |
+|------------------------|----------------------------------------------------|----------------------------------------------------------------|-------------------------------------------------------------|
+| **Educative**          | "Natural Language Processing with Python"          | [S'inscrire](https://www.educative.io/github)                  | [Chercher sur Educative](https://www.educative.io/explore)  |
+| **Educative**          | "Machine Learning Engineering" - Chapitre ML local | [S'inscrire](https://www.educative.io/github)                  | [Chercher sur Educative](https://www.educative.io/explore)  |
+| **Azure for Students** | 100$ crédit pour tester des modèles plus lourds    | [S'inscrire](https://azure.microsoft.com/fr-fr/free/students/) | [Portail Azure](https://portal.azure.com/)                  |
 
 | Modèle                                               | Usage                            | Lien                                    |
 |------------------------------------------------------|----------------------------------|-----------------------------------------|
@@ -183,11 +183,11 @@ accès au fichier `.db` peut lire toutes les données.
 
 ## Ressource Pack
 
-| Formation     | Cours précis                                      | Lien                                          |
-|---------------|---------------------------------------------------|-----------------------------------------------|
-| **Educative** | "Database Design with SQLite" - Chapitre Security | [S'inscrire](https://www.educative.io/github) |
-| **Educative** | "Python Security Cookbook"                        | [S'inscrire](https://www.educative.io/github) |
-| **1Password** | Gestionnaire de mots de passe (1 an gratuit)      | [Activer](https://1password.com/)             |
+| Formation     | Cours précis                                      | Accès Pack Étudiant                           | Lien direct au cours / service                              |
+|---------------|---------------------------------------------------|-----------------------------------------------|-------------------------------------------------------------|
+| **Educative** | "Database Design with SQLite" - Chapitre Security | [S'inscrire](https://www.educative.io/github) | [Chercher sur Educative](https://www.educative.io/explore)  |
+| **Educative** | "Python Security Cookbook"                        | [S'inscrire](https://www.educative.io/github) | [Chercher sur Educative](https://www.educative.io/explore)  |
+| **1Password** | Gestionnaire de mots de passe (1 an gratuit)      | [Activer](https://1password.com/)             | [Application 1Password](https://my.1password.com/)          |
 
 | Outil            | Usage                             | Lien                                           |
 |------------------|-----------------------------------|------------------------------------------------|
@@ -265,13 +265,13 @@ Le fichier `resources/styles/responsive.css` contient des styles de base :
 
 ## Ressource Pack
 
-| Formation           | Cours précis                    | Lien                                                       |
-|---------------------|---------------------------------|------------------------------------------------------------|
-| **FrontendMasters** | "Introduction to HTML/CSS"      | [S'inscrire](https://frontendmasters.com/github-students/) |
-| **FrontendMasters** | "Designing UI/UX"               | [S'inscrire](https://frontendmasters.com/github-students/) |
-| **FrontendMasters** | "Progressive Web Apps"          | [S'inscrire](https://frontendmasters.com/github-students/) |
-| **Scrimba**         | "Build Python Web Apps"         | [S'inscrire](https://scrimba.com/github)                   |
-| **Educative**       | "Progressive Web Apps in React" | [S'inscrire](https://www.educative.io/github)              |
+| Formation           | Cours précis                    | Accès Pack Étudiant                                        | Lien direct au cours                                        |
+|---------------------|---------------------------------|------------------------------------------------------------|-------------------------------------------------------------|
+| **FrontendMasters** | "Introduction to HTML/CSS"      | [S'inscrire](https://frontendmasters.com/github-students/) | [Chercher](https://frontendmasters.com/courses/)            |
+| **FrontendMasters** | "Designing UI/UX"               | [S'inscrire](https://frontendmasters.com/github-students/) | [Chercher](https://frontendmasters.com/courses/)            |
+| **FrontendMasters** | "Progressive Web Apps"          | [S'inscrire](https://frontendmasters.com/github-students/) | [Chercher](https://frontendmasters.com/courses/)            |
+| **Scrimba**         | "Build Python Web Apps"         | [S'inscrire](https://scrimba.com/github)                   | [Python Web Apps](https://scrimba.com/allcourses)           |
+| **Educative**       | "Progressive Web Apps in React" | [S'inscrire](https://www.educative.io/github)              | [Chercher sur Educative](https://www.educative.io/explore)  |
 
 ## Exercice pratique
 
