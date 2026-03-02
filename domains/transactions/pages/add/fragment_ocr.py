@@ -118,11 +118,11 @@ def render_ocr_fragment():
 
 
 def _get_ocr_service():
-    """Retourne l'OCRService en singleton via session_state (évite le cold start ONNX à chaque scan)."""
+    """Retourne l'OCRService singleton process-level (thread-safe, survit aux reruns Streamlit)."""
+    from ...ocr.services.ocr_service import get_ocr_service
     if "ocr_service_instance" not in st.session_state:
-        from ...ocr.services.ocr_service import OCRService
         with st.spinner("⏳ Chargement des modèles OCR (première utilisation)..."):
-            st.session_state.ocr_service_instance = OCRService()
+            st.session_state.ocr_service_instance = get_ocr_service()
     return st.session_state.ocr_service_instance
 
 

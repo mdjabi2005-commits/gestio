@@ -5,6 +5,7 @@ Service unifié pour extraire données depuis Images (tickets) ou PDF (relevés)
 
 import logging
 import os
+import threading
 from datetime import date
 from pathlib import Path
 
@@ -17,6 +18,24 @@ from domains.transactions.database.model import Transaction
 from ..core.parser import parse_amount, parse_date, parse_pdf_revenue
 
 logger = logging.getLogger(__name__)
+
+# ── Singleton process-level ───────────────────────────────────────────────────
+# ONNX Runtime n'est pas thread-safe à l'initialisation.
+# On garantit qu'une seule instance existe dans tout le processus Python,
+# peu importe le nombre de reruns Streamlit.
+_instance: "OCRService | None" = None
+_lock = threading.Lock()
+
+
+def get_ocr_service() -> "OCRService":
+    """Retourne l'instance singleton d'OCRService (thread-safe)."""
+    global _instance
+    if _instance is None:
+        with _lock:
+            if _instance is None:  # double-check après acquisition du lock
+                logger.info("[OCR] Création de l'instance singleton OCRService...")
+                _instance = OCRService()
+    return _instance
 
 
 class OCRService:
