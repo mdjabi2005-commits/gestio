@@ -4,6 +4,7 @@ Service unifié pour extraire données depuis Images (tickets) ou PDF (relevés)
 """
 
 import logging
+import os
 from datetime import date
 from pathlib import Path
 
@@ -21,18 +22,27 @@ logger = logging.getLogger(__name__)
 class OCRService:
     """
     Service unifié orchestrant l'extraction de données depuis:
-    - Images de tickets (OCR EasyOCR)
+    - Images de tickets (OCR RapidOCR)
     - PDF de relevés (pdfminer.six)
-    Et conversion en Transaction unifiée
+    Et conversion en Transaction unifiée.
+    Groq est utilisé pour la catégorisation IA si GROQ_API_KEY est configurée.
     """
 
     def __init__(self):
         """Initialise l'OCR Service avec ses dépendances."""
         self.ocr_engine = RapidOCREngine()
         self.pattern_manager = PatternManager()
-        self.llm_parser = GroqParser()
 
-        logger.info("OCRService unifié initialisé avec LLM Groq")
+        # Instancier Groq seulement si la clé est disponible
+        groq_key = os.getenv("GROQ_API_KEY", "").strip()
+        if groq_key:
+            self.llm_parser = GroqParser()
+            self.groq_available = True
+            logger.info("OCRService initialisé — catégorisation Groq IA activée ✅")
+        else:
+            self.llm_parser = GroqParser()  # fallback interne sans clé
+            self.groq_available = False
+            logger.warning("OCRService initialisé — GROQ_API_KEY absente, catégorisation IA désactivée ⚠️")
 
     @staticmethod
     def _detect_file_type(file_path: str) -> str:

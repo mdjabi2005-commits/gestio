@@ -4,6 +4,7 @@ Flux : upload/disque → extraction OCR → validation formulaire par ticket →
 """
 
 import logging
+import os
 import time
 from pathlib import Path
 
@@ -20,9 +21,39 @@ from config.paths import TO_SCAN_DIR
 logger = logging.getLogger(__name__)
 
 
+def _render_groq_status_banner() -> bool:
+    """
+    Affiche un bandeau selon l'état de la clé Groq.
+    Retourne True si Groq est disponible, False sinon.
+    """
+    groq_key = os.getenv("GROQ_API_KEY", "").strip()
+    if groq_key:
+        st.success(
+            "🤖 **Catégorisation IA activée** — Groq analysera automatiquement vos tickets "
+            "(montant, catégorie, description).",
+            icon="✅",
+        )
+        return True
+    else:
+        st.warning(
+            "⚠️ **Catégorisation IA désactivée** — Aucune clé Groq configurée.\n\n"
+            "Sans Groq, l'OCR extrait uniquement le texte brut : les catégories et descriptions "
+            "seront vides et devront être renseignées manuellement.\n\n"
+            "👉 **Configurez votre clé Groq gratuitement dans ⚙️ Paramètres** pour automatiser "
+            "la catégorisation de vos tickets en 1 seconde.",
+        )
+        if st.button("⚙️ Configurer Groq maintenant", key="btn_goto_settings", type="primary"):
+            st.switch_page("settings")
+        return False
+
+
 def render_ocr_fragment():
     """Upload batch de tickets images → OCR → validation ticket par ticket."""
     st.subheader("📸 Scan par OCR (Simple & Rapide)")
+
+    # Vérification clé Groq — bandeau toujours visible
+    _render_groq_status_banner()
+
     st.info("💡 Chargez vos tickets, vérifiez, et validez. Ils seront automatiquement rangés.")
 
     if "ocr_uploader_key" not in st.session_state:
@@ -99,7 +130,9 @@ def _run_ocr_batch(files_to_process: list, scan_dir_path: Path) -> None:
     start_time = time.time()
 
     try:
-        with st.spinner("🤖 Groq analyse vos tickets..."):
+        groq_active = bool(os.getenv("GROQ_API_KEY", "").strip())
+        spinner_msg = "🤖 Groq catégorise vos tickets..." if groq_active else "🔍 OCR en cours (sans IA — configurez Groq pour la catégorisation auto)..."
+        with st.spinner(spinner_msg):
             for count, f in enumerate(files_to_process, 1):
                 if st.session_state.get("ocr_cancel", False):
                     raise InterruptedError("Annulé par l'utilisateur")
