@@ -43,7 +43,12 @@ def _render_groq_status_banner() -> bool:
             "la catégorisation de vos tickets en 1 seconde.",
         )
         if st.button("⚙️ Configurer Groq maintenant", key="btn_goto_settings", type="primary"):
-            st.switch_page("settings")
+            pages = st.session_state.get("pages", {})
+            settings_page = pages.get("settings")
+            if settings_page:
+                st.switch_page(settings_page)
+            else:
+                st.info("Rendez-vous dans ⚙️ **Paramètres** dans le menu de navigation.")
         return False
 
 
