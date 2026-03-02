@@ -11,7 +11,8 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-# Chemin calculé depuis la racine du projet (2 niveaux au-dessus de shared/utils/)
+# Chemin calculé depuis la racine du projet (3 niveaux au-dessus de shared/utils/)
+# En mode onedir PyInstaller, la structure de dossiers est identique → Path(__file__) fonctionne
 _PROJECT_ROOT = Path(__file__).parent.parent.parent
 _YAML_PATH = _PROJECT_ROOT / "domains" / "transactions" / "database" / "categories.yaml"
 

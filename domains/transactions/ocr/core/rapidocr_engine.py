@@ -4,14 +4,16 @@ Remplace EasyOCR pour une exécution plus rapide et légère.
 """
 
 import logging
+import sys
 
 try:
     # noinspection PyUnusedImports
     from rapidocr_onnxruntime import RapidOCR
 
     RAPIDOCR_AVAILABLE = True
-except ImportError:
+except ImportError as _import_err:
     RAPIDOCR_AVAILABLE = False
+    _rapidocr_error = str(_import_err)
 
 logger = logging.getLogger(__name__)
 
@@ -24,17 +26,22 @@ class RapidOCREngine:
 
     def __init__(self):
         if not RAPIDOCR_AVAILABLE:
-            raise ImportError("rapidocr_onnxruntime n'est pas installé. pip install rapidocr_onnxruntime")
+            frozen = getattr(sys, 'frozen', False)
+            logger.error(
+                f"rapidocr_onnxruntime import échoué (frozen={frozen}): {_rapidocr_error}"
+            )
+            raise ImportError(
+                f"rapidocr_onnxruntime n'est pas disponible. "
+                f"Mode frozen={frozen}. Erreur: {_rapidocr_error}"
+            )
 
         # Initialisation du moteur
-        # det_model_path, rec_model_path peuvent être configurés si besoin,
-        # mais les défauts sont généralement bons (téléchargés auto).
         try:
             self.engine = RapidOCR()
             logger.info("RapidOCR engine initialisé avec succès")
         except Exception as e:
-            logger.error(f"Erreur lors de l'init de RapidOCR: {e}")
-            raise e
+            logger.error(f"Erreur lors de l'init de RapidOCR: {e}", exc_info=True)
+            raise
 
     def extract_text(self, image_path: str) -> str:
         """

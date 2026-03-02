@@ -1,5 +1,5 @@
 """
-ger - Gestion des patterns regex
+Pattern Manager - Gestion des patterns regex
 Lecture simple des patterns depuis ocr_patterns.yaml
 """
 

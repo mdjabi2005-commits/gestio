@@ -4,7 +4,9 @@ PyInstaller spec file — Gestio V4
 Mode : onedir (requis pour Inno Setup et AppImage)
 """
 import sys
-from PyInstaller.utils.hooks import collect_data_files, collect_submodules, copy_metadata
+from PyInstaller.utils.hooks import (
+    collect_data_files, collect_submodules, copy_metadata, collect_dynamic_libs
+)
 
 # ── Dépendances de métadonnées requises par Streamlit ─────────────────────────
 METADATA = (
@@ -14,6 +16,7 @@ METADATA = (
     + copy_metadata('pydantic')
     + copy_metadata('plotly')
     + copy_metadata('rapidocr_onnxruntime')
+    + copy_metadata('onnxruntime')
 )
 
 # ── Données statiques à embarquer ─────────────────────────────────────────────
@@ -28,10 +31,13 @@ DATAS = (
     + collect_data_files('streamlit')
     + collect_data_files('altair')
     + collect_data_files('rapidocr_onnxruntime')
+    + collect_data_files('onnxruntime')
+    + collect_data_files('pdfminer')
     + METADATA
 )
 
 # ── Imports cachés ─────────────────────────────────────────────────────────────
+# collect_submodules assure l'inclusion de tous les sous-modules importés dynamiquement
 HIDDEN = [
     # Streamlit internals
     'streamlit',
@@ -41,9 +47,13 @@ HIDDEN = [
     # Data
     'pandas', 'numpy', 'plotly', 'plotly.express',
     'matplotlib', 'matplotlib.backends.backend_agg',
-    # Image / OCR
+    # Image / OCR — onnxruntime + rapidocr complet
     'PIL', 'PIL.Image', 'cv2',
     'rapidocr_onnxruntime',
+    'onnxruntime',
+    'onnxruntime.capi',
+    'onnxruntime.capi._pybind_state',
+    'onnxruntime.capi.onnxruntime_pybind11_state',
     # PDF / YAML
     'pdfminer', 'pdfminer.high_level', 'yaml',
     # DB & Sécurité
@@ -51,7 +61,7 @@ HIDDEN = [
     'pyjwt',
     # Utils
     'psutil', 'pydantic', 'requests',
-    'dotenv', 'python_dotenv',
+    'dotenv', 'dotenv.main',
     'dateutil', 'dateutil.parser',
     # LLM local + cloud
     'ollama',
@@ -60,12 +70,12 @@ HIDDEN = [
     'multiprocessing', 'concurrent.futures',
     # UI
     'tkinter', 'tkinter.scrolledtext',
-]
+] + collect_submodules('onnxruntime') + collect_submodules('rapidocr_onnxruntime')
 
 a = Analysis(
     ['launcher.py'],
     pathex=[],
-    binaries=[],
+    binaries=collect_dynamic_libs('onnxruntime'),
     datas=DATAS,
     hiddenimports=HIDDEN,
     hookspath=[],
