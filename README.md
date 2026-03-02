@@ -100,7 +100,7 @@ v4/
 
 ```bash
 # Cloner le dépôt
-git clone https://github.com/mdjabi2005-commits/gestio-feature.git
+git clone https://github.com/mdjabi2005-commits/gestio.git
 cd gestio-feature
 
 # Installer les dépendances avec uv
