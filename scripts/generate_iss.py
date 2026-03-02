@@ -18,7 +18,7 @@ CONTENT = (
     '#define AppName      "Gestio"\r\n'
     '#define AppVersion   "4.0"\r\n'
     '#define AppPublisher "Djabi"\r\n'
-    '#define AppURL       "https://github.com/djabi/gestio"\r\n'
+    '#define AppURL       "https://github.com/mdjabi2005-commits/gestio"\r\n'
     '#define AppExeName   "GestioV4.exe"\r\n'
     "\r\n"
     "[Setup]\r\n"

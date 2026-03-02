@@ -2,11 +2,12 @@ import { Download, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import Reveal from "./Reveal";
 
-// ── Version à mettre à jour à chaque release ──────────────────────────────────
+// ── Version à mettre à jour à chaque release ─────────────────────────────────
 const APP_VERSION = "v1.0.3";
 const BASE_URL = `https://github.com/mdjabi2005-commits/gestio/releases/download/${APP_VERSION}`;
-
 const INSTALL_SCRIPT = `curl -sSL ${BASE_URL}/install-mac-linux.sh | bash`;
+
+const platforms = [
   {
     name: "Windows",
     desc: "Windows 10/11 (64-bit)",
@@ -39,7 +40,6 @@ const INSTALL_SCRIPT = `curl -sSL ${BASE_URL}/install-mac-linux.sh | bash`;
   },
 ];
 
-const INSTALL_SCRIPT = "curl -sSL https://github.com/mdjabi2005-commits/gestio/releases/download/v1.0.2/install-mac-linux.sh | bash";
 
 const DownloadSection = () => {
   const [copied, setCopied] = useState(false);
