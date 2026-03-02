@@ -51,6 +51,7 @@ HIDDEN = [
     'pyjwt',
     # Utils
     'psutil', 'pydantic', 'requests',
+    'dotenv', 'python_dotenv',
     'dateutil', 'dateutil.parser',
     # LLM local
     'ollama',
