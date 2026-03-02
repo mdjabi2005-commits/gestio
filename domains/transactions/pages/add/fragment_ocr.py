@@ -117,9 +117,18 @@ def render_ocr_fragment():
         _render_ocr_ticket_form(fname, data)
 
 
+def _get_ocr_service():
+    """Retourne l'OCRService en singleton via session_state (évite le cold start ONNX à chaque scan)."""
+    if "ocr_service_instance" not in st.session_state:
+        from ...ocr.services.ocr_service import OCRService
+        with st.spinner("⏳ Chargement des modèles OCR (première utilisation)..."):
+            st.session_state.ocr_service_instance = OCRService()
+    return st.session_state.ocr_service_instance
+
+
 def _run_ocr_batch(files_to_process: list, scan_dir_path: Path) -> None:
     """Exécute l'extraction OCR sur le batch et stocke les résultats en session."""
-    from ...ocr.services.ocr_service import OCRService
+    ocr_service = _get_ocr_service()
 
     st.session_state.ocr_cancel = False
     total = len(files_to_process)
@@ -131,7 +140,6 @@ def _run_ocr_batch(files_to_process: list, scan_dir_path: Path) -> None:
         status_text = st.empty()
         timer_text = st.empty()
 
-    ocr_service = OCRService()
     start_time = time.time()
 
     try:
