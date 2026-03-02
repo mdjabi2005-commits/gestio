@@ -35,7 +35,7 @@ const platforms = [
   },
 ];
 
-const INSTALL_SCRIPT = "curl -sSL https://github.com/mdjabi2005-commits/gestio/releases/download/v1.0.1/install-mac-linux.sh | bash";
+const INSTALL_SCRIPT = "curl -sSL https://github.com/mdjabi2005-commits/gestio/releases/download/v1.0.2/install-mac-linux.sh | bash";
 
 const DownloadSection = () => {
   const [copied, setCopied] = useState(false);
@@ -75,7 +75,7 @@ const DownloadSection = () => {
 
                 {p.type === "exe" ? (
                   <a
-                    href="https://github.com/mdjabi2005-commits/gestio/releases/download/v1.0.1/Gestio-Setup-v1.0.1.exe"
+                    href="https://github.com/mdjabi2005-commits/gestio/releases/download/v1.0.2/Gestio-Setup-v1.0.2.exe"
                     className="inline-flex items-center justify-center gap-2.5 w-full bg-gradient-primary text-primary-foreground px-8 py-4 rounded-xl font-semibold shadow-primary hover:-translate-y-1 hover:shadow-primary-hover transition-all no-underline shrink-0"
                   >
                     <Download className="w-5 h-5" />
