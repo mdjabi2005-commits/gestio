@@ -61,6 +61,7 @@ def interface_settings() -> None:
         "L'OCR intelligent utilise **Groq** (LLM cloud ultra-rapide) pour analyser vos tickets. "
         "Obtenez votre clé gratuite sur [console.groq.com](https://console.groq.com/keys)."
     )
+    st.caption(f"📁 Fichier de configuration : `{ENV_PATH}`")
 
     env = _read_env()
     current_key = os.getenv("GROQ_API_KEY") or env.get("GROQ_API_KEY", "")
