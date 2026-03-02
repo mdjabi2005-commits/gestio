@@ -68,6 +68,7 @@ from shared.ui import load_all_styles, refresh_and_rerun
 # IMPORTS - Pages
 # ==============================
 from domains.home.pages.home import interface_accueil
+from domains.home.pages.settings import interface_settings
 from domains.transactions.pages.add.add import interface_add_transaction
 from domains.transactions.pages.view.view import interface_voir_transactions
 from domains.transactions.pages.recurrences.recurrences import interface_recurrences
@@ -127,6 +128,7 @@ def main():
         page_view = st.Page(interface_voir_transactions, title="Voir Transactions", icon="📊", url_path="view")
         page_add = st.Page(interface_add_transaction, title="Ajouter Transaction", icon="➕", url_path="add")
         page_recurrences = st.Page(interface_recurrences, title="Récurrences", icon="🔄", url_path="recurrences")
+        page_settings = st.Page(interface_settings, title="Paramètres", icon="⚙️", url_path="settings")
 
         # Stocker les pages dans session_state pour switch_page()
         st.session_state["pages"] = {
@@ -134,11 +136,13 @@ def main():
             "view": page_view,
             "add": page_add,
             "recurrences": page_recurrences,
+            "settings": page_settings,
         }
 
         pages = {
             "Tableau de Bord": [page_accueil, page_view],
             "Saisie": [page_add, page_recurrences],
+            "Application": [page_settings],
         }
 
         pg = st.navigation(pages)

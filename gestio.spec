@@ -53,8 +53,9 @@ HIDDEN = [
     'psutil', 'pydantic', 'requests',
     'dotenv', 'python_dotenv',
     'dateutil', 'dateutil.parser',
-    # LLM local
+    # LLM local + cloud
     'ollama',
+    'groq',
     # Concurrence (Pilier 1 roadmap)
     'multiprocessing', 'concurrent.futures',
     # UI
