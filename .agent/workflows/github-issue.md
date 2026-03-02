@@ -4,6 +4,25 @@ description: Travailler avec les GitHub Issues - conventions de commits, branche
 
 # Workflow GitHub Issues
 
+## 0. Checklist obligatoire — Début de chaque session
+
+> Avant d'écrire la moindre ligne de code, l'agent doit valider ces 3 points.
+
+| # | Question à poser | Exemple de réponse attendue |
+|---|------------------|-----------------------------|
+| 1 | "Sur quelle issue travaille-t-on ?" | `#12` |
+| 2 | "Sur quelle branche Git es-tu ?" | `12-ajout-export-pdf` |
+| 3 | Vérifier en console : `git branch --show-current` | `12-ajout-export-pdf` |
+
+**Si ces infos ne sont pas données → les demander explicitement avant tout.**
+
+Une fois connues, l'agent doit :
+- Mémoriser le numéro d'issue pour la session entière
+- Suffixer chaque commit avec `#{numéro}` (ex: `feat: export PDF #12`)
+- Ne jamais committer sur `main` directement
+
+---
+
 ## 1. Créer une branche liée à une issue
 
 Toujours créer une branche depuis l'issue GitHub elle-même :
