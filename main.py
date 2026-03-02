@@ -23,8 +23,13 @@ os.environ.setdefault("STREAMLIT_THEME_FONT",                       "sans serif"
 import streamlit as st
 from dotenv import load_dotenv
 
-# Charger de force les variables d'environnement du fichier .env à la racine
-load_dotenv()
+# Charger le .env depuis le dossier utilisateur (release) en priorité,
+# puis fallback sur le .env local (développement)
+from config.paths import ENV_PATH as _USER_ENV_PATH
+if _USER_ENV_PATH.exists():
+    load_dotenv(dotenv_path=_USER_ENV_PATH, override=True)
+else:
+    load_dotenv()  # fallback .env local (dev)
 
 # Initialize logging system FIRST (before any other imports)
 from config.logging_config import setup_logging

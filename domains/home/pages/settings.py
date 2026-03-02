@@ -9,11 +9,11 @@ from pathlib import Path
 
 import streamlit as st
 
+from config.paths import ENV_PATH
 from shared.ui.toast_components import toast_success, toast_error, toast_warning
 
 logger = logging.getLogger(__name__)
 
-ENV_PATH = Path(__file__).parent.parent.parent.parent.parent / ".env"
 
 
 def _read_env() -> dict[str, str]:

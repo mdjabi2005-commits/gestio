@@ -40,6 +40,9 @@ APP_LOG_PATH = os.path.join(APP_LOG_DIR, "gestio_app.log")
 CSV_EXPORT_DIR = os.path.join(DATA_DIR, "exports")
 CSV_TRANSACTIONS_SANS_TICKETS = os.path.join(CSV_EXPORT_DIR, "transactions_sans_tickets.csv")
 
+# Fichier .env utilisateur (hors dossier d'installation, accessible en écriture)
+ENV_PATH = Path(DATA_DIR) / ".env"
+
 # Create directories
 for directory in [DATA_DIR, TO_SCAN_DIR, SORTED_DIR,
                   REVENUS_A_TRAITER, REVENUS_TRAITES, APP_LOG_DIR, CSV_EXPORT_DIR]:
