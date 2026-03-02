@@ -40,9 +40,38 @@ class OCRService:
             self.groq_available = True
             logger.info("OCRService initialisé — catégorisation Groq IA activée ✅")
         else:
-            self.llm_parser = GroqParser()  # fallback interne sans clé
+            self.llm_parser = GroqParser()
             self.groq_available = False
             logger.warning("OCRService initialisé — GROQ_API_KEY absente, catégorisation IA désactivée ⚠️")
+
+        # Warm-up ONNX Runtime : force la compilation JIT des kernels au démarrage
+        # pour que le premier vrai scan soit instantané (surtout sous PyInstaller)
+        self._warmup_onnx()
+
+    def _warmup_onnx(self) -> None:
+        """
+        Warm-up ONNX Runtime : exécute une inférence factice sur image blanche 1x1.
+        Force la compilation JIT des kernels au démarrage pour que le premier
+        vrai scan soit instantané (critique sous PyInstaller).
+        """
+        try:
+            import tempfile
+            import numpy as np
+            from PIL import Image
+
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+                tmp_path = tmp.name
+
+            # Image blanche 32x32 — assez grande pour que RapidOCR ne la rejette pas
+            img = Image.fromarray(np.ones((32, 32, 3), dtype=np.uint8) * 255)
+            img.save(tmp_path)
+
+            self.ocr_engine.extract_text(tmp_path)
+
+            Path(tmp_path).unlink(missing_ok=True)
+            logger.info("ONNX Runtime warm-up terminé ✅")
+        except Exception as e:
+            logger.warning(f"Warm-up ONNX non bloquant : {e}")
 
     @staticmethod
     def _detect_file_type(file_path: str) -> str:
