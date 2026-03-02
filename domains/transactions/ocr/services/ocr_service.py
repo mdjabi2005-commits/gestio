@@ -199,46 +199,41 @@ class OCRService:
     def process_ticket(self, image_path: str) -> Transaction:
         """
         Traite un ticket scanné (image) et retourne une Transaction.
-        Workflow:
-            1. OCR -> Texte brut
-            2. Nettoyage du texte
-            3. Extraction montant (via patterns)
-            4. Extraction date (via patterns)
-            5. Construction Transaction
         """
-        logger.info(f"Traitement ticket démarré: {Path(image_path).name}")
+        import time
+        t0 = time.time()
+        logger.info(f"[OCR] process_ticket démarré : {Path(image_path).name}")
 
         try:
             # 1. Extraction texte via OCR
+            logger.info(f"[OCR] Étape 1/4 — extraction texte OCR... ({time.time()-t0:.2f}s)")
             raw_text = self.ocr_engine.extract_text(image_path)
+            logger.info(f"[OCR] Étape 1/4 — texte extrait : {len(raw_text)} caractères ({time.time()-t0:.2f}s)")
 
-            # 3. Récupération des patterns
+            # 2. Récupération des patterns
+            logger.info(f"[OCR] Étape 2/4 — parsing montant/date... ({time.time()-t0:.2f}s)")
             amount_patterns = self.pattern_manager.get_amount_patterns()
             date_patterns = self.pattern_manager.get_date_patterns()
-
-            # 4. Parsing
             amount = parse_amount(raw_text, amount_patterns)
             transaction_date = parse_date(raw_text, date_patterns)
+            logger.info(f"[OCR] Étape 2/4 — montant={amount}, date={transaction_date} ({time.time()-t0:.2f}s)")
 
-            # 5. Extraction Sémantique Intelligente via Groq (Catégorisation)
-            logger.info("Soumission du texte brut à l'IA Groq pour catégorisation...")
+            # 3. Catégorisation Groq
+            logger.info(f"[OCR] Étape 3/4 — catégorisation {'Groq IA' if self.groq_available else 'fallback (pas de clé Groq)'}... ({time.time()-t0:.2f}s)")
             semantic_data = self.llm_parser.parse(raw_text)
-            
             category = semantic_data.get("category", "Autre")
             subcategory = semantic_data.get("subcategory", None)
-            
-            # La description issue du LLM correspond souvent au nom du magasin
             description = semantic_data.get("description", "")
             if len(description) > 50:
-                 description = description[:50]  # Sécurité de longueur DB
-                 
-            # 6. Validation Montant
+                description = description[:50]
+            logger.info(f"[OCR] Étape 3/4 — catégorie={category}, desc={description} ({time.time()-t0:.2f}s)")
+
+            # 4. Construction Transaction
+            logger.info(f"[OCR] Étape 4/4 — construction Transaction... ({time.time()-t0:.2f}s)")
             if amount is None:
-                err = ValueError("Montant non trouvé dans le ticket")
-                log_error(err, f"Echec extraction montant ticket {Path(image_path).name}")
+                logger.warning(f"[OCR] Montant non trouvé, défaut à 0.0")
                 amount = 0.0
 
-            # 7. Construction Transaction unifiée et "Intelligente"
             transaction = Transaction(
                 type="Dépense",
                 categorie=category,
@@ -254,7 +249,7 @@ class OCRService:
                 id=None,
             )
 
-            logger.info(f"✅ Transaction Ticket créée avec succès: {amount}€ ({transaction.date or 'date inconnue'})")
+            logger.info(f"[OCR] ✅ Transaction créée : {amount}€ — {category} — total={time.time()-t0:.2f}s")
             return transaction
 
         except Exception as e:
