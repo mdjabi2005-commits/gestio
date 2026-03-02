@@ -2,7 +2,11 @@ import { Download, Copy, Check } from "lucide-react";
 import { useState } from "react";
 import Reveal from "./Reveal";
 
-const platforms = [
+// ── Version à mettre à jour à chaque release ──────────────────────────────────
+const APP_VERSION = "v1.0.3";
+const BASE_URL = `https://github.com/mdjabi2005-commits/gestio/releases/download/${APP_VERSION}`;
+
+const INSTALL_SCRIPT = `curl -sSL ${BASE_URL}/install-mac-linux.sh | bash`;
   {
     name: "Windows",
     desc: "Windows 10/11 (64-bit)",
@@ -75,7 +79,7 @@ const DownloadSection = () => {
 
                 {p.type === "exe" ? (
                   <a
-                    href="https://github.com/mdjabi2005-commits/gestio/releases/download/v1.0.2/Gestio-Setup-v1.0.2.exe"
+                    href={`${BASE_URL}/Gestio-Setup-${APP_VERSION}.exe`}
                     className="inline-flex items-center justify-center gap-2.5 w-full bg-gradient-primary text-primary-foreground px-8 py-4 rounded-xl font-semibold shadow-primary hover:-translate-y-1 hover:shadow-primary-hover transition-all no-underline shrink-0"
                   >
                     <Download className="w-5 h-5" />
