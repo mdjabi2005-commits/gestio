@@ -111,6 +111,23 @@ except Exception as e:
     st.error(f"⚠️ Erreur d'initialisation de la base de données : {e}")
 
 # ==============================
+# PRÉCHARGEMENT OCR (background)
+# ==============================
+def _preload_ocr() -> None:
+    """Précharge OCRService en arrière-plan pour éliminer le cold start PyInstaller."""
+    try:
+        from domains.transactions.ocr.services.ocr_service import OCRService
+        instance = OCRService()
+        st.session_state["ocr_service_instance"] = instance
+        logger.info("OCRService préchargé en arrière-plan ✅")
+    except Exception as e:
+        logger.warning(f"Préchargement OCR échoué (non bloquant) : {e}")
+
+if "ocr_service_instance" not in st.session_state:
+    import threading
+    threading.Thread(target=_preload_ocr, daemon=True).start()
+
+# ==============================
 # LOAD STYLES
 # ==============================
 load_all_styles()
