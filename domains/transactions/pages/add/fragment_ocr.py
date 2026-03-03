@@ -14,7 +14,7 @@ import streamlit as st
 from shared.ui.batch_uploader import (
     BatchConfig, init_batch_session, render_disk_files,
     render_batch_controls, render_batch_progress, render_validation_section,
-    finalize_validation, handle_file_input
+    finalize_validation, handle_file_input, run_batch_processing
 )
 from shared.ui.toast_components import toast_success, toast_error
 from ...database.model import Transaction
@@ -96,57 +96,22 @@ def _get_ocr_service():
 def _run_ocr_batch(files_to_process: list) -> None:
     """Exécute l'extraction OCR sur le batch."""
     ocr_service = _get_ocr_service()
-    st.session_state.ocr_cancel = False
-    total = len(files_to_process)
-    results = []
+    groq_active = bool(os.getenv("GROQ_API_KEY", "").strip())
+    spinner_msg = "Groq categorise vos tickets..." if groq_active else "OCR en cours..."
 
-    ui_placeholder = st.empty()
-    with ui_placeholder.container():
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        timer_text = st.empty()
-
-    start_time = time.time()
-
-    try:
-        groq_active = bool(os.getenv("GROQ_API_KEY", "").strip())
-        spinner_msg = "🤖 Groq catégorise vos tickets..." if groq_active else "🔍 OCR en cours..."
-        with st.spinner(spinner_msg):
-            for count, f in enumerate(files_to_process, 1):
-                if st.session_state.get("ocr_cancel", False):
-                    raise InterruptedError("Annulé par l'utilisateur")
-
-                fname, p = handle_file_input(f, OCR_CONFIG.dir_path)
-
-                progress_bar.progress((count - 1) / total)
-                status_text.text(f"⏳ Traitement : {fname}  ({count}/{total})")
-                doc_start = time.time()
-                try:
-                    trans = ocr_service.process_document(str(p))
-                    results.append((fname, trans, None, time.time() - doc_start))
-                except Exception as e:
-                    results.append((fname, None, str(e), time.time() - doc_start))
-
-                elapsed = time.time() - start_time
-                progress_bar.progress(count / total)
-                status_text.text(f"✅ Traité : {fname}  ({count}/{total})")
-                timer_text.caption(f"⏱️ Temps écoulé : {elapsed:.1f}s")
-
-    except InterruptedError:
-        st.warning("⚠️ Traitement annulé.")
-        results = []
-    except Exception as e:
-        st.error(f"Erreur inattendue : {e}")
-        results = []
-
-    ui_placeholder.empty()
+    results, start_time = run_batch_processing(
+        config=OCR_CONFIG,
+        files_to_process=files_to_process,
+        process_fn=ocr_service.process_document,
+        spinner_msg=spinner_msg,
+    )
 
     st.session_state.ocr_batch = {
-        fname: {"transaction": trans, "error": err, "saved": False, "temp_path": str(OCR_CONFIG.dir_path / fname)}
+        fname: {"transaction": trans, "error": err, "saved": False,
+                "temp_path": str(OCR_CONFIG.dir_path / fname)}
         for fname, trans, err, _ in results
     }
-
-    render_batch_progress(OCR_CONFIG.prefix, total, results, start_time)
+    render_batch_progress(OCR_CONFIG.prefix, len(files_to_process), results, start_time)
 
 
 def _render_ocr_ticket_form(fname: str, data: dict) -> None:

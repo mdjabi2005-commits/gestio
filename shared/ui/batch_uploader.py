@@ -75,6 +75,62 @@ def render_batch_controls(config: BatchConfig, start_callback: Callable) -> None
         start_callback(files)
 
 
+def run_batch_processing(
+    config: BatchConfig,
+    files_to_process: list,
+    process_fn: Callable,
+    spinner_msg: str = "Traitement en cours...",
+) -> tuple[list, float]:
+    """
+    Boucle de traitement commune pour tous les fragments batch (OCR, PDF, CSV...).
+    Retourne une liste de tuples (fname, result, error, duration).
+    """
+    cancel_key = f"{config.prefix}_cancel"
+    st.session_state[cancel_key] = False
+    total = len(files_to_process)
+    results = []
+
+    ui_placeholder = st.empty()
+    with ui_placeholder.container():
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        timer_text = st.empty()
+
+    start_time = time.time()
+
+    try:
+        with st.spinner(spinner_msg):
+            for count, f in enumerate(files_to_process, 1):
+                if st.session_state.get(cancel_key, False):
+                    raise InterruptedError("Annule par l'utilisateur")
+
+                fname, p = handle_file_input(f, config.dir_path)
+
+                progress_bar.progress((count - 1) / total)
+                status_text.text(f"Traitement : {fname}  ({count}/{total})")
+                doc_start = time.time()
+                try:
+                    result = process_fn(str(p))
+                    results.append((fname, result, None, time.time() - doc_start))
+                except Exception as e:
+                    results.append((fname, None, str(e), time.time() - doc_start))
+
+                elapsed = time.time() - start_time
+                progress_bar.progress(count / total)
+                status_text.text(f"Traite : {fname}  ({count}/{total})")
+                timer_text.caption(f"Temps ecoule : {elapsed:.1f}s")
+
+    except InterruptedError:
+        st.warning("Traitement annule.")
+        results = []
+    except Exception as e:
+        st.error(f"Erreur inattendue : {e}")
+        results = []
+
+    ui_placeholder.empty()
+    return results, start_time
+
+
 def render_batch_progress(prefix: str, total: int, results: list,
                           start_time: float) -> int:
     """Affiche la progress bar et retourne le nombre de fichiers traités."""
