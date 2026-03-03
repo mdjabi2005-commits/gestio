@@ -51,6 +51,7 @@ CONTENT = (
     "SolidCompression=yes\r\n"
     "LZMANumBlockThreads=4\r\n"
     "WizardStyle=modern\r\n"
+    "SetupIconFile=dist\\app\\resources\\icons\\logo.ico\r\n"
     "ShowLanguageDialog=no\r\n"
     "LanguageDetectionMethod=locale\r\n"
     "MinVersion=10.0\r\n"
@@ -74,9 +75,9 @@ CONTENT = (
     'Source: "dist\\app\\*"; DestDir: "{app}\\app"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "*.pyc,__pycache__,.venv,.git"\r\n'
     "\r\n"
     "[Icons]\r\n"
-    'Name: "{group}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"\r\n'
-    'Name: "{autodesktop}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"; Tasks: desktopicon\r\n'
-    'Name: "{userstartup}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"; Tasks: startupicon\r\n'
+    'Name: "{group}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"; IconFilename: "{app}\\app\\resources\\icons\\logo.ico"\r\n'
+    'Name: "{autodesktop}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"; IconFilename: "{app}\\app\\resources\\icons\\logo.ico"; Tasks: desktopicon\r\n'
+    'Name: "{userstartup}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"; IconFilename: "{app}\\app\\resources\\icons\\logo.ico"; Tasks: startupicon\r\n'
     "\r\n"
     "[Tasks]\r\n"
     'Name: "desktopicon"; Description: "Creer un raccourci sur le &Bureau"; GroupDescription: "Raccourcis :"\r\n'

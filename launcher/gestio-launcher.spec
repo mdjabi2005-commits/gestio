@@ -57,5 +57,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=str(ROOT.parent / 'resources' / 'icons' / 'gestio.ico') if sys.platform == 'win32' else None,
+    icon=str(ROOT.parent / 'resources' / 'icons' / 'logo.ico') if sys.platform == 'win32' else None,
 )
