@@ -23,7 +23,7 @@ CONTENT = (
     "; Resultat : dist\\installer\\Gestio-Setup-v4.0.0.exe\r\n"
     ";\r\n"
     "; Architecture : sources + uv standalone + mini-launcher Tkinter\r\n"
-    "; Plus de PyInstaller — uv gere Python + toutes les dependances\r\n"
+    "; Plus de PyInstaller -- uv gere Python + toutes les dependances\r\n"
     "\r\n"
     '#define AppName      "Gestio"\r\n'
     '#define AppVersion   "4.0.0"\r\n'
