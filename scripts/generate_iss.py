@@ -20,13 +20,13 @@ OUT = ROOT / "gestio.iss"
 CONTENT = (
     "; Gestio V4 - Script Inno Setup (uv-native)\r\n"
     "; Build : iscc gestio.iss\r\n"
-    "; Resultat : dist\\installer\\Gestio-Setup-v4.0.exe\r\n"
+    "; Resultat : dist\\installer\\Gestio-Setup-v4.0.0.exe\r\n"
     ";\r\n"
     "; Architecture : sources + uv standalone + mini-launcher Tkinter\r\n"
     "; Plus de PyInstaller — uv gere Python + toutes les dependances\r\n"
     "\r\n"
     '#define AppName      "Gestio"\r\n'
-    '#define AppVersion   "4.0"\r\n'
+    '#define AppVersion   "4.0.0"\r\n'
     '#define AppPublisher "Djabi"\r\n'
     '#define AppURL       "https://github.com/mdjabi2005-commits/gestio"\r\n'
     '#define AppExeName   "GestioLauncher.exe"\r\n'
@@ -57,7 +57,7 @@ CONTENT = (
     "VersionInfoVersion={#AppVersion}.0.0\r\n"
     "VersionInfoCompany={#AppPublisher}\r\n"
     "VersionInfoDescription={#AppName} - Gestion Financiere Personnelle\r\n"
-    "VersionInfoCopyright=Copyright (C) 2025 {#AppPublisher}\r\n"
+    "VersionInfoCopyright=Copyright (C) 2026 {#AppPublisher}\r\n"
     "\r\n"
     "[Languages]\r\n"
     'Name: "french";  MessagesFile: "compiler:Languages\\French.isl"\r\n'

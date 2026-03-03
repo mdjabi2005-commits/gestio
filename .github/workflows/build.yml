@@ -24,12 +24,10 @@ env:
   TIMESTAMP_URL: http://timestamp.digicert.com
 
 jobs:
-
   build:
     name: Build ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         include:
           - os: windows-latest
@@ -47,6 +45,8 @@ jobs:
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
+        with:
+          version: "${{ env.UV_VERSION }}"
 
       - name: Install build dependencies
         run: uv sync --frozen --no-dev --group build
@@ -169,6 +169,7 @@ jobs:
             --timestamp-digest sha256 `
             --file-digest sha256 `
             --description "Gestio Installer" `
+            --description-url "https://github.com/mdjabi2005-commits/gestio" `
             "$($installer.FullName)"
 
       - name: Upload Windows artifact

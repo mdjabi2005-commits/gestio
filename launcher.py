@@ -22,6 +22,7 @@ from tkinter import scrolledtext
 
 APP_NAME = "Gestio V4"
 PORT = 8501
+STARTUP_TIMEOUT = 30  # secondes
 
 
 def _resolve_app_dir() -> Path:
@@ -235,7 +236,8 @@ class Launcher:
             threading.Thread(target=self._read_pipe, daemon=True).start()
 
             # Attendre que Streamlit soit pret
-            for _ in range(60):
+            checks = STARTUP_TIMEOUT * 2  # 1 check toutes les 0.5s
+            for _ in range(checks):
                 if is_port_in_use(PORT):
                     self.is_running = True
                     self.root.after(0, self.log, "Streamlit pret !", "ok")
@@ -253,7 +255,7 @@ class Launcher:
                     return
                 time.sleep(0.5)
 
-            self.root.after(0, self.log, "Timeout (30s)", "error")
+            self.root.after(0, self.log, f"Timeout ({STARTUP_TIMEOUT}s)", "error")
             self.root.after(0, self._ui_error)
         except Exception as e:
             self.root.after(0, self.log, f"Erreur : {e}", "error")
@@ -307,8 +309,12 @@ class Launcher:
             self.toggle_logs()
 
     def stop_app(self) -> None:
-        if self.process and hasattr(self.process, 'terminate'):
+        if self.process:
             self.process.terminate()
+            try:
+                self.process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
         self.root.destroy()
 
     def on_closing(self) -> None:
