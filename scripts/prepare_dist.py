@@ -17,8 +17,7 @@ DIST_APP = ROOT / "dist" / "app"
 # Fichiers/dossiers a copier dans dist/app/
 SOURCES = [
     "main.py",
-    "launcher.py",
-    "launcher",       # package launcher/ (core + ui + __init__)
+    "launcher",       # package launcher/ (core + ui + launcher.py + __init__)
     "pyproject.toml",
     "uv.lock",
     "config",

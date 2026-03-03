@@ -28,7 +28,7 @@ dependencies = [
 ]
 
 [project.scripts]
-gestio = "launcher:main"
+gestio = "launcher.launcher:main"
 
 [project.optional-dependencies]
 dev = []
