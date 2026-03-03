@@ -79,7 +79,7 @@ CONTENT = (
     'Name: "{userstartup}\\{#AppName}"; Filename: "{app}\\{#AppExeName}"; Tasks: startupicon\r\n'
     "\r\n"
     "[Tasks]\r\n"
-    'Name: "desktopicon"; Description: "Creer un raccourci sur le &Bureau"; GroupDescription: "Raccourcis :"; Flags: checked\r\n'
+    'Name: "desktopicon"; Description: "Creer un raccourci sur le &Bureau"; GroupDescription: "Raccourcis :"\r\n'
     'Name: "startupicon"; Description: "Lancer {#AppName} au &demarrage de Windows"; GroupDescription: "Raccourcis :"; Flags: unchecked\r\n'
     "\r\n"
     "[Dirs]\r\n"
