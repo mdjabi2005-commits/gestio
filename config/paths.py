@@ -1,16 +1,26 @@
 import os
+import sys
 from pathlib import Path
+
+# Racine du projet
+APP_ROOT = Path(__file__).parent.parent
 
 # Base directory
 _home = Path.home()
 
-# TEST MODE - Switch between production and test databases
-TEST_MODE = os.getenv('TEST_MODE', 'false').lower() == 'true'
+# TEST MODE — actif si :
+#   1. Variable d'env TEST_MODE=true (manuel ou CI)
+#   2. Lancé via pytest (détection automatique)
+_pytest_running = "pytest" in sys.modules or any("pytest" in arg for arg in sys.argv)
+TEST_MODE = os.getenv('TEST_MODE', 'false').lower() == 'true' or _pytest_running
 
 # Folder paths - Switches based on TEST_MODE
 if TEST_MODE:
     DATA_DIR = str(_home / "test")
-    print("⚠️ MODE TEST ACTIVÉ - Utilisation de test")
+    if _pytest_running:
+        print("[TEST] MODE TEST ACTIVE (pytest detecte) - Utilisation de ~/test")
+    else:
+        print("[TEST] MODE TEST ACTIVE - Utilisation de ~/test")
 else:
     DATA_DIR = str(_home / "analyse")
 
@@ -32,6 +42,9 @@ APP_LOG_PATH = os.path.join(APP_LOG_DIR, "gestio_app.log")
 # CSV Export
 CSV_EXPORT_DIR = os.path.join(DATA_DIR, "exports")
 CSV_TRANSACTIONS_SANS_TICKETS = os.path.join(CSV_EXPORT_DIR, "transactions_sans_tickets.csv")
+
+# Fichier .env utilisateur (hors dossier d'installation, accessible en écriture)
+ENV_PATH = Path(DATA_DIR) / ".env"
 
 # Create directories
 for directory in [DATA_DIR, TO_SCAN_DIR, SORTED_DIR,

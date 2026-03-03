@@ -5,7 +5,7 @@
 
 set -e
 
-REPO="https://github.com/mdjabi2005-commits/gestion-financi-re.git"
+REPO="https://github.com/mdjabi2005-commits/gestio.git"
 
 
 echo ""
