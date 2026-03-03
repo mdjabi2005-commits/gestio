@@ -1,76 +1,82 @@
-# 🚀 Build & Distribution — Gestio V4
+# Build & Distribution - Gestio V4
 
-## 📦 Stratégie par plateforme
+## Strategie par plateforme
 
-| Plateforme     | Pipeline                              | Résultat final          | Prérequis utilisateur                 |
-|----------------|---------------------------------------|-------------------------|---------------------------------------|
-| 🪟 **Windows** | PyInstaller `onedir` → Inno Setup     | `Gestio-Setup-v4.0.exe` | **Aucun** — assistant d'installation  |
-| 🍎 **macOS**   | PyInstaller `onedir` → `create-dmg`   | `Gestio-macOS.dmg`      | **Aucun** — glisser dans Applications |
-| 🐧 **Linux**   | PyInstaller `onedir` → `appimagetool` | `Gestio-Linux.AppImage` | **Aucun** — fichier portable          |
+| Plateforme     | Pipeline                                   | Resultat final          | Prerequis utilisateur                      |
+|----------------|-------------------------------------------|-------------------------|--------------------------------------------|
+| **Windows**    | Mini-launcher + uv + sources -> Inno Setup | `Gestio-Setup-v4.0.exe` | **Aucun** - assistant d'installation       |
+| **macOS**      | `install-mac-linux.sh` -> uv tool install  | commande `gestio`        | **Aucun** - script auto-installant         |
+| **Linux**      | `install-mac-linux.sh` -> uv tool install  | commande `gestio`        | **Aucun** - script auto-installant         |
 
 ---
 
-## 🔑 Prérequis de build (une seule fois)
+## Architecture Windows (uv-native)
+
+Plus de PyInstaller pour l'application complete.
+Seul le mini-launcher Tkinter est compile (~5-10 Mo).
+
+```
+%APPDATA%\Gestio\
+  GestioLauncher.exe      <- Mini-launcher (Tkinter only)
+  uv\uv.exe               <- uv standalone (gere Python + venv)
+  app\                     <- Sources Python du projet
+    main.py
+    pyproject.toml
+    uv.lock
+    config/  domains/  shared/  resources/
+```
+
+Au premier lancement, `uv run` telecharge Python 3.12 + dependances.
+
+---
+
+## Prerequis de build (une seule fois)
 
 ```bash
-# Installer uv (si pas déjà fait)
+# Installer uv
 curl -LsSf https://astral.sh/uv/install.sh | sh   # Mac/Linux
-# ou
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"  # Windows
 
-# Synchroniser l'environnement depuis uv.lock
+# Synchroniser
 uv sync --frozen
-
-# Ajouter PyInstaller (hors uv.lock, outil de build uniquement)
-uv pip install pyinstaller
 ```
-
-> ⚠️ Placer les icônes dans `resources/icons/` avant de builder.
-> Voir `resources/icons/README.md` pour les formats requis.
 
 ---
 
-## 🔨 Build manuel
+## Build manuel (Windows)
 
 ```bash
-# Build onedir (résultat : dist/GestioV4/)
-uv run pyinstaller gestio.spec --noconfirm
+# 1. Preparer les sources dans dist/app/
+uv run python scripts/prepare_dist.py
 
-# Windows uniquement — générer l'installeur avec Inno Setup
+# 2. Compiler le mini-launcher Tkinter
+uv run pyinstaller gestio-launcher.spec --noconfirm
+
+# 3. Generer gestio.iss
+uv run python scripts/generate_iss.py
+
+# 4. Builder l'installeur (necessite Inno Setup installe)
 iscc gestio.iss
-# Résultat : dist/installer/Gestio-Setup-v4.0.exe
+# Resultat : dist/installer/Gestio-Setup-v4.0.exe
 ```
 
 ---
 
-## 🤖 Release automatique — GitHub Actions
+## Release automatique - GitHub Actions
 
-Le workflow `.github/workflows/build.yml` utilise une **`strategy: matrix`** pour
-builder les 3 plateformes **en parallèle** sur les runners GitHub.
-
-```
-tag v1.0.0
-    │
-    ├── 🪟 windows-latest  → PyInstaller → Inno Setup → Gestio-Setup-v1.0.0.exe
-    ├── 🍎 macos-latest    → PyInstaller → create-dmg → Gestio-macOS.dmg
-    └── 🐧 ubuntu-22.04    → PyInstaller → appimagetool → Gestio-Linux.AppImage
-                │
-                └── release job → GitHub Release avec les 3 fichiers
-```
-
-### Déclencher une release
-
-```bash
-git add .
-git commit -m "feat: version 1.0.0"
-git tag v1.0.0
-git push origin v1.0.0   # ← déclenche le workflow
-```
+Le workflow `.github/workflows/build.yml` :
+1. Copie les sources dans `dist/app/`
+2. Compile le mini-launcher via PyInstaller
+3. Telecharge uv standalone dans `dist/uv/`
+4. Signe le launcher et l'installeur (Azure Code Signing)
+5. Package le tout avec Inno Setup
+6. Cree la release GitHub (sur tags `v*.*.*`)
 
 ---
 
-## 🔒 Note confidentialité
+## Mac / Linux
 
-Les données de l'utilisateur sont stockées **uniquement sur sa machine** (`~/analyse/` ou `~/Gestio/analyse/` sur
-Windows).
-Aucune donnée n'est transmise sur internet lors de l'utilisation.
+Pas de compilation. Le script `install-mac-linux.sh` :
+1. Installe uv (standalone) si absent
+2. Fait `uv tool install "git+REPO" --python 3.12`
+3. Expose la commande `gestio` dans le PATH
