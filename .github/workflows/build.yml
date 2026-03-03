@@ -55,7 +55,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: |
           pip install --quiet pyinstaller
-          pyinstaller gestio-launcher.spec --noconfirm
+          pyinstaller launcher/gestio-launcher.spec --noconfirm
           # L'EXE est dans dist/GestioLauncher.exe (mode onefile)
 
       # ── 3. Telecharger uv standalone pour embarquer dans l'installeur ──────

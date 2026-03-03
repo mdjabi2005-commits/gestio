@@ -16,7 +16,12 @@ import webbrowser
 from pathlib import Path
 from tkinter import scrolledtext
 
-from launcher_core import (
+from .launcher_core import (
+    PORT, STARTUP_TIMEOUT,
+    build_streamlit_cmd, build_streamlit_env,
+    find_chrome, is_port_in_use, kill_port,
+    sync_dependencies,
+)
     PORT, STARTUP_TIMEOUT,
     build_streamlit_cmd, build_streamlit_env,
     find_chrome, is_port_in_use, kill_port,

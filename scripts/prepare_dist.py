@@ -18,8 +18,7 @@ DIST_APP = ROOT / "dist" / "app"
 SOURCES = [
     "main.py",
     "launcher.py",
-    "launcher_core.py",
-    "launcher_ui.py",
+    "launcher",       # package launcher/ (core + ui + __init__)
     "pyproject.toml",
     "uv.lock",
     "config",
