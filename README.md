@@ -2,7 +2,7 @@
 
 > Application de **gestion financière personnelle** — Python · Streamlit · SQLite
 
-[![Build](https://github.com/mdjabi2005-commits/gestio-feature/actions/workflows/build.yml/badge.svg)](https://github.com/mdjabi2005-commits/gestio-feature/actions/workflows/build.yml)
+[![Build](https://github.com/mdjabi2005-commits/gestio/actions/workflows/build.yml/badge.svg)](https://github.com/mdjabi2005-commits/gestio/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue.svg)](https://www.python.org/)
 
@@ -26,61 +26,45 @@
 Le projet suit une architecture **Domain-Driven Design (DDD)** :
 
 ```
-v4/
+V1/
 ├── main.py                          ← Point d'entrée Streamlit
-├── launcher.py                      ← Lanceur (dev + PyInstaller)
 ├── pyproject.toml                   ← Dépendances & config projet (uv)
+│
+├── launcher/                        ← Package launcher (mini-EXE Tkinter)
+│   ├── launcher.py                  ← Point d'entrée principal
+│   ├── launcher_core.py             ← Logique métier (venv, uv sync, chemins)
+│   ├── launcher_ui.py               ← Fenêtre Tkinter
+│   └── gestio-launcher.spec        ← Spec PyInstaller (mini-launcher ~5 Mo)
 │
 ├── config/                          ← Configuration globale
 │   ├── paths.py                     ← Chemins (DB, dossiers)
-│   └── logging_config.py           ← Logging structuré
+│   └── logging_config.py            ← Logging structuré
 │
 ├── domains/                         ← Domaines métier (DDD)
 │   ├── home/
-│   │   └── pages/home.py           ← Page d'accueil / tableau de bord
+│   │   └── pages/home.py            ← Page d'accueil / tableau de bord
 │   │
 │   └── transactions/
 │       ├── database/                ← Modèles, repositories, schéma SQLite
-│       │   ├── model.py             ← Modèle Transaction (Pydantic)
-│       │   ├── model_recurrence.py  ← Modèle Récurrence
-│       │   ├── model_attachment.py  ← Modèle Pièce jointe
-│       │   ├── repository.py        ← CRUD transactions
-│       │   ├── repository_recurrence.py
-│       │   ├── repository_attachment.py
-│       │   ├── schema.py            ← Migrations tables
-│       │   └── constants.py         ← Catégories, constantes
-│       │
 │       ├── services/                ← Logique métier
-│       │   ├── transaction_service.py
-│       │   └── attachment_service.py
-│       │
 │       ├── recurrence/              ← Service récurrences
-│       │   └── recurrence_service.py
-│       │
-│       ├── ocr/                     ← Extraction de texte
-│       │   ├── core/                ← Moteurs OCR (RapidOCR, PDF, LLM)
-│       │   └── services/            ← Service OCR + patterns YAML
-│       │
+│       ├── ocr/                     ← Extraction de texte (RapidOCR, PDF, LLM)
 │       ├── pages/                   ← Pages Streamlit
-│       │   ├── add/                 ← Ajout de transaction
-│       │   ├── view/                ← Consultation & filtres
-│       │   ├── recurrences/         ← Gestion récurrences
-│       │   └── import_page/         ← Import en masse
-│       │
-│       └── view/                    ← Composants visuels
-│           ├── components/          ← Charts, KPI, calendrier, table
-│           └── sunburst_navigation/ ← Navigation sunburst (D3/Plotly)
+│       └── view/                    ← Composants visuels (charts, calendrier)
 │
 ├── shared/                          ← Utilitaires transversaux
 │   ├── database/connection.py       ← Connexion SQLite centralisée
 │   ├── ui/                          ← Helpers UI, styles, toasts, erreurs
 │   ├── services/security.py         ← Sécurité
-│   ├── utils/converters.py          ← Convertisseurs
-│   └── exceptions.py               ← Exceptions métier
+│   └── utils/                       ← Convertisseurs, parsers
 │
 ├── resources/                       ← Assets statiques
 │   ├── styles/                      ← CSS (gestio.css, calendar.css)
-│   └── icons/                       ← Icônes app (générées)
+│   └── icons/                       ← Icônes app
+│
+├── scripts/                         ← Scripts de build
+│   ├── prepare_dist.py              ← Copie les sources dans dist/app/
+│   └── generate_iss.py              ← Génère le script Inno Setup
 │
 └── .github/
     └── workflows/
@@ -93,17 +77,16 @@ v4/
 
 ### Prérequis
 
-- **Python 3.12+**
-- **[uv](https://docs.astral.sh/uv/)** (gestionnaire de dépendances)
+- **[uv](https://docs.astral.sh/uv/)** (gestionnaire de dépendances — inclut Python)
 
 ### Installation
 
 ```bash
 # Cloner le dépôt
 git clone https://github.com/mdjabi2005-commits/gestio.git
-cd gestio-feature
+cd gestio
 
-# Installer les dépendances avec uv
+# Installer les dépendances
 uv sync
 ```
 
@@ -113,21 +96,54 @@ uv sync
 # Via Streamlit directement
 uv run streamlit run main.py
 
-# Ou via le launcher (ouvre le navigateur automatiquement)
-uv run python launcher.py
+# Via le launcher Tkinter (ouvre Chrome en mode app)
+uv run gestio
 ```
 
-### Build Windows (exécutable)
+### Build Windows (installeur)
+
+Le build est entièrement géré par la CI. Pour tester localement :
 
 ```bash
-# Installer les dépendances de build
-uv sync --group build
+# 1. Copier les sources dans dist/app/
+python scripts/prepare_dist.py
 
-# Générer l'exécutable avec PyInstaller
-uv run pyinstaller gestio.spec
+# 2. Compiler le mini-launcher Tkinter (~5 Mo)
+pip install pyinstaller
+pyinstaller launcher/gestio-launcher.spec --noconfirm
+
+# 3. Générer le script Inno Setup
+python scripts/generate_iss.py
 ```
 
 > Le workflow CI/CD (`build.yml`) automatise le build + signature Azure + release GitHub sur les tags `v*.*.*`.
+
+---
+
+## 📦 Architecture de distribution
+
+Depuis la **v4 (#23)**, Gestio abandonne PyInstaller pour l'application complète au profit de **uv standalone** :
+
+```
+%APPDATA%\Gestio\
+├── GestioLauncher.exe   ← Mini-launcher Tkinter (~5 Mo, seul EXE compilé)
+├── uv\
+│   └── uv.exe           ← uv standalone (gère Python 3.12 + dépendances)
+└── app\
+    ├── main.py          ← Sources Python du projet
+    ├── pyproject.toml
+    ├── uv.lock
+    └── ...
+```
+
+**Flux au premier lancement** : `uv sync` télécharge Python 3.12 + toutes les dépendances → venv créé dans `app/.venv`.  
+**Lancements suivants** : venv déjà présent → démarrage rapide.
+
+**Avantages** :
+- Installeur léger (~15 Mo vs ~500 Mo)
+- OCR (onnxruntime, rapidocr) installé nativement → aucun problème de DLL
+- Installation sans droits admin (`%APPDATA%`)
+- Pas de dépendances natives à lister manuellement dans un `.spec`
 
 ---
 
@@ -140,10 +156,10 @@ uv run pyinstaller gestio.spec
 | **Données** | SQLite + Pandas |
 | **Graphiques** | Plotly, Matplotlib |
 | **Validation** | Pydantic |
-| **OCR** | RapidOCR, pdfminer.six, Ollama (LLM) |
+| **OCR** | RapidOCR, pdfminer.six, Ollama / Groq (LLM) |
 | **Dépendances** | uv |
-| **Build** | PyInstaller + Inno Setup |
-| **CI/CD** | GitHub Actions |
+| **Build** | Mini-launcher PyInstaller + Inno Setup + uv standalone |
+| **CI/CD** | GitHub Actions + Azure Code Signing |
 
 ---
 
