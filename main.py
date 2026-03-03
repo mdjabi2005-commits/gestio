@@ -24,9 +24,12 @@ setup_logging()
 # ==============================
 # STREAMLIT CONFIGURATION
 # ==============================
+from config.paths import APP_ROOT
+
+# ==============================
 st.set_page_config(
-    page_title="Gestio V4 - Gestion Financière",
-    page_icon="💰",
+    page_title="Gestio - Gestion Financière",
+    page_icon=str(APP_ROOT / "resources" / "icons" / "gestio.png"),
     layout="wide",
     initial_sidebar_state="expanded"
 )
