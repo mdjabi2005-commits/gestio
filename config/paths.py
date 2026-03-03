@@ -15,9 +15,9 @@ TEST_MODE = os.getenv('TEST_MODE', 'false').lower() == 'true' or _pytest_running
 if TEST_MODE:
     DATA_DIR = str(_home / "test")
     if _pytest_running:
-        print("⚠️ MODE TEST ACTIVÉ (pytest détecté) - Utilisation de ~/test")
+        print("[TEST] MODE TEST ACTIVE (pytest detecte) - Utilisation de ~/test")
     else:
-        print("⚠️ MODE TEST ACTIVÉ - Utilisation de ~/test")
+        print("[TEST] MODE TEST ACTIVE - Utilisation de ~/test")
 else:
     DATA_DIR = str(_home / "analyse")
 

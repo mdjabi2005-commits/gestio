@@ -3,10 +3,10 @@ name: Build Sign and Release Gestio
 on:
   push:
     branches:
-      - main          # Build automatique a chaque push sur main (sans release)
+      - main
     tags:
-      - "v*.*.*"      # Build + Release sur les tags versionnés
-  workflow_dispatch:  # Lancement manuel depuis l'onglet Actions sur GitHub
+      - "v*.*.*"
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -14,7 +14,8 @@ permissions:
 
 env:
   PYTHON_VERSION: "3.12"
-  APP_NAME: "GestioV4"
+  UV_VERSION: "0.6.6"
+  APP_NAME: "Gestio"
   AZURE_VAULT_URI: ${{ secrets.AZURE_VAULT_URI }}
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
@@ -23,17 +24,15 @@ env:
   TIMESTAMP_URL: http://timestamp.digicert.com
 
 jobs:
-
   build:
     name: Build ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: false
       matrix:
         include:
           - os: windows-latest
             name: Windows
-            artifact: GestioV4-Windows
+            artifact: Gestio-Windows
 
     steps:
       - name: Checkout
@@ -46,18 +45,42 @@ jobs:
 
       - name: Setup uv
         uses: astral-sh/setup-uv@v5
+        with:
+          version: "${{ env.UV_VERSION }}"
 
-      - name: Install dependencies
+      - name: Install build dependencies
         run: uv sync --frozen --no-dev --group build
 
-      - name: Generate icons
-        if: matrix.os == 'windows-latest'
-        run: uv run python resources/icons/generate_icons.py
+      # ── 1. Preparer dist/app/ (sources du projet) ──────────────────────────
+      - name: Prepare sources
+        run: uv run python scripts/prepare_dist.py
 
-      - name: PyInstaller build
+      # ── 2. Compiler le mini-launcher Tkinter (~5-10 Mo) ────────────────────
+      - name: Build mini-launcher (PyInstaller)
         if: matrix.os == 'windows-latest'
-        run: uv run pyinstaller gestio.spec --noconfirm
+        run: |
+          uv run pyinstaller gestio-launcher.spec --noconfirm
+          # L'EXE est dans dist/GestioLauncher.exe (mode onefile)
 
+      # ── 3. Telecharger uv standalone pour embarquer dans l'installeur ──────
+      - name: Download uv standalone
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path "dist\uv" | Out-Null
+          $uvUrl = "https://github.com/astral-sh/uv/releases/download/${{ env.UV_VERSION }}/uv-x86_64-pc-windows-msvc.zip"
+          Write-Host "Telechargement de uv ${{ env.UV_VERSION }}..."
+          Invoke-WebRequest -Uri $uvUrl -OutFile "dist\uv\uv.zip"
+          Expand-Archive -Path "dist\uv\uv.zip" -DestinationPath "dist\uv\temp" -Force
+          # Le zip contient un dossier, trouver uv.exe dedans
+          $uvExe = Get-ChildItem -Path "dist\uv\temp" -Recurse -Filter "uv.exe" | Select-Object -First 1
+          if (-not $uvExe) { Write-Error "uv.exe introuvable dans le zip"; exit 1 }
+          Move-Item $uvExe.FullName "dist\uv\uv.exe" -Force
+          Remove-Item "dist\uv\temp" -Recurse -Force
+          Remove-Item "dist\uv\uv.zip" -Force
+          Write-Host "OK - dist\uv\uv.exe pret"
+
+      # ── 4. Signature Azure ─────────────────────────────────────────────────
       - name: Validate Azure secrets
         if: matrix.os == 'windows-latest'
         shell: pwsh
@@ -68,7 +91,6 @@ jobs:
           if ([string]::IsNullOrWhiteSpace($env:AZURE_TENANT_ID))    { $missing += "AZURE_TENANT_ID" }
           if ([string]::IsNullOrWhiteSpace($env:AZURE_CLIENT_SECRET)){ $missing += "AZURE_CLIENT_SECRET" }
 
-          # Afficher les longueurs (pas les valeurs) pour debug
           Write-Host "AZURE_VAULT_URI    : $($env:AZURE_VAULT_URI.Length) chars"
           Write-Host "AZURE_CLIENT_ID    : $($env:AZURE_CLIENT_ID.Length) chars"
           Write-Host "AZURE_TENANT_ID    : $($env:AZURE_TENANT_ID.Length) chars"
@@ -76,13 +98,8 @@ jobs:
 
           if ($missing.Count -gt 0) {
             Write-Error "Secrets GitHub manquants ou vides : $($missing -join ', ')"
-            Write-Host ""
-            Write-Host "Comment corriger :"
-            Write-Host "  1. Aller sur GitHub -> Settings -> Secrets and variables -> Actions"
-            Write-Host "  2. Verifier que ces secrets existent et ne sont pas vides : $($missing -join ', ')"
             exit 1
           }
-
           Write-Host "Tous les secrets Azure sont presents."
 
       - name: Install AzureSignTool
@@ -90,7 +107,7 @@ jobs:
         shell: pwsh
         run: dotnet tool install --global AzureSignTool
 
-      - name: Sign GestioV4.exe
+      - name: Sign GestioLauncher.exe
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
@@ -103,45 +120,27 @@ jobs:
             --timestamp-rfc3161 "$env:TIMESTAMP_URL" `
             --timestamp-digest sha256 `
             --file-digest sha256 `
-            --description "Gestio - Gestion Financiere Personnelle" `
-            --description-url "https://github.com/djabi/gestio" `
-            "dist\GestioV4\GestioV4.exe"
+            --description "Gestio Launcher" `
+            --description-url "https://github.com/mdjabi2005-commits/gestio" `
+            "dist\GestioLauncher.exe"
 
-      - name: Sign DLLs
+      # ── 5. Inno Setup installer ────────────────────────────────────────────
+      - name: Generate and build Inno Setup installer
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          $dlls = Get-ChildItem -Path "dist\GestioV4" -Recurse -Include "*.dll","*.pyd" | Where-Object { $_.Length -gt 0 } | Select-Object -ExpandProperty FullName
-          if ($dlls.Count -eq 0) { Write-Host "No DLLs found."; exit 0 }
-          AzureSignTool sign `
-            --azure-key-vault-url "$env:AZURE_VAULT_URI" `
-            --azure-key-vault-client-id "$env:AZURE_CLIENT_ID" `
-            --azure-key-vault-tenant-id "$env:AZURE_TENANT_ID" `
-            --azure-key-vault-client-secret "$env:AZURE_CLIENT_SECRET" `
-            --azure-key-vault-certificate "$env:CERT_NAME" `
-            --timestamp-rfc3161 "$env:TIMESTAMP_URL" `
-            --timestamp-digest sha256 `
-            --file-digest sha256 `
-            --continue-on-error `
-            @dlls
-
-      - name: Inno Setup installer
-        if: matrix.os == 'windows-latest'
-        shell: pwsh
-        run: |
-          # Generer gestio.iss en ASCII pur (ecrase tout fichier corrompu du checkout)
           uv run python scripts/generate_iss.py
           $bytes = [System.IO.File]::ReadAllBytes("gestio.iss")
           $bad = $bytes | Where-Object { $_ -gt 127 }
           if ($bad.Count -gt 0) { Write-Error "gestio.iss non-ASCII !"; exit 1 }
           Write-Host "gestio.iss OK - $($bytes.Count) octets, 100% ASCII"
 
-          # Installer Inno Setup via choco avec retry
+          # Installer Inno Setup via choco
           $maxRetries = 3
           for ($i = 1; $i -le $maxRetries; $i++) {
             choco install innosetup --no-progress --yes
             if ($LASTEXITCODE -eq 0) { break }
-            Write-Host "Tentative $i/$maxRetries echouee, nouvelle tentative..."
+            Write-Host "Tentative $i/$maxRetries echouee..."
             Start-Sleep -Seconds 10
           }
           if ($LASTEXITCODE -ne 0) { Write-Error "Impossible d'installer Inno Setup"; exit 1 }
@@ -156,7 +155,7 @@ jobs:
         run: |
           $installer = Get-ChildItem "dist\installer\Gestio-Setup-*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
           if (-not $installer) {
-            Write-Error "Installeur introuvable dans dist\installer\ - Inno Setup a echoue"
+            Write-Error "Installeur introuvable dans dist\installer\"
             exit 1
           }
           Write-Host "Signature de : $($installer.FullName)"
@@ -170,6 +169,7 @@ jobs:
             --timestamp-digest sha256 `
             --file-digest sha256 `
             --description "Gestio Installer" `
+            --description-url "https://github.com/mdjabi2005-commits/gestio" `
             "$($installer.FullName)"
 
       - name: Upload Windows artifact
@@ -193,7 +193,7 @@ jobs:
       - name: Download Windows artifact
         uses: actions/download-artifact@v4
         with:
-          name: GestioV4-Windows
+          name: Gestio-Windows
           path: ./release
 
       - name: Prepare Mac/Linux script
@@ -208,12 +208,16 @@ jobs:
           body: |
             ## Gestio ${{ github.ref_name }}
 
+            ### Nouveaute : installation legere (plus de PyInstaller)
+            L'installeur Windows ne fait plus que ~15 Mo.
+            Au premier lancement, les dependances Python sont telechargees automatiquement via uv.
+
             | Platform | File | Instructions |
             |---|---|---|
             | Windows | `Gestio-Setup-v*.exe` | Double-click, assistant d'installation |
             | macOS / Linux | `install-mac-linux.sh` | `chmod +x install-mac-linux.sh && ./install-mac-linux.sh` |
 
-            Your financial data is stored only on your machine.
+            Vos donnees financieres restent 100% sur votre machine.
           files: |
             ./release/Gestio-Setup-*.exe
             ./release/install-mac-linux.sh
