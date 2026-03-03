@@ -12,7 +12,7 @@ from pathlib import Path
 import streamlit as st
 
 from shared.ui.batch_uploader import (
-    BatchConfig, init_batch_session, render_disk_files, get_batch_files,
+    BatchConfig, init_batch_session, render_disk_files,
     render_batch_controls, render_batch_progress, render_validation_section,
     finalize_validation, handle_file_input
 )
@@ -47,10 +47,8 @@ def render_pdf_fragment():
     st.markdown("---")
     render_disk_files(PDF_CONFIG)
 
-    # 2. Upload + Extraction
-    files_to_process = get_batch_files(PDF_CONFIG)
-    if files_to_process:
-        render_batch_controls(PDF_CONFIG, _run_pdf_batch)
+    # 2. Upload + bouton lancer (file_uploader rendu UNE seule fois dans render_batch_controls)
+    render_batch_controls(PDF_CONFIG, _run_pdf_batch)
 
     # 3. Validation
     render_validation_section(PDF_CONFIG.prefix, PDF_CONFIG.title, _render_pdf_form)

@@ -12,7 +12,7 @@ from pathlib import Path
 import streamlit as st
 
 from shared.ui.batch_uploader import (
-    BatchConfig, init_batch_session, render_disk_files, get_batch_files,
+    BatchConfig, init_batch_session, render_disk_files,
     render_batch_controls, render_batch_progress, render_validation_section,
     finalize_validation, handle_file_input
 )
@@ -77,10 +77,8 @@ def render_ocr_fragment():
     st.markdown("---")
     render_disk_files(OCR_CONFIG)
 
-    # 2. Upload + Extraction
-    files_to_process = get_batch_files(OCR_CONFIG)
-    if files_to_process:
-        render_batch_controls(OCR_CONFIG, _run_ocr_batch)
+    # 2. Upload + bouton lancer (file_uploader rendu UNE seule fois dans render_batch_controls)
+    render_batch_controls(OCR_CONFIG, _run_ocr_batch)
 
     # 3. Validation
     render_validation_section(OCR_CONFIG.prefix, OCR_CONFIG.title, _render_ocr_ticket_form)
