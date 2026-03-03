@@ -19,10 +19,6 @@ build/
 # ── Inno Setup (genere automatiquement par scripts/generate_iss.py) ──────────
 gestio.iss
 
-# ── PyInstaller ───────────────────────────────────────────────────────────────
-dist/
-build/
-*.manifest
 
 # ── Données utilisateur (ne jamais commiter) ──────────────────────────────────
 analyse/
