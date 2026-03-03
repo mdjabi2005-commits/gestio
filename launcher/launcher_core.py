@@ -19,30 +19,13 @@ STARTUP_TIMEOUT = 30  # secondes
 
 
 def resolve_app_dir() -> Path:
-    """
-    Resout le dossier contenant les sources de l'application.
-    - Frozen (EXE) : %APPDATA%\\Gestio\\app
-    - Dev (script) : dossier de launcher.py
-    """
-    if getattr(sys, 'frozen', False):
-        installed = Path(sys.executable).parent / "app"
-        if installed.exists():
-            return installed
-    # launcher_core.py est dans launcher/ — remonter d'un niveau vers la racine
-    return Path(__file__).parent.parent
+    """Retourne le dossier app/ cote de l'EXE : %APPDATA%\\Gestio\\app"""
+    return Path(sys.executable).parent / "app"
 
 
 def resolve_uv_path() -> str:
-    """
-    Trouve l'executable uv.
-    1. uv.exe embarque dans %APPDATA%\\Gestio\\uv\\ (mode installe)
-    2. uv dans le PATH systeme (mode dev)
-    """
-    if getattr(sys, 'frozen', False):
-        bundled = Path(sys.executable).parent / "uv" / "uv.exe"
-        if bundled.exists():
-            return str(bundled)
-    return "uv"
+    """Retourne uv.exe embarque cote de l'EXE : %APPDATA%\\Gestio\\uv\\uv.exe"""
+    return str(Path(sys.executable).parent / "uv" / "uv.exe")
 
 
 def is_port_in_use(port: int) -> bool:
