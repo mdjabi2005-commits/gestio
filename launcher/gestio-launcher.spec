@@ -11,11 +11,11 @@ Lancer depuis la RACINE du projet :
 import sys
 from pathlib import Path
 
-ROOT = Path(SPECPATH)  # launcher/ EST la racine du package launcher
+ROOT = Path(SPECPATH)  # dossier launcher/
 
 a = Analysis(
     [str(ROOT / 'launcher.py')],
-    pathex=[str(ROOT.parent)],  # racine du projet pour resoudre les imports
+    pathex=[str(ROOT), str(ROOT.parent)],  # launcher/ + racine projet
     binaries=[],
     datas=[],
     hiddenimports=[
