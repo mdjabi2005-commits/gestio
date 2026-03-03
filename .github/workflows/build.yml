@@ -48,12 +48,13 @@ jobs:
         with:
           version: "${{ env.UV_VERSION }}"
 
-      - name: Install build dependencies
-        run: uv sync --frozen --no-dev --group build
-
-      # ── 1. Preparer dist/app/ (sources du projet) ──────────────────────────
+      # prepare_dist.py utilise stdlib pure (shutil/pathlib) — pas besoin de venv
       - name: Prepare sources
-        run: uv run python scripts/prepare_dist.py
+        run: python scripts/prepare_dist.py
+
+      # PyInstaller uniquement pour le mini-launcher Tkinter (~5-10 Mo)
+      - name: Install PyInstaller
+        run: uv sync --frozen --only-group build
 
       # ── 2. Compiler le mini-launcher Tkinter (~5-10 Mo) ────────────────────
       - name: Build mini-launcher (PyInstaller)
@@ -129,7 +130,8 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: pwsh
         run: |
-          uv run python scripts/generate_iss.py
+          # generate_iss.py utilise stdlib pure — python direct sans uv run
+          python scripts/generate_iss.py
           $bytes = [System.IO.File]::ReadAllBytes("gestio.iss")
           $bad = $bytes | Where-Object { $_ -gt 127 }
           if ($bad.Count -gt 0) { Write-Error "gestio.iss non-ASCII !"; exit 1 }
