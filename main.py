@@ -9,18 +9,12 @@ Refactored modular version
 @date: 2025-11-17
 """
 
-import os
-
-# Thème Gestio — défini AVANT import streamlit pour garantir
-# la palette même si .streamlit/config.toml n'est pas trouvé.
-os.environ.setdefault("STREAMLIT_THEME_BASE",                       "dark")
-os.environ.setdefault("STREAMLIT_THEME_PRIMARY_COLOR",              "#10B981")
-os.environ.setdefault("STREAMLIT_THEME_BACKGROUND_COLOR",           "#111827")
-os.environ.setdefault("STREAMLIT_THEME_SECONDARY_BACKGROUND_COLOR", "#1E293B")
-os.environ.setdefault("STREAMLIT_THEME_TEXT_COLOR",                 "#F8FAFC")
-os.environ.setdefault("STREAMLIT_THEME_FONT",                       "sans serif")
 
 import streamlit as st
+from dotenv import load_dotenv
+
+# Charger de force les variables d'environnement du fichier .env à la racine
+load_dotenv()
 
 # Initialize logging system FIRST (before any other imports)
 from config.logging_config import setup_logging
@@ -30,9 +24,12 @@ setup_logging()
 # ==============================
 # STREAMLIT CONFIGURATION
 # ==============================
+from config.paths import APP_ROOT
+
+# ==============================
 st.set_page_config(
-    page_title="Gestio V4 - Gestion Financière",
-    page_icon="💰",
+    page_title="Gestio - Gestion Financière",
+    page_icon=str(APP_ROOT / "resources" / "icons" / "logo.png"),
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -119,15 +116,22 @@ def main():
 
         # Navigation Setup (Native Streamlit)
         # Group pages by functionality
+        page_accueil = st.Page(interface_accueil, title="Accueil", icon="🏠", default=True)
+        page_view = st.Page(interface_voir_transactions, title="Voir Transactions", icon="📊", url_path="view")
+        page_add = st.Page(interface_add_transaction, title="Ajouter Transaction", icon="➕", url_path="add")
+        page_recurrences = st.Page(interface_recurrences, title="Récurrences", icon="🔄", url_path="recurrences")
+
+        # Stocker les pages dans session_state pour switch_page()
+        st.session_state["pages"] = {
+            "accueil": page_accueil,
+            "view": page_view,
+            "add": page_add,
+            "recurrences": page_recurrences,
+        }
+
         pages = {
-            "Tableau de Bord": [
-                st.Page(interface_accueil, title="Accueil", icon="🏠", default=True),
-                st.Page(interface_voir_transactions, title="Voir Transactions", icon="📊", url_path="view"),
-            ],
-            "Saisie": [
-                st.Page(interface_add_transaction, title="Ajouter Transaction", icon="➕", url_path="add"),
-                st.Page(interface_recurrences, title="Récurrences", icon="🔄", url_path="recurrences"),
-            ]
+            "Tableau de Bord": [page_accueil, page_view],
+            "Saisie": [page_add, page_recurrences],
         }
 
         pg = st.navigation(pages)

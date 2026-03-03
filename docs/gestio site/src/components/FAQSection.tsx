@@ -61,6 +61,7 @@ const FAQSection = () => {
                   <button
                     className="w-full p-6 flex items-center justify-between gap-4 text-left"
                     onClick={() => setActiveIndex(isActive ? null : i)}
+                    aria-expanded={isActive}
                   >
                     <h3 className="text-foreground font-semibold">{f.q}</h3>
                     <Plus className={`w-5 h-5 text-primary shrink-0 transition-transform ${isActive ? "rotate-45" : ""}`} />

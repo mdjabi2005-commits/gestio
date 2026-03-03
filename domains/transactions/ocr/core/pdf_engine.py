@@ -5,7 +5,10 @@ Utilisé pour extraire des données de relevés de revenus (PDF)
 
 import logging
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+
+# Défini avant le try/except pour garantir sa résolution statique
+PDFMINER_AVAILABLE: bool = False
 
 try:
     # noinspection PyUnusedImports
@@ -15,7 +18,6 @@ try:
 
     PDFMINER_AVAILABLE = True
 except ImportError:
-    PDFMINER_AVAILABLE = False
     logging.warning("pdfminer.six n'est pas installé. L'extraction PDF ne sera pas disponible.")
 
 logger = logging.getLogger(__name__)
@@ -31,7 +33,7 @@ class PDFEngine:
         if not PDFMINER_AVAILABLE:
             raise ImportError(
                 "pdfminer.six est requis pour l'extraction PDF. "
-                "Installez-le avec: pip install pdfminer.six"
+                "Installez-le avec: uv add pdfminer.six"
             )
 
     @staticmethod
@@ -150,4 +152,6 @@ class PDFEngine:
 
 
 # Instance singleton
-pdf_engine = PDFEngine() if PDFMINER_AVAILABLE else None
+pdf_engine: Optional["PDFEngine"] = PDFEngine() if PDFMINER_AVAILABLE else None
+
+__all__ = ["PDFMINER_AVAILABLE", "pdf_engine", "PDFEngine"]

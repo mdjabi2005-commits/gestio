@@ -15,27 +15,26 @@ const guides = [
     tip: "Vous pouvez créer plusieurs comptes pour séparer vos finances personnelles et professionnelles.",
   },
   {
-    title: "Ajouter une transaction",
+    title: "Ajouter des transactions",
     steps: [
-      { bold: "Cliquez sur \"Nouvelle transaction\"", text: " ou utilisez le raccourci clavier." },
-      { bold: "Sélectionnez le type", text: " : Dépense ou Revenu." },
-      { bold: "Entrez le montant", text: " et une description." },
-      { bold: "Choisissez une catégorie", text: " (Alimentation, Transport, Loisirs...)." },
-      { bold: "Validez", text: " - la transaction apparaît immédiatement dans votre historique." },
+      { bold: "Allez sur la page", text: " \"Ajouter Transaction\" dans le menu principal." },
+      { bold: "Mode OCR", text: " : importez vos tickets de caisse. Gestio analyse les montants et la date pour vous." },
+      { bold: "Mode PDF", text: " : idéal pour importer vos factures et fiches de paie." },
+      { bold: "Mode CSV/Excel", text: " : pour importer d'un coup l'historique de votre banque." },
+      { bold: "Saisie & Modification", text: " : vous pouvez directement éditer ou ajouter vos transactions dans le tableau interactif de la vue \"Voir Transactions\"." },
     ],
-    tip: "Vous pouvez créer vos propres catégories personnalisées dans les paramètres.",
+    tip: "L'import OCR est le moyen le plus rapide de ranger vos tickets de caisse sans aucune frappe manuelle.",
   },
   {
-    title: "Configurer une récurrence",
+    title: "Transactions récurrentes",
     steps: [
-      { bold: "Accédez à l'onglet \"Récurrences\"", text: " dans le menu principal." },
-      { bold: "Cliquez sur \"Nouvelle récurrence\"", text: "." },
-      { bold: "Remplissez les informations", text: " : nom (ex: Netflix), montant, catégorie." },
+      { bold: "Accédez à l'onglet", text: " \"Ajouter Transaction\"." },
+      { bold: "Sélectionnez le mode", text: " \"Transaction Récurrente\" dans la liste déroulante principale." },
+      { bold: "Remplissez les informations", text: " : montant, catégorie (ex: Logement, Abonnement)." },
       { bold: "Définissez la fréquence", text: " : mensuelle, hebdomadaire, annuelle." },
-      { bold: "Choisissez le jour d'exécution", text: " (ex: le 5 de chaque mois)." },
-      { bold: "Activez", text: " la récurrence - Gestio générera automatiquement les transactions." },
+      { bold: "Activez", text: " la récurrence - Gestio générera automatiquement les transactions aux dates prévues au lancement de l'application." },
     ],
-    tip: "Utilisez les récurrences pour votre loyer, abonnements, et salaire afin de ne jamais oublier une transaction.",
+    tip: "Utilisez les récurrences pour votre loyer, abonnements, et salaire afin de ne jamais oublier une transaction fixe.",
   },
   {
     title: "Importer un ticket (OCR)",
@@ -90,6 +89,7 @@ const GuidesSection = () => {
                   <button
                     className="w-full p-6 flex items-center justify-between hover:bg-muted/50 transition-colors text-left"
                     onClick={() => setActiveIndex(isActive ? null : i)}
+                    aria-expanded={isActive}
                   >
                     <div className="flex items-center gap-4">
                       <div className="w-9 h-9 bg-gradient-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold text-sm shrink-0">

@@ -17,9 +17,9 @@ const FooterSection = () => (
         <div>
           <h4 className="text-foreground text-sm font-semibold uppercase tracking-wider mb-5">Navigation</h4>
           <ul className="space-y-3 list-none">
-            <li><a href="/#fonctionnalites" className="text-muted-foreground hover:text-primary transition-colors text-[0.9375rem] no-underline">Fonctionnalités</a></li>
-            <li><a href="/#securite" className="text-muted-foreground hover:text-primary transition-colors text-[0.9375rem] no-underline">Sécurité</a></li>
-            <li><a href="/#captures" className="text-muted-foreground hover:text-primary transition-colors text-[0.9375rem] no-underline">Aperçu</a></li>
+            <li><Link to="/fonctionnalites" className="text-muted-foreground hover:text-primary transition-colors text-[0.9375rem] no-underline">Fonctionnalités</Link></li>
+            <li><Link to="/securite" className="text-muted-foreground hover:text-primary transition-colors text-[0.9375rem] no-underline">Sécurité</Link></li>
+            <li><Link to="/apercu" className="text-muted-foreground hover:text-primary transition-colors text-[0.9375rem] no-underline">Aperçu</Link></li>
             <li><Link to="/telecharger" className="text-muted-foreground hover:text-primary transition-colors text-[0.9375rem] no-underline">Télécharger</Link></li>
           </ul>
         </div>

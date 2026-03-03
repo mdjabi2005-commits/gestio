@@ -19,10 +19,6 @@ build/
 # ── Inno Setup (genere automatiquement par scripts/generate_iss.py) ──────────
 gestio.iss
 
-# ── PyInstaller ───────────────────────────────────────────────────────────────
-dist/
-build/
-*.manifest
 
 # ── Données utilisateur (ne jamais commiter) ──────────────────────────────────
 analyse/
@@ -50,20 +46,44 @@ resources/icons/gestio.png
 *.cer
 .azure/
 cert-policy.json
+secrets.toml
+.streamlit/secrets.toml
 
 # ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
+ehthumbs.db
 
 # ── IDE ───────────────────────────────────────────────────────────────────────
 .idea/
 .vscode/
 *.swp
 *.swo
+*.iml
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 .pytest_cache/
 .coverage
 htmlcov/
+.tox/
+
+# ── Streamlit cache ───────────────────────────────────────────────────────────
+.streamlit/
+
+# ── Temporary files ───────────────────────────────────────────────────────────
+*.tmp
+*.bak
+*.orig
+tmp/
+temp/
+
+# ── Uploads / fichiers importés par l'utilisateur ────────────────────────────
+uploads/
+import/
+
+# ── Dossiers IA / assistants ──────────────────────────────────────────────────
+.agent/
+.claude/
+.copilot/
 
