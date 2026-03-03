@@ -8,7 +8,7 @@ Streamlit, pandas, onnxruntime, etc. sont geres par uv dans le venv.
 import sys
 
 a = Analysis(
-    ['launcher.py'],
+    ['launcher.py', 'launcher_core.py', 'launcher_ui.py'],
     pathex=[],
     binaries=[],
     datas=[],
