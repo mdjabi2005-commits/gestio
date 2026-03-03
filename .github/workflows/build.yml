@@ -43,24 +43,19 @@ jobs:
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Setup uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          version: "${{ env.UV_VERSION }}"
 
       # prepare_dist.py utilise stdlib pure (shutil/pathlib) — pas besoin de venv
       - name: Prepare sources
         run: python scripts/prepare_dist.py
 
-      # PyInstaller uniquement pour le mini-launcher Tkinter (~5-10 Mo)
-      - name: Install PyInstaller
-        run: uv sync --frozen --only-group build
-
       # ── 2. Compiler le mini-launcher Tkinter (~5-10 Mo) ────────────────────
+      # pip install dans le Python du runner — AUCUN venv projet cree,
+      # AUCUNE dependance app (streamlit/pandas/onnxruntime) telechargee
       - name: Build mini-launcher (PyInstaller)
         if: matrix.os == 'windows-latest'
         run: |
-          uv run pyinstaller gestio-launcher.spec --noconfirm
+          pip install --quiet pyinstaller
+          pyinstaller gestio-launcher.spec --noconfirm
           # L'EXE est dans dist/GestioLauncher.exe (mode onefile)
 
       # ── 3. Telecharger uv standalone pour embarquer dans l'installeur ──────
