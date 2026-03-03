@@ -77,7 +77,8 @@ V1/
 
 ### Prérequis
 
-- **[uv](https://docs.astral.sh/uv/)** (gestionnaire de dépendances — inclut Python)
+- **Python 3.12+**
+- **[uv](https://docs.astral.sh/uv/)** (gestionnaire de dépendances)
 
 ### Installation
 
@@ -86,7 +87,7 @@ V1/
 git clone https://github.com/mdjabi2005-commits/gestio.git
 cd gestio
 
-# Installer les dépendances
+# Installer les dépendances avec uv
 uv sync
 ```
 
@@ -96,23 +97,21 @@ uv sync
 # Via Streamlit directement
 uv run streamlit run main.py
 
-# Via le launcher Tkinter (ouvre Chrome en mode app)
+# Ou via le launcher (ouvre le navigateur automatiquement)
 uv run gestio
 ```
 
-### Build Windows (installeur)
-
-Le build est entièrement géré par la CI. Pour tester localement :
+### Build Windows (exécutable)
 
 ```bash
-# 1. Copier les sources dans dist/app/
+# Copier les sources dans dist/app/
 python scripts/prepare_dist.py
 
-# 2. Compiler le mini-launcher Tkinter (~5 Mo)
+# Compiler le mini-launcher Tkinter (~5 Mo)
 pip install pyinstaller
 pyinstaller launcher/gestio-launcher.spec --noconfirm
 
-# 3. Générer le script Inno Setup
+# Générer le script Inno Setup
 python scripts/generate_iss.py
 ```
 
