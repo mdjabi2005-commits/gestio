@@ -28,7 +28,8 @@ def resolve_app_dir() -> Path:
         installed = Path(sys.executable).parent / "app"
         if installed.exists():
             return installed
-    return Path(__file__).parent
+    # launcher_core.py est dans launcher/ — remonter d'un niveau vers la racine
+    return Path(__file__).parent.parent
 
 
 def resolve_uv_path() -> str:
