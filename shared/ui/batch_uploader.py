@@ -44,26 +44,17 @@ def render_disk_files(config: BatchConfig) -> list:
     return []
 
 
-def render_file_uploader(config: BatchConfig) -> list:
-    """Affiche le widget uploader de fichiers."""
-    return st.file_uploader(
-        f"Ou glissez-déposez vos fichiers ici",
-        type=config.extensions,
-        accept_multiple_files=True,
-        key=st.session_state[f"{config.prefix}_uploader_key"]
-    )
-
-
 def get_batch_files(config: BatchConfig) -> list:
     """Récupère les fichiers à traiter (disque ou uploadés)."""
     disk_files = st.session_state.pop(f"{config.prefix}_disk_trigger", [])
-    uploaded_files = st.file_uploader(
-        f"Ou glissez-déposez vos fichiers ici",
+    if disk_files:
+        return disk_files
+    return st.file_uploader(
+        "Ou glissez-déposez vos fichiers ici",
         type=config.extensions,
         accept_multiple_files=True,
-        key=st.session_state[f"{config.prefix}_uploader_key"]
-    )
-    return disk_files or uploaded_files
+        key=st.session_state[f"{config.prefix}_uploader_key"],
+    ) or []
 
 
 def render_batch_controls(config: BatchConfig, start_callback: Callable) -> None:
