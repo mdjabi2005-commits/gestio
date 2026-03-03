@@ -44,35 +44,34 @@ def render_disk_files(config: BatchConfig) -> list:
     return []
 
 
-def get_batch_files(config: BatchConfig) -> list:
-    """Récupère les fichiers à traiter (disque ou uploadés)."""
+def render_batch_controls(config: BatchConfig, start_callback: Callable) -> None:
+    """Affiche les boutons lancer/annuler et exécute le callback si demandé."""
+    # Si le trigger disque est présent, lancer directement sans passer par le bouton
     disk_files = st.session_state.pop(f"{config.prefix}_disk_trigger", [])
     if disk_files:
-        return disk_files
-    return st.file_uploader(
+        start_callback(disk_files)
+        return
+
+    uploaded_files = st.file_uploader(
         "Ou glissez-déposez vos fichiers ici",
         type=config.extensions,
         accept_multiple_files=True,
         key=st.session_state[f"{config.prefix}_uploader_key"],
     ) or []
 
-
-def render_batch_controls(config: BatchConfig, start_callback: Callable) -> None:
-    """Affiche les boutons lancer/annuler et exécute le callback si demandé."""
-    files = get_batch_files(config)
-    if not files:
+    if not uploaded_files:
         return
 
     col_btn, col_cancel = st.columns([3, 1])
     with col_btn:
-        start = st.button(f"🔍 Lancer le traitement", type="primary",
+        start = st.button("🔍 Lancer le traitement", type="primary",
                           key=f"btn_{config.prefix}_start")
     with col_cancel:
         if st.button("❌ Annuler", key=f"btn_{config.prefix}_cancel"):
             st.session_state[f"{config.prefix}_cancel"] = True
 
     if start:
-        start_callback(files)
+        start_callback(uploaded_files)
 
 
 def run_batch_processing(
