@@ -7,7 +7,7 @@ const features = [
   { icon: Edit3, title: "Récurrences automatiques", desc: "Configurez vos abonnements, loyers et salaires une seule fois. Gestio les enregistre automatiquement chaque mois." },
   { icon: Image, title: "Import OCR intelligent", desc: "Photographiez vos tickets et reçus. L'OCR extrait le texte localement, puis l'IA Groq (optionnel) classe automatiquement la transaction." },
   { icon: BarChart3, title: "Tableaux de bord visuels", desc: "Visualisez vos finances avec des graphiques clairs et interactifs. Identifiez vos tendances et optimisez vos dépenses." },
-  { icon: WifiOff, title: "100% Hors-ligne", desc: "Aucune connexion internet requise. Gérez vos finances n'importe où, même sans réseau. Vos données restent locales." },
+  { icon: WifiOff, title: "Quasi hors-ligne", desc: "Aucune connexion requise pour gérer vos finances au quotidien. Une connexion est uniquement nécessaire si vous activez l'analyse IA de tickets (Groq, optionnel)." },
   { icon: Lock, title: "Vie privée garantie", desc: "Vos données financières sont stockées uniquement sur votre ordinateur. Pas de compte, pas de serveur, pas de tracking." },
 ];
 

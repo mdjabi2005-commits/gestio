@@ -10,6 +10,7 @@ const negatives = [
 
 const positives = [
   "Contrôle total sur vos données",
+  "Fonctionne hors ligne (connexion requise uniquement pour l'OCR IA optionnel)",
   "Application gratuite (bêta)",
   "Multi-plateforme (Windows, macOS, Linux)",
 ];

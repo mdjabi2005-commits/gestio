@@ -30,7 +30,7 @@ const ConfidentialitePage = () => (
                 { q: "Accès Lamom's ?", r: "Non, jamais", warn: false },
                 { q: "Données partagées ?", r: "Non (sauf IA OCR opt.)", warn: true },
                 { q: "Compte requis ?", r: "Non", warn: false },
-                { q: "Fonctionne hors ligne ?", r: "Oui, 100%", warn: false },
+                { q: "Fonctionne hors ligne ?", r: "Oui (sauf OCR IA opt.)", warn: true },
                 { q: "Cookies / tracking ?", r: "Aucun", warn: false },
               ].map(({ q, r, warn }) => (
                 <div key={q} className={`bg-card border rounded-xl p-4 text-center ${warn ? "border-amber-500/30" : "border-primary/20"}`}>
