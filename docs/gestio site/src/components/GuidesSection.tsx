@@ -62,9 +62,9 @@ const GuidesSection = () => {
 
 	return (
 		<section className="py-[120px] bg-background" id="guides">
-			<div className="container max-w-6xl mx-auto">
-				<Reveal>
-					<div className="text-center max-w-[700px] mx-auto mb-16">
+		<div className="container">
+			<Reveal>
+				<div className="text-center max-w-[700px] mx-auto mb-16">
 						<div className="inline-flex items-center gap-2 text-primary text-sm font-semibold uppercase tracking-wider mb-4">
 							Guides
 						</div>
@@ -124,7 +124,7 @@ const GuidesSection = () => {
 
 												{/* Vidéo — pleine largeur mobile, ~60% desktop */}
 												{g.video && (
-													<div className="lg:w-[60%] p-5 shrink-0">
+													<div className="lg:w-[65%] p-5 shrink-0">
 														<div className="relative rounded-xl overflow-hidden border border-border/60 shadow-[0_8px_32px_rgba(0,0,0,0.45)] bg-black h-full">
 															{/* Barre fenêtre fictive */}
 															<div className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 border-b border-border/40">

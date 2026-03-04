@@ -52,7 +52,7 @@ const FAQSection = () => {
             </p>
           </div>
         </Reveal>
-        <div className="max-w-[800px] mx-auto space-y-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
           {faqs.map((f, i) => {
             const isActive = activeIndex === i;
             return (
