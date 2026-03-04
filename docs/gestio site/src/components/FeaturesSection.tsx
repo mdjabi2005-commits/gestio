@@ -1,10 +1,11 @@
-import { DollarSign, Edit3, Image, BarChart3, WifiOff, Lock } from "lucide-react";
+import { DollarSign, Edit3, Image, BarChart3, WifiOff, Lock, AlertTriangle } from "lucide-react";
+import { Link } from "react-router-dom";
 import Reveal from "./Reveal";
 
 const features = [
   { icon: DollarSign, title: "Gestion des transactions", desc: "Enregistrez facilement vos dépenses et revenus. Catégorisez chaque transaction pour une vue claire de vos habitudes financières." },
   { icon: Edit3, title: "Récurrences automatiques", desc: "Configurez vos abonnements, loyers et salaires une seule fois. Gestio les enregistre automatiquement chaque mois." },
-  { icon: Image, title: "Import OCR intelligent", desc: "Photographiez vos tickets et reçus. Notre technologie OCR extrait automatiquement les informations pour vous." },
+  { icon: Image, title: "Import OCR intelligent", desc: "Photographiez vos tickets et reçus. L'OCR extrait le texte localement, puis l'IA Groq (optionnel) classe automatiquement la transaction." },
   { icon: BarChart3, title: "Tableaux de bord visuels", desc: "Visualisez vos finances avec des graphiques clairs et interactifs. Identifiez vos tendances et optimisez vos dépenses." },
   { icon: WifiOff, title: "100% Hors-ligne", desc: "Aucune connexion internet requise. Gérez vos finances n'importe où, même sans réseau. Vos données restent locales." },
   { icon: Lock, title: "Vie privée garantie", desc: "Vos données financières sont stockées uniquement sur votre ordinateur. Pas de compte, pas de serveur, pas de tracking." },
@@ -40,6 +41,16 @@ const FeaturesSection = () => (
           </Reveal>
         ))}
       </div>
+
+      <Reveal delay={700}>
+        <div className="flex items-start gap-2 mt-10 max-w-[640px] mx-auto px-4 py-3 bg-amber-500/5 border border-amber-500/20 rounded-xl justify-center">
+          <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+          <p className="text-muted-foreground text-xs text-center">
+            <strong className="text-amber-500">À propos de l'OCR IA :</strong> l'extraction du texte est 100% locale (RapidOCR). Si vous activez l'analyse Groq, seul le texte brut du ticket est transmis à l'API — jamais vos données financières ni l'image originale.{" "}
+            <Link to="/confidentialite#groq" className="text-amber-500 hover:underline">Politique de confidentialité →</Link>
+          </p>
+        </div>
+      </Reveal>
     </div>
   </section>
 );
