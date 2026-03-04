@@ -117,33 +117,13 @@ const GuidesSection = () => {
 									{/* Content */}
 									<div
 										className="overflow-hidden transition-all duration-500"
-										style={{ maxHeight: isActive ? "1200px" : "0" }}
+										style={{ maxHeight: isActive ? "1400px" : "0" }}
 									>
 										<div className="border-t border-border">
-											<div className="flex flex-col lg:flex-row gap-0">
+											<div className="flex flex-col gap-0">
 
-												{/* Vidéo — pleine largeur mobile, ~60% desktop */}
-												{g.video && (
-													<div className="lg:w-[65%] p-5 shrink-0">
-														<div className="relative rounded-xl overflow-hidden border border-border/60 shadow-[0_8px_32px_rgba(0,0,0,0.45)] bg-black h-full">
-															{/* Barre fenêtre fictive */}
-															<div className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 border-b border-border/40">
-																<span className="w-2.5 h-2.5 rounded-full bg-destructive/60" />
-																<span className="w-2.5 h-2.5 rounded-full bg-amber-400/60" />
-																<span className="w-2.5 h-2.5 rounded-full bg-emerald-400/60" />
-																<span className="ml-3 text-[10px] text-muted-foreground/60 font-mono truncate">gestio — {g.title}</span>
-															</div>
-															<img
-																src={g.video}
-																alt={`Démonstration : ${g.title}`}
-																className="w-full h-full object-cover"
-															/>
-														</div>
-													</div>
-												)}
-
-												{/* Steps + Tip — ~40% desktop */}
-												<div className="flex-1 px-6 py-6 flex flex-col justify-between">
+												{/* Steps + Tip — en haut */}
+												<div className="px-6 py-6">
 													<ol className="pl-5 text-muted-foreground list-decimal space-y-3">
 														{g.steps.map((s, j) => (
 															<li key={j} className="leading-relaxed">
@@ -158,6 +138,26 @@ const GuidesSection = () => {
 														</p>
 													</div>
 												</div>
+
+												{/* Vidéo — en bas, pleine largeur */}
+												{g.video && (
+													<div className="px-5 pb-5">
+														<div className="relative rounded-xl overflow-hidden border border-border/60 shadow-[0_8px_32px_rgba(0,0,0,0.45)] bg-black">
+															{/* Barre fenêtre fictive */}
+															<div className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 border-b border-border/40">
+																<span className="w-2.5 h-2.5 rounded-full bg-destructive/60" />
+																<span className="w-2.5 h-2.5 rounded-full bg-amber-400/60" />
+																<span className="w-2.5 h-2.5 rounded-full bg-emerald-400/60" />
+																<span className="ml-3 text-[10px] text-muted-foreground/60 font-mono truncate">gestio — {g.title}</span>
+															</div>
+															<img
+																src={g.video}
+																alt={`Démonstration : ${g.title}`}
+																className="w-full object-contain"
+															/>
+														</div>
+													</div>
+												)}
 
 											</div>
 										</div>
