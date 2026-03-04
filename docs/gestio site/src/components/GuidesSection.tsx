@@ -11,10 +11,10 @@ const guides = [
     steps: [
       { bold: "Téléchargez l'installateur", text: " depuis la page Télécharger — aucun compte requis." },
       { bold: "Lancez le fichier .exe", text: " : l'installation se fait dans votre espace utilisateur, sans droits admin." },
-      { bold: "Gestio démarre automatiquement", text: " avec votre navigateur. C'est tout !" },
-      { bold: "Créez votre premier compte financier", text: " (ex : Compte courant, Livret A) et définissez un solde initial." },
+      { bold: "Gestio s'ouvre dans votre navigateur", text: " automatiquement au premier lancement." },
+      { bold: "Explorez le tableau de bord", text: " : accueil, ajout de transactions, récurrences et graphiques accessibles depuis le menu." },
     ],
-    tip: "Vous pouvez créer plusieurs comptes pour séparer vos finances personnelles et professionnelles.",
+    tip: "Aucune connexion internet requise après installation — vos données restent 100% locales.",
   },
   {
     id: "transactions",
@@ -120,17 +120,24 @@ const GuidesSection = () => {
                     style={{ maxHeight: isActive ? "900px" : "0" }}
                   >
                     <div className="border-t border-border">
-                      {/* Video */}
+                      {/* Animated WebP recording */}
                       {g.video && (
-                        <div className="w-full bg-black/20">
-                          <video
-                            src={g.video}
-                            autoPlay
-                            loop
-                            muted
-                            playsInline
-                            className="w-full max-h-[360px] object-cover"
-                          />
+                        <div className="px-6 pt-6">
+                          <div className="relative rounded-xl overflow-hidden border border-border/60 shadow-[0_8px_32px_rgba(0,0,0,0.45)] bg-black">
+                            {/* Barre de fenêtre fictive */}
+                            <div className="flex items-center gap-1.5 px-3 py-2 bg-muted/60 border-b border-border/40 shrink-0">
+                              <span className="w-2.5 h-2.5 rounded-full bg-destructive/60" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-amber-400/60" />
+                              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/60" />
+                              <span className="ml-3 text-[10px] text-muted-foreground/60 font-mono truncate">gestio — {g.title}</span>
+                            </div>
+                            <img
+                              src={g.video}
+                              alt={`Démonstration : ${g.title}`}
+                              className="w-full object-cover"
+                              style={{ maxHeight: "340px" }}
+                            />
+                          </div>
                         </div>
                       )}
 
