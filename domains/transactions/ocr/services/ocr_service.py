@@ -6,6 +6,7 @@ Service unifié pour extraire données depuis Images (tickets) ou PDF (relevés)
 import logging
 import os
 import threading
+import time
 from datetime import date
 from pathlib import Path
 
@@ -52,6 +53,10 @@ class OCRService:
         self.ocr_engine = RapidOCREngine()
         self.pattern_manager = PatternManager()
 
+        # Cache des patterns pour éviter rechargement à chaque ticket
+        self._amount_patterns = self.pattern_manager.get_amount_patterns()
+        self._date_patterns = self.pattern_manager.get_date_patterns()
+
         # Instancier Groq seulement si la clé est disponible
         groq_key = os.getenv("GROQ_API_KEY", "").strip()
         if groq_key:
@@ -63,15 +68,14 @@ class OCRService:
             self.groq_available = False
             logger.warning("OCRService initialisé — GROQ_API_KEY absente, catégorisation IA désactivée ⚠️")
 
-        # Warm-up ONNX Runtime : force la compilation JIT des kernels au démarrage
-        # pour que le premier vrai scan soit instantané (surtout sous PyInstaller)
+        # Warm-up ONNX Runtime au démarrage
         self._warmup_onnx()
 
     def _warmup_onnx(self) -> None:
         """
-        Warm-up ONNX Runtime : exécute une inférence factice sur image blanche 1x1.
+        Warm-up ONNX Runtime : exécute une inférence factice sur image blanche.
         Force la compilation JIT des kernels au démarrage pour que le premier
-        vrai scan soit instantané (critique sous PyInstaller).
+        vrai scan soit instantané.
         """
         try:
             import tempfile
@@ -165,7 +169,7 @@ class OCRService:
         if not _pdf_module.PDFMINER_AVAILABLE or _pdf_module.pdf_engine is None:
             err = ImportError(
                 "pdfminer.six est requis pour traiter les PDF. "
-                "Installez-le avec: pip install pdfminer.six"
+                "Installez-le avec: uv add pdfminer.six"
             )
             log_error(err, "Dépendance manquante: pdfminer.six")
             raise err
@@ -219,7 +223,6 @@ class OCRService:
         """
         Traite un ticket scanné (image) et retourne une Transaction.
         """
-        import time
         t0 = time.time()
         logger.info(f"[OCR] process_ticket démarré : {Path(image_path).name}")
 
@@ -229,12 +232,10 @@ class OCRService:
             raw_text = self.ocr_engine.extract_text(image_path)
             logger.info(f"[OCR] Étape 1/4 — texte extrait : {len(raw_text)} caractères ({time.time()-t0:.2f}s)")
 
-            # 2. Récupération des patterns
+            # 2. Parsing montant/date via patterns cached
             logger.info(f"[OCR] Étape 2/4 — parsing montant/date... ({time.time()-t0:.2f}s)")
-            amount_patterns = self.pattern_manager.get_amount_patterns()
-            date_patterns = self.pattern_manager.get_date_patterns()
-            amount = parse_amount(raw_text, amount_patterns)
-            transaction_date = parse_date(raw_text, date_patterns)
+            amount = parse_amount(raw_text, self._amount_patterns)
+            transaction_date = parse_date(raw_text, self._date_patterns)
             logger.info(f"[OCR] Étape 2/4 — montant={amount}, date={transaction_date} ({time.time()-t0:.2f}s)")
 
             # 3. Catégorisation Groq
@@ -277,15 +278,10 @@ class OCRService:
 
     def process_batch_tickets(self, image_paths: list[str], max_workers: int = 1, progress_callback=None) -> list[tuple[str, Transaction | None, str | None, float]]:
         """
-        Traite un lot d'images (tickets) via le module OCR interne de l'instance.
-        Architecture "V4 Indestructible (Fail-Safe)" : 
-        - Après de nombreux tests, l'accès concurrentiel (Threads ou Processes) d'ONNX Runtime 
-          sous Windows + Streamlit est trop instable (GIL Lock, I/O Spawns).
-        - Le multiprocessing est officiellement retiré de la V4 locale.
-        - On utilise une boucle séquentielle stricte (1 thread, 1 process) pour 100% de fiabilité.
+        Traite un lot de tickets en séquentiel pur.
+        Le multiprocessing ONNX Runtime est instable sous Windows + Streamlit —
+        boucle séquentielle stricte pour fiabilité maximale.
         """
-        import time
-        
         results = []
         total = len(image_paths)
         processed_count = 0

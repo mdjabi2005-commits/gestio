@@ -13,7 +13,11 @@
       "Bash(git ls-tree:*)",
       "WebFetch(domain:github.com)",
       "WebSearch",
-      "WebFetch(domain:education.github.com)"
+      "WebFetch(domain:education.github.com)",
+      "Bash(wc:*)",
+      "Bash(powershell:*)",
+      "Bash(python:*)",
+      "Bash(uv run:*)"
     ]
   }
 }

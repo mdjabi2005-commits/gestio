@@ -19,6 +19,7 @@ categories:
   - Contrôle technique
   - Assurance auto
   - Lavage
+  - Feu Vert abonnement
 - name: Logement
   subcategories:
   - Loyer
@@ -69,6 +70,8 @@ categories:
 - name: Autre
   subcategories:
   - Divers
+  - Alimentation - Courses Leclerc
+  - Test
 - name: Uber
   subcategories:
   - Livraison

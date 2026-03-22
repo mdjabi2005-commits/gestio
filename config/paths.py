@@ -2,7 +2,12 @@ import os
 import sys
 from pathlib import Path
 
+<<<<<<< HEAD
 
+=======
+# Racine du projet
+APP_ROOT = Path(__file__).parent.parent
+>>>>>>> 5cee8b499709947a9b294adbb43c8429ad143389
 
 # Base directory
 _home = Path.home()
@@ -17,9 +22,9 @@ TEST_MODE = os.getenv('TEST_MODE', 'false').lower() == 'true' or _pytest_running
 if TEST_MODE:
     DATA_DIR = str(_home / "test")
     if _pytest_running:
-        print("⚠️ MODE TEST ACTIVÉ (pytest détecté) - Utilisation de ~/test")
+        print("[TEST] MODE TEST ACTIVE (pytest detecte) - Utilisation de ~/test")
     else:
-        print("⚠️ MODE TEST ACTIVÉ - Utilisation de ~/test")
+        print("[TEST] MODE TEST ACTIVE - Utilisation de ~/test")
 else:
     DATA_DIR = str(_home / "analyse")
 

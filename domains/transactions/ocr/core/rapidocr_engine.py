@@ -4,7 +4,12 @@ Remplace EasyOCR pour une exécution plus rapide et légère.
 """
 
 import logging
+<<<<<<< HEAD
 import sys
+=======
+import time
+import time
+>>>>>>> 5cee8b499709947a9b294adbb43c8429ad143389
 
 try:
     # noinspection PyUnusedImports
@@ -26,6 +31,7 @@ class RapidOCREngine:
 
     def __init__(self):
         if not RAPIDOCR_AVAILABLE:
+<<<<<<< HEAD
             frozen = getattr(sys, 'frozen', False)
             logger.error(
                 f"rapidocr_onnxruntime import échoué (frozen={frozen}): {_rapidocr_error}"
@@ -34,6 +40,9 @@ class RapidOCREngine:
                 f"rapidocr_onnxruntime n'est pas disponible. "
                 f"Mode frozen={frozen}. Erreur: {_rapidocr_error}"
             )
+=======
+            raise ImportError("rapidocr_onnxruntime n'est pas installe. uv add rapidocr-onnxruntime")
+>>>>>>> 5cee8b499709947a9b294adbb43c8429ad143389
 
         # Initialisation du moteur
         try:
@@ -47,7 +56,6 @@ class RapidOCREngine:
         """
         Extrait le texte d'une image.
         """
-        import time
         t0 = time.time()
         logger.info(f"[OCR] extract_text démarré pour : {image_path}")
 

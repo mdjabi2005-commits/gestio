@@ -4,12 +4,13 @@ import appVisual from "@/assets/privacy_visual.png";
 
 const negatives = [
   "Pas de création de compte",
-  "Pas de données envoyées vers des serveurs",
+  "Pas de données financières envoyées vers des serveurs",
   "Pas de tracking ou analytics",
 ];
 
 const positives = [
   "Contrôle total sur vos données",
+  "Fonctionne hors ligne (connexion requise uniquement pour l'OCR IA optionnel)",
   "Application gratuite (bêta)",
   "Multi-plateforme (Windows, macOS, Linux)",
 ];

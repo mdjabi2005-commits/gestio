@@ -28,7 +28,7 @@ const HeroSection = () => {
         </h1>
 
         <p className="text-muted-foreground text-[clamp(1.125rem,2vw,1.375rem)] mb-10 max-w-[600px] mx-auto">
-          Gestio est l'application de gestion de finances personnelles qui respecte votre vie privée. 100% hors-ligne, sans compte, vos données restent sur votre ordinateur.
+          Gestio est l'application de gestion de finances personnelles qui respecte votre vie privée. Quasi hors-ligne, sans compte, vos données restent sur votre ordinateur.
         </p>
 
         <div className="flex flex-wrap gap-4 justify-center">
@@ -50,7 +50,7 @@ const HeroSection = () => {
 
         <div className="flex flex-col sm:flex-row justify-center gap-12 sm:gap-12 mt-16 pt-12 border-t border-border">
           {[
-            { value: "100%", label: "Hors-ligne" },
+            { value: "~100%", label: "Hors-ligne" },
             { value: "0", label: "Données envoyées" },
             { value: "3", label: "Plateformes" },
           ].map((stat) => (

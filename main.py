@@ -9,6 +9,7 @@ Refactored modular version
 @date: 2025-11-17
 """
 
+<<<<<<< HEAD
 import os
 
 # Thème Gestio — défini AVANT import streamlit pour garantir
@@ -19,10 +20,13 @@ os.environ.setdefault("STREAMLIT_THEME_BACKGROUND_COLOR",           "#111827")
 os.environ.setdefault("STREAMLIT_THEME_SECONDARY_BACKGROUND_COLOR", "#1E293B")
 os.environ.setdefault("STREAMLIT_THEME_TEXT_COLOR",                 "#F8FAFC")
 os.environ.setdefault("STREAMLIT_THEME_FONT",                       "sans serif")
+=======
+>>>>>>> 5cee8b499709947a9b294adbb43c8429ad143389
 
 import streamlit as st
 from dotenv import load_dotenv
 
+<<<<<<< HEAD
 # Charger le .env depuis le dossier utilisateur (release) en priorité,
 # puis fallback sur le .env local (développement)
 from config.paths import ENV_PATH as _USER_ENV_PATH
@@ -30,6 +34,10 @@ if _USER_ENV_PATH.exists():
     load_dotenv(dotenv_path=_USER_ENV_PATH, override=True)
 else:
     load_dotenv()  # fallback .env local (dev)
+=======
+# Charger de force les variables d'environnement du fichier .env à la racine
+load_dotenv()
+>>>>>>> 5cee8b499709947a9b294adbb43c8429ad143389
 
 # Initialize logging system FIRST (before any other imports)
 from config.logging_config import setup_logging
@@ -39,9 +47,18 @@ setup_logging()
 # ==============================
 # STREAMLIT CONFIGURATION
 # ==============================
+<<<<<<< HEAD
 st.set_page_config(
     page_title="Gestio V4 - Gestion Financière",
     page_icon="💰",
+=======
+from config.paths import APP_ROOT
+
+# ==============================
+st.set_page_config(
+    page_title="Gestio - Gestion Financière",
+    page_icon=str(APP_ROOT / "resources" / "icons" / "logo.png"),
+>>>>>>> 5cee8b499709947a9b294adbb43c8429ad143389
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -73,7 +90,10 @@ from shared.ui import load_all_styles, refresh_and_rerun
 # IMPORTS - Pages
 # ==============================
 from domains.home.pages.home import interface_accueil
+<<<<<<< HEAD
 from domains.home.pages.settings import interface_settings
+=======
+>>>>>>> 5cee8b499709947a9b294adbb43c8429ad143389
 from domains.transactions.pages.add.add import interface_add_transaction
 from domains.transactions.pages.view.view import interface_voir_transactions
 from domains.transactions.pages.recurrences.recurrences import interface_recurrences
@@ -111,6 +131,7 @@ except Exception as e:
     st.error(f"⚠️ Erreur d'initialisation de la base de données : {e}")
 
 # ==============================
+<<<<<<< HEAD
 # PRÉCHARGEMENT OCR (background)
 # ==============================
 def _preload_ocr() -> None:
@@ -127,6 +148,8 @@ if "ocr_service_instance" not in st.session_state:
     threading.Thread(target=_preload_ocr, daemon=True).start()
 
 # ==============================
+=======
+>>>>>>> 5cee8b499709947a9b294adbb43c8429ad143389
 # LOAD STYLES
 # ==============================
 load_all_styles()
@@ -149,7 +172,10 @@ def main():
         page_view = st.Page(interface_voir_transactions, title="Voir Transactions", icon="📊", url_path="view")
         page_add = st.Page(interface_add_transaction, title="Ajouter Transaction", icon="➕", url_path="add")
         page_recurrences = st.Page(interface_recurrences, title="Récurrences", icon="🔄", url_path="recurrences")
+<<<<<<< HEAD
         page_settings = st.Page(interface_settings, title="Paramètres", icon="⚙️", url_path="settings")
+=======
+>>>>>>> 5cee8b499709947a9b294adbb43c8429ad143389
 
         # Stocker les pages dans session_state pour switch_page()
         st.session_state["pages"] = {
@@ -157,13 +183,19 @@ def main():
             "view": page_view,
             "add": page_add,
             "recurrences": page_recurrences,
+<<<<<<< HEAD
             "settings": page_settings,
+=======
+>>>>>>> 5cee8b499709947a9b294adbb43c8429ad143389
         }
 
         pages = {
             "Tableau de Bord": [page_accueil, page_view],
             "Saisie": [page_add, page_recurrences],
+<<<<<<< HEAD
             "Application": [page_settings],
+=======
+>>>>>>> 5cee8b499709947a9b294adbb43c8429ad143389
         }
 
         pg = st.navigation(pages)
