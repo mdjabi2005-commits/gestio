@@ -1,7 +1,7 @@
 import Navbar from "@/components/Navbar";
 import FooterSection from "@/components/FooterSection";
 import Reveal from "@/components/Reveal";
-import { Shield, Lock, X, Check } from "lucide-react";
+import { Shield, Lock, X, Check, AlertTriangle } from "lucide-react";
 
 const ConfidentialitePage = () => (
   <>
@@ -18,7 +18,7 @@ const ConfidentialitePage = () => (
               <h1 className="text-foreground text-[clamp(2rem,4vw,3rem)] font-bold mb-3">
                 Politique de Confidentialité
               </h1>
-              <p className="text-muted-foreground text-sm">Dernière mise à jour : 16 février 2026</p>
+              <p className="text-muted-foreground text-sm">Dernière mise à jour : 4 mars 2026</p>
             </div>
           </Reveal>
 
@@ -26,16 +26,16 @@ const ConfidentialitePage = () => (
           <Reveal>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-12">
               {[
-                { q: "Données stockées ?", r: "Sur votre appareil uniquement" },
-                { q: "Accès Lamom's ?", r: "Non, jamais" },
-                { q: "Données partagées ?", r: "Non, avec personne" },
-                { q: "Compte requis ?", r: "Non" },
-                { q: "Fonctionne hors ligne ?", r: "Oui, 100%" },
-                { q: "Cookies / tracking ?", r: "Aucun" },
-              ].map(({ q, r }) => (
-                <div key={q} className="bg-card border border-primary/20 rounded-xl p-4 text-center">
+                { q: "Données stockées ?", r: "Sur votre appareil uniquement", warn: false },
+                { q: "Accès Lamom's ?", r: "Non, jamais", warn: false },
+                { q: "Données partagées ?", r: "Non (sauf IA OCR opt.)", warn: true },
+                { q: "Compte requis ?", r: "Non", warn: false },
+                { q: "Fonctionne hors ligne ?", r: "Oui (sauf OCR IA opt.)", warn: true },
+                { q: "Cookies / tracking ?", r: "Aucun", warn: false },
+              ].map(({ q, r, warn }) => (
+                <div key={q} className={`bg-card border rounded-xl p-4 text-center ${warn ? "border-amber-500/30" : "border-primary/20"}`}>
                   <p className="text-muted-foreground text-xs mb-1">{q}</p>
-                  <p className="text-primary font-semibold text-sm">{r}</p>
+                  <p className={`font-semibold text-sm ${warn ? "text-amber-500" : "text-primary"}`}>{r}</p>
                 </div>
               ))}
             </div>
@@ -144,9 +144,9 @@ const ConfidentialitePage = () => (
                 <h3 className="text-foreground font-medium mb-3">4.2 Aucune transmission de données</h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {[
-                    "N'envoie AUCUNE donnée vers des serveurs externes",
+                    "N'envoie AUCUNE donnée financière vers des serveurs externes",
                     "Ne collecte AUCUNE information sur votre utilisation",
-                    "Ne partage AUCUNE donnée avec des tiers",
+                    "Ne partage AUCUNE donnée avec des tiers à des fins commerciales",
                     "N'utilise PAS de services d'analytics ou de tracking",
                     "Ne requiert PAS de connexion internet pour fonctionner",
                   ].map((item) => (
@@ -155,6 +155,12 @@ const ConfidentialitePage = () => (
                       <span className="text-muted-foreground text-sm">{item}</span>
                     </div>
                   ))}
+                </div>
+                <div className="flex items-start gap-3 mt-3 p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <span className="text-muted-foreground text-sm">
+                    <strong className="text-amber-500">Exception optionnelle :</strong> si vous activez l'analyse IA des tickets (OCR Groq), le texte extrait est transmis à l'API Groq. → <a href="#groq" className="text-amber-500 hover:underline">Voir section 7.2</a>
+                  </span>
                 </div>
                 <p className="text-muted-foreground text-sm mt-4">
                   <strong className="text-foreground">4.3 Emplacement des données :</strong> Vos données sont stockées dans le dossier d'installation de l'application. Vous en êtes l'unique propriétaire et responsable.
@@ -202,20 +208,94 @@ const ConfidentialitePage = () => (
 
             {/* 7 */}
             <Reveal>
-              <div className="bg-card border border-border rounded-2xl p-8">
+              <div id="groq" className="bg-card border border-border rounded-2xl p-8">
                 <h2 className="text-foreground text-xl font-semibold mb-5 flex items-center gap-3">
                   <span className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center text-primary font-bold text-sm shrink-0">7</span>
                   Services tiers
                 </h2>
                 <div className="space-y-4">
+
+                  {/* 7.1 OCR local */}
                   <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                    <h3 className="text-foreground font-medium mb-1">7.1 OCR (Reconnaissance de caractères)</h3>
-                    <p className="text-muted-foreground text-sm">La fonctionnalité d'import de tickets par OCR traite les images <strong className="text-foreground">localement</strong> sur votre appareil. Aucune image n'est envoyée vers des serveurs externes.</p>
+                    <h3 className="text-foreground font-medium mb-2 flex items-center gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0" />
+                      7.1 Extraction OCR — 100% local (RapidOCR)
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      L'extraction du texte depuis vos images et PDF de tickets se fait <strong className="text-foreground">entièrement sur votre appareil</strong> via RapidOCR. Aucune image, aucun fichier PDF n'est jamais transmis vers l'extérieur.
+                    </p>
                   </div>
+
+                  {/* 7.2 Groq — service cloud optionnel */}
+                  <div className="p-4 bg-amber-500/5 border border-amber-500/30 rounded-xl">
+                    <h3 className="text-foreground font-medium mb-3 flex items-center gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                      7.2 Classification IA — Groq (service optionnel, cloud)
+                    </h3>
+                    <div className="space-y-3 text-sm text-muted-foreground">
+                      <p>
+                        Gestio propose en option une classification intelligente des tickets via <strong className="text-foreground">l'API Groq</strong> (Groq, LLC — États-Unis), utilisant le modèle <code className="bg-muted px-1 py-0.5 rounded text-xs">llama-3.3-70b-versatile</code>.
+                      </p>
+                      <div className="space-y-2">
+                        <p className="text-foreground font-medium text-xs uppercase tracking-wide">Ce qui est transmis à Groq :</p>
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                          <span>Le <strong className="text-foreground">texte brut extrait</strong> de votre ticket (résultat de l'OCR local). <em>Pas l'image originale, pas votre nom, pas vos données bancaires.</em></span>
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-foreground font-medium text-xs uppercase tracking-wide">Ce qui n'est pas transmis :</p>
+                        {[
+                          "Vos données financières (montants, soldes, historique)",
+                          "Vos fichiers ou images originaux",
+                          "Toute information permettant de vous identifier",
+                        ].map((item) => (
+                          <div key={item} className="flex items-start gap-2">
+                            <X className="w-3.5 h-3.5 text-destructive shrink-0 mt-0.5" />
+                            <span>{item}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-3 space-y-1">
+                        <p className="text-amber-500 font-medium text-xs">⚠️ Conditions d'activation</p>
+                        <ul className="space-y-1 list-none">
+                          {[
+                            "Vous devez configurer votre propre clé API Groq (GROQ_API_KEY)",
+                            "Cette fonctionnalité est inactive par défaut — l'OCR reste local si aucune clé n'est fournie",
+                            "Vous pouvez supprimer votre clé à tout moment depuis les paramètres de l'application",
+                          ].map((item) => (
+                            <li key={item} className="flex items-start gap-2 text-muted-foreground">
+                              <span className="text-amber-500 mt-0.5">›</span>{item}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                      <p>
+                        En utilisant cette fonctionnalité, vous acceptez la{" "}
+                        <a
+                          href="https://groq.com/privacy-policy/"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-amber-500 hover:underline font-medium"
+                        >
+                          Politique de confidentialité de Groq, LLC
+                        </a>
+                        . Les données transmises sont soumises au droit américain.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 7.3 Aucun autre service cloud */}
                   <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl">
-                    <h3 className="text-foreground font-medium mb-1">7.2 Aucun service cloud</h3>
-                    <p className="text-muted-foreground text-sm">Gestio n'utilise aucun service cloud pour le stockage ou le traitement de vos données.</p>
+                    <h3 className="text-foreground font-medium mb-1 flex items-center gap-2">
+                      <Check className="w-4 h-4 text-primary shrink-0" />
+                      7.3 Aucun autre service cloud
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      En dehors de Groq (optionnel et sous votre contrôle), Gestio n'utilise aucun autre service cloud pour le stockage, le traitement ou l'analyse de vos données.
+                    </p>
                   </div>
+
                 </div>
               </div>
             </Reveal>

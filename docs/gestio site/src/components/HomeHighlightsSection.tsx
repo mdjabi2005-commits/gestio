@@ -1,4 +1,4 @@
-import { Lock, Zap, BarChart3, ArrowRight } from "lucide-react";
+import { Lock, Zap, BarChart3, ArrowRight, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import Reveal from "./Reveal";
 
@@ -73,6 +73,16 @@ const HomeHighlightsSection = () => (
                     </Reveal>
                 ))}
             </div>
+
+            <Reveal delay={400}>
+                <div className="flex items-start gap-2 mt-8 max-w-[600px] mx-auto px-4 py-3 bg-amber-500/5 border border-amber-500/20 rounded-xl text-center justify-center">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+                    <p className="text-muted-foreground text-xs">
+                        <strong className="text-amber-500">OCR IA (optionnel) :</strong> si vous utilisez l'analyse de tickets par Groq, seul le texte extrait du ticket est transmis — jamais vos données financières.{" "}
+                        <Link to="/confidentialite#groq" className="text-amber-500 hover:underline">En savoir plus</Link>
+                    </p>
+                </div>
+            </Reveal>
         </div>
     </section>
 );
