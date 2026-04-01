@@ -105,9 +105,6 @@ async def health():
 
 # Serve Static Files (Frontend)
 frontend_path = os.path.join(os.getcwd(), "frontend", "out")
-print(f"[DEBUG] CWD: {os.getcwd()}")
-print(f"[DEBUG] Frontend path: {frontend_path}")
-print(f"[DEBUG] Frontend exists: {os.path.exists(frontend_path)}")
 if os.path.exists(frontend_path):
     # Important: Mount at the end so it doesn't intercept API routes
     app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
