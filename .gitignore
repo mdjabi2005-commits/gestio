@@ -5,20 +5,40 @@ __pycache__/
 *.pyd
 *.egg-info/
 *.egg
-.eggs/
+*.eggs/
 dist/
 build/
 *.spec.bak
 
+# ── Node.js ────────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.next/
+frontend/out/
+frontend/dist/
+dist/
+build/
+
 # ── uv / virtualenv ───────────────────────────────────────────────────────────
 .venv/
+.venv2/
+venv/
+env/
 .env
 .env.*
 !.env.example
 
-# ── Inno Setup (genere automatiquement par scripts/generate_iss.py) ──────────
-gestio.iss
+# ── Inno Setup (gere manuellement) ──────────────────
+# distribution/gestio.iss
 
+# ── PyInstaller ───────────────────────────────────────────────────────────────
+dist/
+build/
+*.manifest
 
 # ── Données utilisateur (ne jamais commiter) ──────────────────────────────────
 analyse/

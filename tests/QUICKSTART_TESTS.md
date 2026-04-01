@@ -55,7 +55,7 @@ tests/test_services/test_csv_export.py ...           [100%]
 
 1. **Import errors** → Vérifier que vous êtes dans `v4/`
 2. **Database locked** → Fermer Streamlit
-3. **Missing modules** → `uv sync`
+3. **Missing modules** → `pip install -r requirements.txt`
 
 ## Objectif
 

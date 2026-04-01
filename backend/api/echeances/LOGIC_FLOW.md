@@ -1,0 +1,196 @@
+# Logic Flow — API /echeances
+
+## Fichiers concernés
+
+```
+backend/api/echeances/
+└── echeances.py               # Endpoints REST
+
+backend/domains/transactions/
+├── database/
+│   ├── model_echeance.py     # Modèle Echeance (Pydantic)
+│   ├── repository_echeance.py # EcheanceRepository
+│   └── schema_table_echeance.py # Création table
+├── recurrence/
+│   └── recurrence_service.py  # refresh_echeances(), sync/cleanup
+└── shared/
+    └── database/
+        └── connection.py     # get_db_connection()
+```
+
+## Arbre des dépendances
+
+```
+echeances.py (API)
+├── fastapi (APIRouter, HTTPException)
+├── typing (List)
+├── backend.domains.transactions.database.model_echeance
+│   └── pydantic (BaseModel, Field)
+├── backend.domains.transactions.database.repository_echeance
+│   └── backend.shared.database (get_db_connection)
+└── datetime (date, timedelta)
+```
+
+## Data Flow
+
+```mermaid
+graph TD
+    subgraph Client
+        Front[Frontend<br/>api.getEcheances()]
+    end
+    
+    subgraph API
+        GET_ECH["GET /api/echeances/"]
+    end
+    
+    subgraph Repository
+        Repo[EcheanceRepository]
+    end
+    
+    subgraph Services
+        Refresh[refresh_echeances]
+        Sync[sync_recurrences_to_echeances]
+        Cleanup[cleanup_past_echeances]
+    end
+    
+    subgraph Database
+        ECHE[(SQLite<br/>echeances table)]
+    end
+    
+    subgraph Recurrences
+        REC[(recurrences)]
+    end
+    
+    Front -->|HTTP| GET_ECH
+    GET_ECH --> Refresh
+    
+    Refresh --> Cleanup
+    Cleanup -->|DELETE old| ECHE
+    
+    Refresh --> Sync
+    Sync -->|SELECT| REC
+    REC -->|active recurrences| Sync
+    Sync -->|generate occurrences| ECHE
+    
+    GET_ECH --> Repo
+    Repo -->|SELECT active| ECHE
+    ECHE -->|echeances| Repo
+    Repo -->|EcheanceResponse[]| GET_ECH
+    GET_ECH -->|JSON| Front
+```
+
+## Endpoint
+
+| Methode | Path | Entrée | Sortie |
+|---------|------|--------|---------|
+| `GET` | `/api/echeances/` | - | `EcheanceResponse[]` |
+
+## Format de réponse (EcheanceResponse)
+
+```typescript
+interface EcheanceResponse {
+  id: string                    // ID de l'échéance
+  nom: string                   // description ou nom
+  categorie: string             // categorie
+  sous_categorie?: string      // sous_categorie (optionnel)
+  categoryType: string         // sous_categorie (alias pour compatibilité)
+  date: string                 // date_prevue formatée "DD Mmm."
+  daysRemaining: number        // jours jusqu'à l'échéance
+  montant: number              // montant
+  type: "depense" | "revenu"   // type de l'échéance
+  statut: "paid" | "pending" | "overdue"  // basé sur date_prevue et transactions
+  frequence: string            // fréquence (mensuel, hebdomadaire, etc.)
+  date_debut: string           // date de début (ISO)
+  date_fin?: string            // date de fin (ISO)
+  date_prevue: string          // prochaine date prévue (ISO)
+  paymentMethod: "automatic" | "manual"  // basé sur frequence
+  statut_base: "active" | "inactive"     // statut réel en BDD
+}
+```
+
+## Logique de calcul du statut
+
+Le statut est calculé dans `echeances.py` (EcheanceResponse) :
+
+```python
+def _build_echeance_response(echeance: Echeance, is_paid: bool = False):
+    if is_paid:
+        statut = "paid"  # Transaction liée ce mois
+    elif echeance.statut == "active":
+        statut = "overdue" if (next_date and next_date < today) else "pending"
+    else:
+        statut = "paid"  # statut inactive traité comme paid
+    return {
+        "statut": statut,
+        # ...
+    }
+```
+
+**Important** : Le frontend doit **inclure** les échéances `statut === 'paid'` dans les calculs car elles représentent des charges/revenus du mois en cours.
+
+## Logique de projection
+
+La méthode `get_occurrences_for_month(year, month)` calcule les occurrences :
+
+- Si `date_fin` est NULL → projette jusqu'à fin année+1
+- Si `date_fin` est présent → ne pas dépasser cette date
+
+## Effet papillon
+
+**Si tu modifies...** → **Ça affecte...**
+
+| Fichier modifié | Impact |
+|-----------------|--------|
+| `echeances.py` | Frontend `api.getEcheances()`, page `/echeances` |
+| `repository_echeance.py` | API echeances, dashboard |
+| `model_echeance.py` | API echeances, Frontend (types) |
+| `recurrence_service.py` | Generation automatique des échéances |
+
+## Frontend associé
+
+- `frontend/src/api.ts` - `api.getEcheances()`
+- `frontend/src/app/echeances/page.tsx`
+- `frontend/src/components/dashboard/echeance-table.tsx`
+
+## Relations
+
+- **Dashboard** appelle `refresh_echeances()` et retourne `prochaines_echeances`
+- Les échéances sont générées depuis les recurrences actives
+- Chaque recurrence génère des occurrences futures dans `echeances`
+
+---
+
+## 🔧 Quick Reference
+
+### Endpoints
+
+| Méthode | Endpoint | Description |
+|---------|----------|-------------|
+| `GET` | `/api/echeances/` | Liste échéances |
+| `GET` | `/api/echeances/calendar` | Occurrences calendrier |
+| `POST` | `/api/echeances/` | Créer échéance |
+
+### Statut des échéances
+
+| Statut | Signification |
+|--------|---------------|
+| `paid` | Échéance liée à une transaction ce mois |
+| `pending` | Échéance active, pas encore payée |
+| `overdue` | Échéance active, date dépassée |
+
+### Erreurs courantes
+
+| Erreur | Cause | Solution |
+|--------|-------|----------|
+| `Solde échéance = 0` | Filtré par `statut === 'paid'` | **Inclure** 'paid' dans le calcul |
+
+### Statut calcul (echeances.py)
+
+```python
+if is_paid:
+    statut = "paid"
+elif echeance.statut == "active":
+    statut = "overdue" if next_date < today else "pending"
+else:
+    statut = "paid"  # inactive traité comme paid
+```

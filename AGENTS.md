@@ -1,345 +1,215 @@
-# AGENTS.md — Gestio V4 (Production)
+# AGENTS.md — Gestio V4
 
-> Application desktop Python + Streamlit + SQLite. Version de production stable.
-
----
-
-## 🏗️ Architecture
-
-```
-V1/
-├── main.py                    ← Point d'entrée Streamlit
-├── pyproject.toml            ← Dépendances avec uv
-│
-├── launcher/                 ← Package launcher (mini-EXE Tkinter)
-│   ├── launcher.py           ← Point d'entrée principal
-│   ├── launcher_core.py      ← Logique métier (venv, uv sync, chemins)
-│   ├── launcher_ui.py        ← Fenêtre Tkinter
-│   └── gestio-launcher.spec ← Spec PyInstaller
-│
-├── config/                   ← Configuration globale
-│   ├── paths.py             ← Chemins DB, ressources
-│   └── logging_config.py    ← Logging structuré
-│
-├── domains/                  ← Domaines métier (DDD)
-│   ├── home/                ← Page d'accueil / dashboard
-│   └── transactions/
-│       ├── database/        ← Modèles, repositories, schéma
-│       ├── services/       ← Logique métier
-│       ├── recurrence/      ← Transactions récurrentes
-│       ├── ocr/            ← Extraction OCR
-│       ├── pages/         ← Pages Streamlit
-│       └── view/          ← Composants visuels
-│
-├── shared/                 ← Utilitaires transversaux
-│   ├── database/          ← Connexion SQLite
-│   ├── ui/               ← Helpers UI, styles
-│   ├── services/         ← Sécurité
-│   └── utils/            ← Convertisseurs, parsers
-│
-├── resources/             ← Assets (styles, icônes)
-└── scripts/              ← Scripts de build
-```
+> **Point d'entrée pour TOUS les agents IA. À LIRE EN PREMIER.**
 
 ---
 
-## ⚡ 1. Commandes de Build/Lint/Test
+## ⚡ Début de session
 
-### Installation
-
-```bash
-# Installer les dépendances avec uv
-uv sync
-
-# Ajouter une dépendance
-uv add <package>
-```
-
-### Lancement (Développement)
-
-```bash
-# Via Streamlit directement
-uv run streamlit run main.py
-
-# Ou via le launcher
-uv run python launcher.py
-```
-
-### Tests
-
-```bash
-# Tous les tests
-pytest
-
-# Mode verbose
-pytest -v
-
-# Test spécifique
-pytest tests/test_transactions/test_repository.py::test_add_transaction
-
-# Avec coverage
-pytest --cov=domains --cov=shared --cov-report=html
-
-# Marqueurs
-pytest -m unit         # Tests unitaires purs
-pytest -m integration  # Tests avec DB
-pytest -m ocr          # Tests OCR
-```
-
-### Build (Production)
-
-```bash
-# Installer les dépendances de build
-uv sync --group build
-
-# Générer l'exécutable Windows avec PyInstaller
-uv run pyinstaller gestio.spec
-
-# Générer le script Inno Setup
-python scripts/generate_iss.py
-```
+1. **Lire ce fichier en entier**
+2. **Demander sur quelle partie** du projet travailler
+3. **Lire le fichier approprié** (voir ci-dessous)
 
 ---
 
-## 📐 2. Conventions de Code
+## Quel agent ?
 
-### Python
+| Agent | Scope | Lire ce fichier |
+|-------|-------|-----------------|
+| **Claude / Minimax** | `backend/` uniquement | `.agent/skill-backend.md` |
+| **Gemini / v0 / Lovable** | `frontend/` uniquement | `.agent/skill-frontend.md` |
 
-**Framework & Validation :**
-- **Pydantic** — Modèles avec validation
-- **Pandas** — Autorisé pour les DataFrames
-- **Plotly** — Graphiques interactifs
-- **RapidOCR** — OCR offline
+---
 
-**Conventions :**
-- **Clés en FRANÇAIS** : `categorie`, `montant`, `date`, `type`
-- **snake_case** pour les variables et fonctions
-- **logging** : `logger = logging.getLogger(__name__)`
-- **docstrings** Google style
+## 🎯 Scope des agents (TRES IMPORTANT)
 
-**Imports (ordre) :**
-```python
-# 1. Bibliothèques standard
-import logging
-from datetime import date
-from typing import Optional, List
+### Règle d'or : **1 agent = 1 dossier**
 
-# 2. Bibliothèques tierces
-import pandas as pd
-import streamlit as st
-from pydantic import BaseModel
+- **Agent Frontend** (Gemini, v0, Lovable) → **SEULEMENT** dans `frontend/`
+- **Agent Backend** (Claude, Minimax) → **SEULEMENT** dans `backend/`
 
-# 3. Imports locaux
-from shared.database import get_db_connection
-from domains.transactions.database.model import Transaction
+### Si un agent a besoin de changements dans l'autre partie :
 
-# 4. Logger
-logger = logging.getLogger(__name__)
+**L'agent DOIT écrire un prompt à l'autre agent** pour expliquer les changements nécessaires.
+
+**Exemple :**
+> L'agent frontend constate que l'API manque un endpoint → Il **ne modifie PAS** le backend, il **écrit** à l'agent backend :
+> 
+> *"Bonjour, j'ai besoin d'un nouvel endpoint GET /api/transactions/summary qui retourne le total des dépenses par catégorie. Peux-tu l'ajouter dans backend/api/ ?"*
+
+---
+
+## ⚠️ Avant de modifier du code (OBLIGATOIRE)
+
+### 1. Lire le README du dossier concerné
+
+**OBLIGATOIRE** : Lire le fichier `README.md` du dossier concerné avant toute modification.
+
+Exemple :
+- Pour modifier `backend/domains/transactions/` → lire `backend/domains/transactions/README.md`
+- Pour modifier `frontend/src/app/transactions/` → lire `frontend/README.md`
+
+### 2. Comprendre le Data Flow
+
+**OBLIGATOIRE** : Avant de modifier un fichier, comprendre :
+- **Comment les données entrent** (input)
+- **Comment les données sortent** (output)
+- **Quels services/API sont appelés**
+
+Chercher s'il existe un fichier `LOGIC_FLOW.md` ou une documentation dans le README du dossier.
+
+### 📍 Emplacements des LOGIC_FLOW (API)
+
+| Module | Emplacement |
+|--------|--------------|
+| Dashboard | `backend/api/dashboard/LOGIC_FLOW.md` |
+| Transactions | `backend/api/transactions/LOGIC_FLOW.md` |
+| Attachments | `backend/api/attachments/LOGIC_FLOW.md` |
+| OCR | `backend/api/ocr/LOGIC_FLOW.md` |
+| Echeances | `backend/api/echeances/LOGIC_FLOW.md` |
+
+### 3. Si le Logic Flow n'existe pas
+
+**Créer un fichier `LOGIC_FLOW.md`** dans le dossier concerné avec :
+- Diagramme mermaid du flux de données
+- Description des entrées/sorties
+- API endpoints utilisés
+
+---
+
+## ⚠️ Effet papillon
+
+**AVANT une modification, réfléchir à :**
+
+1. Cette modification affecte-t-elle d'autres parties ?
+2. Le fichier importe-t-il d'autres modules ?
+3. Faut-il mettre à jour les tests ? Les types ? La documentation ?
+4. Respecte-t-elle les règles DDD ? (domaines isolés, pas de dépendances circulaires)
+
+### 🔄 Synchronisation Backend ↔ Frontend
+
+**Règle** : Si tu modifies un **modèle Pydantic** dans le backend, tu DOIS aussi modifier les **types TypeScript** correspondants dans `frontend/src/api.ts`.
+
+| Fichier modifié | Fichier à synchroniser |
+|-----------------|------------------------|
+| `backend/domains/transactions/database/model.py` (Pydantic) | `frontend/src/api/types.ts` (TypeScript) |
+| `backend/api/*.py` (nouveau endpoint) | `frontend/src/api/types.ts` (nouvelle méthode) |
+
+> [!TIP]
+> **Standardisation des types** : Les types de transactions (`type`) sont stockés en **minuscule** et sans accent : `depense`, `revenu`.
+
+**Exemple** :
+> Tu ajoutes un champ `description` au modèle Transaction → Tu DOIS ajouter `description?: string` à l'interface Transaction dans `frontend/src/api.ts`
+
+### 🌍 Règle绝对 : Français uniquement pour les noms de champs API
+
+**TOUJOURS utiliser des noms de champs en français** dans les réponses API. Ne jamais angliciser les noms de champs.
+
+| Type错误 à éviter ✅ | Correct ✅ |
+|---------------------|-----------|
+| `amount` | `montant` |
+| `type: "income" / "expense"` | `type: "revenu" / "depense"` |
+| `status: "paid" / "pending"` | `statut: "active" / "inactive"` |
+| `category` | `categorie` |
+| `name` | `nom` |
+
+Cette règle s'applique au **Backend** (réponses API) et au **Frontend** (utilisation des données). Plus de mappingFR↔EN !
+
+---
+
+## 📁 Structure
+
 ```
-
-**Gestion d'erreurs :**
-```python
-from shared.exceptions import DatabaseError, ValidationError
-
-try:
-    result = repository.add(data)
-except ValidationError as e:
-    st.error(f"Données invalides: {e}")
-    logger.warning(f"Validation échouée: {e}")
-except DatabaseError as e:
-    st.error("Erreur base de données")
-    logger.error(f"DB error: {e}", exc_info=True)
-```
-
-**Pydantic Models :**
-```python
-from pydantic import BaseModel, Field, validator
-
-class Transaction(BaseModel):
-    type: str = Field(..., description="Type (Dépense/Revenu)")
-    categorie: str = Field("Non catégorisé")
-    montant: float = Field(..., ge=0)
-    date: date
-
-    @validator("type", pre=True)
-    def normalize_type(cls, v):
-        if isinstance(v, str):
-            return v.strip().capitalize()
-        return v
+gestion-financiere/
+├── backend/           # FastAPI
+│   ├── api/          # Endpoints REST
+│   ├── domains/      # Logique métier (DDD)
+│   ├── shared/       # Composants partagés
+│   └── config/       # Configuration (Paths, etc.)
+├── frontend/         # React + TypeScript + Tailwind (port 3000)
+│   └── src/app/     # Pages
+└── tests/           # Tests pytest
 ```
 
 ---
 
-### Streamlit Pages
+## 🔀 Architecture globale
 
-**Structure d'une page :**
-```python
-import streamlit as st
-from shared.ui import render_header, render_error
+```mermaid
+graph TB
+    subgraph Frontend["Frontend (React + TypeScript)"]
+        Pages[Pages<br/>app/]
+        Components[Composants<br/>components/]
+        Context[Context<br/>context/]
+        Hooks[Hooks<br/>hooks/]
+        API_Client["API Client<br/>api.ts"]
+    end
 
-def page_transactions():
-    st.set_page_config(title="Transactions", layout="wide")
-    render_header("📊 Transactions")
+    subgraph Backend["Backend (FastAPI)"]
+        API[API Routes<br/>api/]
+        Services[Services<br/>domains/*/services]
+        Repos[Repositories<br/>domains/*/database]
+    end
 
-    # État
-    if "transactions" not in st.session_state:
-        st.session_state.transactions = load_transactions()
+    DB[(Base de données SQLite)]
 
-    # Filtres
-    col1, col2 = st.columns(2)
-    with col1:
-        start_date = st.date_input("Date début")
-    with col2:
-        end_date = st.date_input("Date fin")
-
-    # Actions
-    if st.button("Ajouter"):
-        show_add_form()
-
-    # Affichage
-    render_transactions_table(st.session_state.transactions)
+    Pages --> Context
+    Context --> Hooks
+    Hooks --> API_Client
+    API_Client -->|HTTP| API
+    API --> Services
+    Services --> Repos
+    Repos -->|SQL| DB
+    Repos --> Services
+    Services --> API
+    API -->|JSON| API_Client
+    API_Client --> Hooks
+    Hooks --> Context
+    Context --> Components
+    Components --> Pages
 ```
 
 ---
 
-## 🧪 3. Tests
+## 🔌 Ports
 
-### Structure des tests
-
-```
-tests/
-├── conftest.py              # Fixtures partagées
-├── test_transactions/
-│   ├── test_repository.py  # Tests CRUD
-│   └── test_service.py     # Tests logique métier
-├── test_ocr/
-│   └── test_parser.py      # Tests OCR
-└── test_shared/
-    └── test_utils.py       # Tests utilitaires
-```
-
-### Exemple de test
-
-```python
-import pytest
-from datetime import date
-
-from domains.transactions.database.model import Transaction
-
-
-@pytest.fixture
-def transaction_sample():
-    """Fixture pour une transaction de test."""
-    return Transaction(
-        type="Dépense",
-        categorie="Alimentation",
-        montant=42.50,
-        date=date(2026, 1, 15),
-        source="Manuel",
-    )
-
-
-def test_transaction_validation(transaction_sample):
-    """La transaction doit être valide."""
-    assert transaction_sample.montant == 42.50
-    assert transaction_sample.type == "Dépense"
-
-
-def test_montant_negatif_invalide():
-    """Un montant négatif doit lever une erreur."""
-    with pytest.raises(ValueError):
-        Transaction(
-            type="Dépense",
-            montant=-10.0,
-            date=date(2026, 1, 15),
-            source="Manuel",
-        )
-```
+| Service | Port |
+|---------|------|
+| Backend (FastAPI) | 8002 |
+| Frontend (Next.js) | 3000 |
 
 ---
 
-## 🎨 4. Style Git
+## 📍 Gestion des Chemins (Paths)
 
-### Commits
+**IMPORTANT** : Les chemins vers la base de données, les dossiers de scan et d'archives ne sont **JAMAIS** en dur dans le code. 
+Ils sont définis dynamiquement dans : `backend/config/paths.py`.
 
-```
-feat: ajouter l'export CSV des transactions
-fix: corriger le filtre par catégorie sur la page view
-refactor: extraire la logique de parsing dans ocr_parser.py
-chore: mettre à jour les dépendances (pandas, streamlit)
-test: ajouter 5 tests pour le module recurrence
-```
-
-### Branches
-
-| Préfixe | Usage |
-|---------|-------|
-| `main` | Production stable |
-| `feat/` | Nouvelles fonctionnalités |
-| `fix/` | Corrections de bugs |
-| `chore/` | Maintenance, dépendances |
+> [!WARNING]
+> La base de données ne se trouve **PAS** dans le dossier `backend/`. Son emplacement est géré par la variable `DATA_DIR` dans `paths.py`.
 
 ---
 
-## 📁 5. Patterns Courants
+## ⚠️ Règle de taille
 
-### Repository Pattern
-
-```python
-# domains/transactions/database/repository.py
-class TransactionRepository:
-    def get_all(self) -> List[Transaction]:
-        conn = get_db_connection()
-        cursor = conn.execute("SELECT * FROM transactions ORDER BY date DESC")
-        rows = cursor.fetchall()
-        return [Transaction(**row) for row in rows]
-
-    def add(self, transaction: Transaction) -> int:
-        # Insert et retourne l'ID
-        pass
-```
-
-### Service Layer
-
-```python
-# domains/transactions/services/transaction_service.py
-class TransactionService:
-    def __init__(self):
-        self.repository = TransactionRepository()
-
-    def get_all(self) -> List[Transaction]:
-        """Point d'entrée unique pour les lectures."""
-        return self.repository.get_all()
-
-    def add(self, data: dict) -> Optional[int]:
-        """Valide et ajoute une transaction."""
-        try:
-            transaction = Transaction.parse_obj(data)
-            return self.repository.add(transaction)
-        except ValidationError as e:
-            logger.error(f"Validation échouée: {e}")
-            return None
-```
+**INTERDIT :** Tout fichier dépassant **200 lignes**.
 
 ---
 
-## ⚠️ 6. Règles Importantes
+## 📝 Fin de session
 
-1. **Clés en français** — Pas de mapping FR↔EN dans les services
-2. **Ne jamais accéder au repository depuis les pages Streamlit** — Passer par le service
-3. **Valider avec Pydantic** — Toujours utiliser les modèles pour valider les entrées
-4. **Logging structuré** — Utiliser `logger.info()`, `logger.error()` avec contexte
-5. **Tests avant commit** — Lancer `pytest` avant de pusher
-6. **Pas de secrets hardcodés** — Utiliser `os.getenv()` ou `.env`
+**SI** vous avez fait une grande refactorisation ou ajouté/supprimé beaucoup de fonctionnalités :
 
----
+1. **Mettre à jour les READMEs** des dossiers concernés
+2. **Créer ou mettre à jour** le fichier `LOGIC_FLOW.md` si le flux de données a changé
+3. **Vérifier** que la documentation reflète les nouvelles structures
 
-## 🔄 7. Différences avec V1-feature
+**TOUJOURS** vérifier et mettre à jour :
+- **Les tests** : Lancer `uv run pytest tests/ -v` et corriger les tests cassés. **ATTENTION :** Assurez-vous d'être à la racine du projet (`V1-feature`), et *jamais* dans le dossier `backend/`, car le dossier `tests/` se situe à la racine.
+- **Les READMEs/LOGIC_FLOWs** : S'assurer qu'ils sont à jour avec le code
 
-| Aspect | V1 (Production) | V1-feature (Dev) |
-|--------|-----------------|------------------|
-| Launcher | Package complet | Script simple |
-| Branches | `main` stable | `feat/`, `fix/` pour dev |
-| Build CI/CD | GitHub Actions automatisé | Manuel |
-
-**Note** : Merger les features depuis `V1-feature` vers `V1` via PR après tests et review.
+> [!IMPORTANT]
+> Quand l'utilisateur dit **"fin de session"** ou **"session terminée"** :
+> 1. Lancer les tests (`uv run pytest tests/ -v` depuis la racine !) et corriger les échecs
+> 2. Passer en revue **tous** les READMEs et LOGIC_FLOWs modifiés pendant la session
+> 3. Les mettre à jour si besoin (nouvelles fonctions, endpoints, erreurs courantes)
