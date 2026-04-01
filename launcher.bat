@@ -16,4 +16,9 @@ if %ERRORLEVEL% neq 0 (
 
 echo [Demarrage] Lancement de l'environnement Python...
 uv run launcher.py
+if %ERRORLEVEL% neq 0 (
+    echo [ERREUR] Echec du lancement de Gestio. Appuyez sur une touche pour fermer.
+    pause >nul
+)
+
 popd
