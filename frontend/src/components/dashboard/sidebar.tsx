@@ -17,12 +17,12 @@ import {
 interface SidebarProps {}
 
 const navItems = [
-  { id: "dashboard", href: "/dashboard", label: "Tableau de bord", icon: LayoutDashboard },
-  { id: "transactions", href: "/transactions", label: "Transactions", icon: ArrowLeftRight },
-  { id: "echeances", href: "/echeances", label: "Échéances", icon: RefreshCw },
-  { id: "budgets", href: "/budgets", label: "Budgets", icon: Wallet },
-  { id: "objectifs", href: "/objectifs", label: "Objectifs", icon: Target },
-  { id: "settings", href: "/settings", label: "Paramètres", icon: Settings },
+  { id: "dashboard", href: "/dashboard/", label: "Tableau de bord", icon: LayoutDashboard },
+  { id: "transactions", href: "/transactions/", label: "Transactions", icon: ArrowLeftRight },
+  { id: "echeances", href: "/echeances/", label: "Échéances", icon: RefreshCw },
+  { id: "budgets", href: "/budgets/", label: "Budgets", icon: Wallet },
+  { id: "objectifs", href: "/objectifs/", label: "Objectifs", icon: Target },
+  { id: "settings", href: "/settings/", label: "Paramètres", icon: Settings },
 ]
 
 export function Sidebar({}: SidebarProps) {
@@ -55,7 +55,7 @@ export function Sidebar({}: SidebarProps) {
       <nav className="flex-1 p-4 space-y-2">
         {navItems.map((item) => {
           const Icon = item.icon
-          const isActive = pathname === item.href
+          const isActive = pathname === item.href || pathname === item.href.replace(/\/$/, "")
 
           return (
             <a

@@ -97,7 +97,6 @@ app.add_middleware(
 )
 
 
-# La route racine '/' est volontairement supprimée pour laisser StaticFiles servir index.html
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
@@ -105,9 +104,38 @@ async def health():
 
 # Serve Static Files (Frontend)
 frontend_path = os.path.join(os.getcwd(), "frontend", "out")
+
 if os.path.exists(frontend_path):
-    # Important: Mount at the end so it doesn't intercept API routes
-    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="frontend")
+    # Monter les assets statiques Next.js (_next/) directement
+    next_assets = os.path.join(frontend_path, "_next")
+    if os.path.exists(next_assets):
+        app.mount("/_next", StaticFiles(directory=next_assets), name="next_assets")
+
+    # Route catch-all : sert le bon index.html selon la route SPA
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        # Fichiers statiques directs (favicon, logo, etc.)
+        static_file = os.path.join(frontend_path, full_path)
+        if os.path.isfile(static_file):
+            return FileResponse(static_file)
+
+        # Route SPA avec trailingSlash → out/<route>/index.html
+        route_index = os.path.join(frontend_path, full_path.strip("/"), "index.html")
+        if os.path.isfile(route_index):
+            return FileResponse(route_index)
+
+        # Racine
+        root_index = os.path.join(frontend_path, "index.html")
+        if os.path.isfile(root_index):
+            return FileResponse(root_index)
+
+        # 404 fallback
+        not_found = os.path.join(frontend_path, "404.html")
+        if os.path.isfile(not_found):
+            return FileResponse(not_found, status_code=404)
+
+        from fastapi.responses import JSONResponse
+        return JSONResponse({"detail": "Not found"}, status_code=404)
 else:
     logger.warning(f"Dossier frontend statique non trouvé : {frontend_path}")
 
