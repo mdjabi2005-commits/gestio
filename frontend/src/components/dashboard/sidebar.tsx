@@ -61,7 +61,7 @@ export function Sidebar({}: SidebarProps) {
           const isActive = pathname === item.href
 
           return (
-            <a
+            <Link
               key={item.id}
               href={item.href}
               className={cn(
@@ -83,7 +83,7 @@ export function Sidebar({}: SidebarProps) {
               {isActive && (
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-indigo-500 to-violet-500 rounded-r-full" />
               )}
-            </a>
+            </Link>
           )
         })}
       </nav>
