@@ -1,8 +1,7 @@
 
 
 import { useState } from "react"
-import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import {
   LayoutDashboard,
@@ -29,11 +28,6 @@ const navItems = [
 export function Sidebar({}: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(true)
   const pathname = usePathname()
-  const router = useRouter()
-
-  const handleDoubleClick = (href: string) => {
-    router.push(href);
-  };
 
   return (
     <aside
@@ -64,34 +58,29 @@ export function Sidebar({}: SidebarProps) {
           const isActive = pathname === item.href
 
           return (
-            <div
+            <a
               key={item.id}
-              onDoubleClick={() => handleDoubleClick(item.href)}
-              className="cursor-pointer"
+              href={item.href}
+              className={cn(
+                "group relative flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
+                isActive
+                  ? "bg-gradient-to-r from-indigo-500/20 via-violet-500/20 to-purple-500/20 text-foreground border border-indigo-500/30"
+                  : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+              )}
             >
-              <Link
-                href={item.href}
+              <Icon
                 className={cn(
-                  "group relative flex items-center gap-3 w-full px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200",
+                  "w-5 h-5 transition-all duration-200",
                   isActive
-                    ? "bg-gradient-to-r from-indigo-500/20 via-violet-500/20 to-purple-500/20 text-foreground border border-indigo-500/30"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/50"
+                    ? "text-indigo-400"
+                    : "text-muted-foreground group-hover:text-foreground"
                 )}
-              >
-                <Icon
-                  className={cn(
-                    "w-5 h-5 transition-all duration-200",
-                    isActive
-                      ? "text-indigo-400"
-                      : "text-muted-foreground group-hover:text-foreground"
-                  )}
-                />
-                {!isCollapsed && <span>{item.label}</span>}
-                {isActive && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-indigo-500 to-violet-500 rounded-r-full" />
-                )}
-              </Link>
-            </div>
+              />
+              {!isCollapsed && <span>{item.label}</span>}
+              {isActive && (
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-gradient-to-b from-indigo-500 to-violet-500 rounded-r-full" />
+              )}
+            </a>
           )
         })}
       </nav>
