@@ -1,7 +1,7 @@
 #define MyAppName "Gestio"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "Gestio Team"
-#define MyAppExeName "launcher.py"
+#define MyAppExeName "launcher.bat"
 #define MyAppIcon "favicon.ico"
 
 ; ─────────────────────────────────────────────────────────────────────────────
@@ -50,6 +50,8 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 ; ── Strict minimum d'exécution (voir INSTALL_FILES dans paths.py) ──────────
 ; Point d'entrée
 Source: "..\launcher.py"; DestDir: "{app}"; Flags: ignoreversion
+; Wrapper Windows (double-clic → lance uv run python launcher.py)
+Source: "..\launcher.bat"; DestDir: "{app}"; Flags: ignoreversion
 ; Dépendances Python
 Source: "..\pyproject.toml"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\uv.lock"; DestDir: "{app}"; Flags: ignoreversion
@@ -66,7 +68,7 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppIcon}"; Tasks: desktopicon
 
 [Run]
-; Lance l'app via uv depuis le dossier app/
-Filename: "cmd.exe"; Parameters: "/c cd /d ""{app}"" && uv run python ""{#MyAppExeName}"""; \
+; Lance l'app via launcher.bat (appelle uv run python launcher.py)
+Filename: "cmd.exe"; Parameters: "/c start """ ""{app}\{#MyAppExeName}"""; \
     Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; \
     Flags: shellexec postinstall skipifsilent

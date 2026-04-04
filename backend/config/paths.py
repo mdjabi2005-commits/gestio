@@ -72,7 +72,8 @@ for directory in [
 
 # Fichiers et dossiers à INCLURE dans le package (strict minimum d'exécution)
 INSTALL_FILES = [
-    "launcher.py",          # Point d'entrée : démarre uvicorn + navigateur
+    "launcher.py",          # Point d'entrée Python (logique de lancement)
+    "launcher.bat",         # Wrapper Windows : double-clic → uv run python launcher.py
     "pyproject.toml",       # Décrit les dépendances (lu par uv)
     "uv.lock",              # Lockfile exact pour reproductibilité
     "backend",              # Code FastAPI (api/, domains/, shared/, config/)
