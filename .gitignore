@@ -5,19 +5,35 @@ __pycache__/
 *.pyd
 *.egg-info/
 *.egg
-.eggs/
+*.eggs/
 dist/
 build/
 *.spec.bak
 
+# ── Node.js ────────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+.next/
+frontend/out/
+frontend/dist/
+dist/
+build/
+
 # ── uv / virtualenv ───────────────────────────────────────────────────────────
 .venv/
+.venv2/
+venv/
+env/
 .env
 .env.*
 !.env.example
 
-# ── Inno Setup (genere automatiquement par scripts/generate_iss.py) ──────────
-gestio.iss
+# ── Inno Setup (gere manuellement) ──────────────────
+# distribution/gestio.iss
 
 # ── PyInstaller ───────────────────────────────────────────────────────────────
 dist/
@@ -50,20 +66,44 @@ resources/icons/gestio.png
 *.cer
 .azure/
 cert-policy.json
+secrets.toml
+.streamlit/secrets.toml
 
 # ── OS ────────────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
+ehthumbs.db
 
 # ── IDE ───────────────────────────────────────────────────────────────────────
 .idea/
 .vscode/
 *.swp
 *.swo
+*.iml
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
 .pytest_cache/
 .coverage
 htmlcov/
+.tox/
+
+# ── Streamlit cache ───────────────────────────────────────────────────────────
+.streamlit/
+
+# ── Temporary files ───────────────────────────────────────────────────────────
+*.tmp
+*.bak
+*.orig
+tmp/
+temp/
+
+# ── Uploads / fichiers importés par l'utilisateur ────────────────────────────
+uploads/
+import/
+
+# ── Dossiers IA / assistants ──────────────────────────────────────────────────
+.agent/
+.claude/
+.copilot/
 
