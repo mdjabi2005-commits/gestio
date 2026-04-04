@@ -1,21 +1,37 @@
 #define MyAppName "Gestio"
 #define MyAppVersion "1.0.0"
 #define MyAppPublisher "Gestio Team"
-#define MyAppExeName "launcher.bat"
+#define MyAppExeName "launcher.py"
 #define MyAppIcon "favicon.ico"
 
+; ─────────────────────────────────────────────────────────────────────────────
+; Structure de l'installation (définie dans backend/config/paths.py)
+;
+;   {localappdata}\Gestio\           ← DATA_DIR (données utilisateur)
+;     ├── finances.db
+;     ├── gestio_app.log
+;     ├── tickets_tries\
+;     ├── revenus_traites\
+;     └── objectifs\
+;
+;   {localappdata}\Gestio\app\       ← code de l'application (INSTALL_FILES)
+;     ├── launcher.py
+;     ├── pyproject.toml
+;     ├── uv.lock
+;     ├── backend\
+;     └── frontend\out\
+; ─────────────────────────────────────────────────────────────────────────────
+
 [Setup]
-; NOTE: The value of AppId uniquely identifies this application. Do not use the same AppId value in installers for other applications.
-; (To generate a new GUID, click Tools | Generate GUID inside the IDE.)
 AppId={{B7A38D4A-98C3-4E82-9694-87A5B6913D5E}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-;AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
-DefaultDirName={localappdata}\{#MyAppName}
+; L'app est installée dans un sous-dossier "app" — les données utilisateur
+; restent dans le parent {localappdata}\Gestio\ (géré par paths.py → DATA_DIR)
+DefaultDirName={localappdata}\{#MyAppName}\app
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
-; Installation au niveau utilisateur (pas besoin des droits Administrateur !)
 PrivilegesRequired=lowest
 OutputDir=..\dist\installer
 OutputBaseFilename=Gestio-Setup-v{#MyAppVersion}
@@ -31,9 +47,18 @@ Name: "french"; MessagesFile: "compiler:Languages\French.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-; Copier tous les fichiers sauf les dossiers de dépendances et caches
-Source: "../*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; \
-    Excludes: ".git\*,.venv\*,frontend\node_modules\*,node_modules\*,.idea\*,.pytest_cache\*,.ruff_cache\*,tmp\*,.github\*,dist\*,build\*"
+; ── Strict minimum d'exécution (voir INSTALL_FILES dans paths.py) ──────────
+; Point d'entrée
+Source: "..\launcher.py"; DestDir: "{app}"; Flags: ignoreversion
+; Dépendances Python
+Source: "..\pyproject.toml"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\uv.lock"; DestDir: "{app}"; Flags: ignoreversion
+; Backend FastAPI (sans scripts de dev ni __pycache__)
+Source: "..\backend\*"; DestDir: "{app}\backend"; Flags: ignoreversion recursesubdirs createallsubdirs; \
+    Excludes: "__pycache__\*,scripts\*,*.pyc,*.pyo"
+; Frontend : build statique uniquement (pas src/, pas node_modules/)
+Source: "..\frontend\out\*"; DestDir: "{app}\frontend\out"; Flags: ignoreversion recursesubdirs createallsubdirs
+; Icône
 Source: "{#MyAppIcon}"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
@@ -41,5 +66,7 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppIcon}"; Tasks: desktopicon
 
 [Run]
-; Lancer le setup.ps1 au premier démarrage (via run.ps1 qui l'appelle si besoin)
-Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: shellexec postinstall skipifsilent
+; Lance l'app via uv depuis le dossier app/
+Filename: "cmd.exe"; Parameters: "/c cd /d ""{app}"" && uv run python ""{#MyAppExeName}"""; \
+    Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; \
+    Flags: shellexec postinstall skipifsilent

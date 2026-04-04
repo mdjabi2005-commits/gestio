@@ -48,3 +48,73 @@ for directory in [
     OBJECTIFS_DIR,
 ]:
     os.makedirs(directory, exist_ok=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Distribution — Fichiers nécessaires pour le package d'installation final
+# Source de vérité unique : gestio.iss, build.yml et build_archive.py lisent ici.
+#
+# Séparation claire sur la machine de l'utilisateur :
+#
+#   AppData\Local\Gestio\               ← DATA_DIR  (données utilisateur)
+#     ├── finances.db                   ← DB_PATH
+#     ├── gestio_app.log                ← APP_LOG_PATH
+#     ├── tickets_tries\                ← SORTED_DIR
+#     ├── revenus_traites\              ← REVENUS_TRAITES
+#     └── objectifs\                   ← OBJECTIFS_DIR
+#
+#   AppData\Local\Gestio\app\           ← dossier d'installation (INSTALL_FILES)
+#     ├── launcher.py                   → point d'entrée
+#     ├── pyproject.toml + uv.lock      → dépendances
+#     ├── backend\                      → code FastAPI
+#     └── frontend\out\                 → build statique Next.js
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Fichiers et dossiers à INCLURE dans le package (strict minimum d'exécution)
+INSTALL_FILES = [
+    "launcher.py",          # Point d'entrée : démarre uvicorn + navigateur
+    "pyproject.toml",       # Décrit les dépendances (lu par uv)
+    "uv.lock",              # Lockfile exact pour reproductibilité
+    "backend",              # Code FastAPI (api/, domains/, shared/, config/)
+    "frontend/out",         # Build Next.js statique servi par FastAPI
+    "distribution/favicon.ico",  # Icône de l'application
+]
+
+# Dossiers/fichiers à EXCLURE (dev, tests, CI, documentation)
+INSTALL_EXCLUDES = [
+    # Dépendances et caches (jamais dans l'installeur)
+    ".git",
+    ".venv",
+    "frontend/node_modules",
+    "__pycache__",
+    ".pytest_cache",
+    ".ruff_cache",
+    "dist",
+    "build",
+    # Code source frontend (seul le build out/ est nécessaire)
+    "frontend/src",
+    "frontend/public",
+    "frontend/.next",
+    "frontend/package.json",
+    "frontend/package-lock.json",
+    "frontend/tsconfig.json",
+    "frontend/next.config.mjs",
+    "frontend/postcss.config.mjs",
+    "frontend/eslint.config.mjs",
+    # Scripts de migration/dev (one-shot, pas nécessaires en prod)
+    "backend/scripts",
+    # Tests (inutiles en production)
+    "tests",
+    "pytest.ini",
+    # CI/CD et configuration git
+    ".github",
+    ".gitattributes",
+    ".gitignore",
+    # Scripts utilitaires dev
+    "scripts",
+    # Documentation dev
+    "AGENTS.md",
+    "ARCHITECTURE.md",
+    # Le dossier distribution lui-même (recette, pas le résultat)
+    "distribution/gestio.iss",
+]

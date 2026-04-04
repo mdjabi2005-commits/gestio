@@ -46,6 +46,7 @@ build = [
 ]
 dev = [
     "pandas-stubs~=2.3.3",
+    "pytest>=9.0.2",
 ]
 test = [
     "pytest>=9.0.2",

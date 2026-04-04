@@ -64,12 +64,9 @@ jobs:
       - name: Package Universal Mac/Linux Archive
         shell: bash
         run: |
-          mkdir release-universal
-          cp -r backend release-universal/
-          mkdir -p release-universal/frontend
-          cp -r frontend/out release-universal/frontend/out
-          cp pyproject.toml uv.lock launcher.py launcher.bat launcher.sh release-universal/
-          python -c "import shutil; shutil.make_archive('Gestio-Universal', 'zip', 'release-universal')"
+          # L'archive est construite par scripts/build_archive.py
+          # qui lit INSTALL_FILES / INSTALL_EXCLUDES depuis backend/config/paths.py
+          uv run python scripts/build_archive.py --output Gestio-Universal.zip
 
       - name: Upload Universal artifact
         if: matrix.os == 'windows-latest'

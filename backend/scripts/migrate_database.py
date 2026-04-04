@@ -38,13 +38,13 @@ OBSOLETE_TABLES = [
     "transactions_backup",
     "transaction_attachments_old",
     "budgets_categories",
-    "virements",
     "objectif",
     "comptes",
-    "recurrences",
-    "investissements",
-    "comptes_bancaires",
-    "portefeuilles",
+    "recurrences",       # Remplacée par echeances
+    "investissements",   # Vide, non utilisée
+    "portefeuilles",     # Vide, non utilisée
+    # comptes_bancaires : GARDÉE (données réelles)
+    # virements : GARDÉE (données réelles)
 ]
 
 
@@ -343,16 +343,34 @@ def migrate_goals(db_path: str) -> None:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 nom TEXT NOT NULL,
                 montant_cible REAL NOT NULL,
-                date_echeance TEXT,
+                date_fin TEXT,
                 categorie TEXT NOT NULL,
                 description TEXT,
                 statut TEXT DEFAULT 'active',
+                poids_allocation REAL DEFAULT 1.0,
+                date_debut TEXT,
+                montant_mensuel REAL,
                 date_creation TEXT,
                 date_modification TEXT
             )
         """)
         conn.commit()
         logger.info("  ➕ Table goals créée")
+    else:
+        # Migrations additionnelles si la table existe déjà
+        cursor.execute("PRAGMA table_info(goals)")
+        existing = [row[1] for row in cursor.fetchall()]
+        extra_cols = {
+            "date_fin": "TEXT",
+            "date_debut": "TEXT",
+            "poids_allocation": "REAL DEFAULT 1.0",
+            "montant_mensuel": "REAL",
+        }
+        for col, col_type in extra_cols.items():
+            if col not in existing:
+                cursor.execute(f"ALTER TABLE goals ADD COLUMN {col} {col_type}")
+                logger.info(f"  ➕ Colonne '{col}' ajoutée à goals")
+        conn.commit()
 
     conn.close()
     logger.info("  ✅ goals migrée")

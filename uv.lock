@@ -619,6 +619,7 @@ build = [
 ]
 dev = [
     { name = "pandas-stubs" },
+    { name = "pytest" },
 ]
 test = [
     { name = "pytest" },
@@ -656,7 +657,10 @@ provides-extras = ["dev", "test"]
 
 [package.metadata.requires-dev]
 build = [{ name = "pyinstaller", specifier = ">=6.0" }]
-dev = [{ name = "pandas-stubs", specifier = "~=2.3.3" }]
+dev = [
+    { name = "pandas-stubs", specifier = "~=2.3.3" },
+    { name = "pytest", specifier = ">=9.0.2" },
+]
 test = [{ name = "pytest", specifier = ">=9.0.2" }]
 
 [[package]]
