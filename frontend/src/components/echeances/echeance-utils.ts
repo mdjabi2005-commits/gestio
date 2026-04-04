@@ -3,7 +3,7 @@ import {
   Receipt, type LucideIcon 
 } from "lucide-react"
 import type { Transaction } from "@/api"
-import type { Installment } from "./echeance-types"
+import type { Installment, InstallmentStatus } from "./echeance-types"
 import { getCategoryMetadata } from "@/lib/categories"
 import { getCategoryIcon } from "@/lib/icons"
 
@@ -52,6 +52,11 @@ export function mapEcheanceToInstallment(e: any, allCategories: any[] = []): Ins
   const catMeta = getCategoryMetadata(allCategories, catName)
   const Icon = getCategoryIcon(catMeta.icone)
 
+  let safeStatut = e.statut || "pending"
+  if (!["paid", "pending", "overdue"].includes(safeStatut)) {
+    safeStatut = daysRemaining < 0 ? "overdue" : "pending"
+  }
+
   return {
     id: String(e.id),
     echeance_base_id: e.echeance_base_id ?? e.id,
@@ -69,8 +74,8 @@ export function mapEcheanceToInstallment(e: any, allCategories: any[] = []): Ins
     daysRemaining,
     montant: e.montant ?? 0,
     type: e.type,
-    statut: e.statut || "pending",
-    statut_base: e.statut_base || (e.statut === "paid" && !e.date_prevue ? "inactive" : "active"),
+    statut: safeStatut as InstallmentStatus,
+    statut_base: e.statut_base || (e.statut === "inactive" ? "inactive" : "active"),
     paymentMethod: e.paymentMethod || "automatic",
   }
 }
