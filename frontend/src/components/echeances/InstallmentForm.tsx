@@ -111,7 +111,11 @@ export function InstallmentForm({ initial, onSave, onCancel, attachments = [], o
       <div className="flex gap-3 pt-4 border-t border-white/5">
         {step > 1 ? <button onClick={() => setStep(step - 1)} className="flex-1 py-3 rounded-xl bg-white/5 text-white/50 text-xs font-bold hover:bg-white/10 transition-all flex items-center justify-center gap-2"><ChevronLeft className="w-4 h-4" /> Précédent</button> : <button onClick={onCancel} className="flex-1 py-3 rounded-xl text-xs font-bold text-white/40 hover:text-white/60">Annuler</button>}
         {step < 4 ? <button disabled={!canNext} onClick={() => setStep(step + 1)} className="flex-[2] py-3 rounded-xl bg-indigo-500 text-white text-xs font-bold hover:bg-indigo-600 disabled:opacity-50 flex items-center justify-center gap-2">Suivant <ChevronRight className="w-4 h-4" /></button>
-                 : <button disabled={!canNext} onClick={() => onSave(form)} className="flex-[2] py-3 rounded-xl bg-indigo-600 text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Enregistrer</button>}
+                 : <button disabled={!canNext} onClick={() => {
+                   const data = { ...form };
+                   if (!data.date_fin) data.date_fin = null;
+                   onSave(data);
+                 }} className="flex-[2] py-3 rounded-xl bg-indigo-600 text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20 flex items-center justify-center gap-2"><Save className="w-4 h-4" /> Enregistrer</button>}
       </div>
     </div>
   )
