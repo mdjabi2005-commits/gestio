@@ -68,7 +68,7 @@ Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "
 Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; IconFilename: "{app}\{#MyAppIcon}"; Tasks: desktopicon
 
 [Run]
-; Lance l'app via launcher.bat (appelle uv run python launcher.py)
-Filename: "cmd.exe"; Parameters: "/c start """ ""{app}\{#MyAppExeName}"""; \
+; Lance launcher.bat directement (shellexec ouvre le .bat avec cmd.exe automatiquement)
+Filename: "{app}\{#MyAppExeName}"; \
     Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; \
     Flags: shellexec postinstall skipifsilent
