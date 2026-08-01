@@ -1,0 +1,9 @@
+.env
+.env.*
+
+# Etat local Lamoms, propre à chaque workspace/worktree
+.lamoms/journey.json
+.lamoms/usage.json
+.lamoms/handoff.json
+.lamoms/task-state.json
+.lamoms/waiting.json

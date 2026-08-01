@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "projectId": "gestio",
+  "objective": "Savoir la situation financière à tout moment pour gérer les imprévus",
+  "targetUsers": "1 utilisateur auto-hébergé",
+  "features": [
+    "tréso disponible agrégée + par compte",
+    "synchro bancaire Enable Banking (43 transactions réelles validées)",
+    "import CSV/PDF (état des lieux + bilan mensuel)",
+    "saisie manuelle fallback",
+    "UI différente mobile/desktop sur même frontend"
+  ],
+  "stack": "Fullstack TypeScript (Node.js/Fastify + React Vite PWA + Drizzle + better-sqlite3-multiple-ciphers)",
+  "infrastructure": {
+    "hebergement": "Raspberry Pi (always-on, cible finale) → PC hôte (phase MVP)",
+    "acces_mobile": "Tailscale (WireGuard mesh VPN, 0 port ouvert, 0€/mois, E2EE)",
+    "redirect_url_enablebanking": "https://<machine>.tailnet.ts.net (Tailscale Funnel, certificat auto Let's Encrypt)",
+    "sauvegarde": "sqlite3 .backup en cron journalier, rotation 30 jours"
+  },
+  "constraints": [
+    "frontend et backend unifiés, UI différenciée mobile/desktop depuis une base de code unique",
+    "Enable Banking API : historique 90 jours, consentement 180 jours",
+    "fallback CSV puis PDF si compte non disponible sur API",
+    "1 utilisateur, mot de passe local, maintenance minimale",
+    "backend et données sur RPi : portabilité PC→RPi sans réécriture"
+  ],
+  "approvedDecisions": [
+    "Problème : pas de vue fiable sur la tréso disponible",
+    "Core Feature : affichage tréso disponible agrégée + par compte",
+    "Comptes supportés initialement : bancaire + Livret A",
+    "État des lieux par import CSV/PDF complet",
+    "Fonctionnement mensuel par import CSV/PDF + synchro Enable Banking",
+    "Backend unique, frontend partagé, UI différente mobile/desktop",
+    "Stack technique : Fullstack TypeScript (Fastify + React Vite PWA + Drizzle + SQLCipher)",
+    "Accès réseau : Tailscale (RPi always-on = mobile toujours connecté, problème offline PWA sans objet)",
+    "Chiffrement tokens Enable Banking : better-sqlite3-multiple-ciphers (SQLCipher AES-256), clé dans .env chmod 600",
+    "SCA Enable Banking mobile : pattern Out-of-Band Auth + polling (compatible iOS et Android)",
+    "Moteur de déduplication : validé sur données réelles (27/27 CSV+API, Jaccard moyen 98.6%)"
+  ],
+  "abandonedDecisions": [
+    "Cloudflare Tunnel : exclu (terminaison TLS côté Cloudflare = données bancaires déchiffrées par tiers)",
+    "Offline PWA complexe (IndexedDB + Service Worker stratégie avancée) : sans objet si RPi always-on + Tailscale"
+  ],
+  "qualityCriteria": [
+    "Le besoin est couvert",
+    "Les validations du projet passent",
+    "La livraison est relue avant le verdict"
+  ],
+  "cycleId": "",
+  "updatedAt": "2026-07-31T01:05:00.000Z"
+}

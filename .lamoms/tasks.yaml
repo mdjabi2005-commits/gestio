@@ -1,0 +1,257 @@
+_principe: |
+  Principe de l'arbre (posé par l'utilisateur, 2026-07-31).
+  La racine est la Core Feature : savoir son solde disponible à tout moment.
+  Tout ce qu'on ajoute doit pousser à partir d'elle et la servir.
+  On n'ajoute jamais pour ajouter : si un ajout n'apporte pas de valeur réelle
+  à la racine, il n'entre pas. Ce qui manque se rajoutera quand le besoin sera
+  démontré, pas par anticipation.
+
+_ordre_conseille: |
+  Chemin le plus court vers une application utilisable : T1 → T4 → T7.
+  À ce stade l'app affiche le vrai solde, synchronisé automatiquement.
+  T3 sécurise, T2 devient nécessaire dès qu'un second canal arrive,
+  T5 et T6 apportent l'état des lieux au-delà de la fenêtre de 90 jours.
+
+T1:
+  objectif: >-
+    Un backend Fastify + SQLite servi en HTTPS local, qui expose le solde
+    disponible agrégé et par compte, et permet de saisir manuellement comptes
+    et transactions. Vérifiable de bout en bout sans aucune dépendance externe.
+  probleme_resolu: >-
+    P1 (pas de vue fiable sur la trésorerie) pour sa partie calcul ;
+    P13 (l'instance fait foi, le client ne stocke qu'un cache) ;
+    P19 (le Livret A, absent de l'API, est alimenté par la saisie manuelle).
+  projets: [gestio]
+  dependances: []
+  parallelisable_avec: []
+  criteres_acceptation:
+    - Créer un compte, y saisir des transactions et obtenir son solde par l'API.
+    - Le solde agrégé est exactement la somme des soldes par compte, eux-mêmes
+      sommes de leurs transactions. Aucun recalcul manuel nulle part.
+    - Les montants sont stockés en entiers de centimes, jamais en flottants.
+    - Chaque transaction porte sa source et son empreinte.
+    - La base est chiffrée au repos (SQLCipher via better-sqlite3-multiple-ciphers),
+      la clé venant d'une variable d'environnement hors dépôt.
+    - Le serveur répond en HTTPS sur https://localhost:3000/ — exigé par la
+      redirect_url enregistrée chez Enable Banking, donc à faire dès le socle.
+    - Une sauvegarde quotidienne par `sqlite3 .backup` est en place, avec
+      rotation sur 30 jours.
+  validations:
+    - npm run typecheck
+    - npm test
+    - Créer un compte + 3 transactions, vérifier le solde renvoyé par l'API.
+  hors_perimetre:
+    - Aucune interface graphique.
+    - Aucune synchronisation bancaire.
+    - Aucun import de fichier.
+
+T2:
+  objectif: >-
+    Un moteur de déduplication qui, recevant des transactions de plusieurs
+    canaux, produit un jeu sans doublon et sans perte. Traduction en TypeScript
+    de l'algorithme déjà validé sur données réelles.
+  probleme_resolu: >-
+    P5 (deux transactions distinctes de même montant le même jour écrasées par
+    une clé naïve) ; P11 (les preuves doivent s'appuyer sur les données réelles
+    du lab, pas sur des jeux fabriqués).
+  projets: [gestio]
+  dependances: [T1]
+  parallelisable_avec: [T3, T7]
+  criteres_acceptation:
+    - Clé primaire (date ISO, montant en centimes), file FIFO par clé.
+    - Le score de Jaccard sur les mots du libellé ne sert QUE de départage
+      lorsque plusieurs candidats partagent la même clé.
+    - Le signe du montant vient de credit_debit_indicator (CRDT/DBIT), jamais
+      déduit du libellé.
+    - Rejoue le résultat de référence sur les données réelles du lab —
+      27 mouvements CSV contre 27 transactions API, 27 rapprochements,
+      0 orphelin de chaque côté.
+    - Deux transactions réellement distinctes de même montant le même jour
+      restent deux transactions. ATTENTION — ce cas n'existe PAS dans les 43
+      transactions réelles du lab (vérifié le 2026-07-31 — zéro collision
+      date+montant). Il figure uniquement dans enable_banking_juin_bp.json,
+      qui est un fichier FABRIQUÉ à partir du PDF — ne pas s'en servir comme
+      preuve. Le cas doit donc être couvert par un test construit à la main.
+    - Rejouer la même ingestion deux fois ne change ni le solde ni le nombre
+      de transactions.
+  validations:
+    - npm test
+    - Jeu de test constitué des fichiers réels de .lamoms/lab/agy/
+      (enable_banking_transactions_reelles.json et les deux CSV La Banque Postale).
+  hors_perimetre:
+    - Aucun seuil de similarité flou pour décider d'une fusion.
+    - Aucune règle liée au contenu ou au commerçant.
+
+T3:
+  objectif: >-
+    Authentification locale par mot de passe, et protection au repos des
+    secrets de l'application.
+  probleme_resolu: >-
+    Exigence de sécurité du PRD : données financières, 1 utilisateur, aucune
+    authentification cloud.
+  projets: [gestio]
+  dependances: [T1]
+  parallelisable_avec: [T2, T7]
+  criteres_acceptation:
+    - Mot de passe stocké en Argon2id, jamais en clair ni réversible.
+    - Une session invalide ou expirée interdit tout accès aux données.
+    - Les jetons Enable Banking résident dans la base chiffrée.
+    - Aucun secret lisible en clair sur le disque, ni dans le dépôt.
+  validations:
+    - npm test
+    - Vérifier qu'aucun secret n'apparaît en clair dans la base ni dans les logs.
+  hors_perimetre:
+    - Multi-utilisateur, comptes, rôles.
+    - Biométrie et déverrouillage sans mot de passe.
+
+T4:
+  objectif: >-
+    Connecter une banque via Enable Banking, rapatrier les transactions réelles
+    et tenir à jour la fraîcheur du solde.
+  probleme_resolu: >-
+    P2 (l'accès production fonctionne, avec ses limites mesurées) ;
+    P12 (authentification forte encaissée par le serveur — PC puis RPi) ;
+    P18 (redirect_url : ne pas reprendre celle du script du lab) ;
+    P5 pour sa part MVP (idempotence de la resynchronisation).
+  projets: [gestio]
+  dependances: [T1, T2]
+  parallelisable_avec: [T5, T6, T7]
+  criteres_acceptation:
+    - Connexion par le pattern Out-of-Band — le backend produit l'URL bancaire,
+      le client l'ouvre à l'extérieur puis interroge le backend jusqu'à ce que
+      la session soit établie. Le backend reçoit le retour de la banque.
+    - redirect_url = https://localhost:3000/ — l'une des deux URL réellement
+      enregistrées par l'utilisateur. NE PAS reprendre
+      http://localhost:3000/callback, présente dans le script du lab et non
+      enregistrée — l'échec surviendrait après l'authentification forte.
+    - Le libellé est lu dans remittance_information (liste de chaînes, à joindre),
+      et non dans remittance_information_unstructured.
+    - Le montant de transaction_amount est non signé — le sens vient de
+      credit_debit_indicator.
+    - La fenêtre d'historique de 90 jours est respectée et rendue visible —
+      au-delà, le manque est signalé, jamais présenté comme un solde complet.
+      L'API refuse elle-même toute demande plus ancienne — HTTP 422,
+      error = WRONG_TRANSACTIONS_PERIOD (vérifié en direct le 2026-07-31).
+      Ce code doit être traité, pas laissé remonter en erreur brute.
+    - L'expiration du consentement est lue dans access.valid_until renvoyé par
+      GET /sessions/{id} — NE PAS coder en dur une durée de 180 jours. La
+      session réelle du lab porte valid_until = 2027-01-01, la valeur demandée
+      à la création et accordée par la banque. Son expiration est détectée et
+      donne lieu à un chemin de reconnexion, sans effacer le dernier solde connu.
+    - La devise vient du solde (balances[].balance_amount.currency), jamais du
+      compte — GET /accounts/{uid}/details renvoie currency = "XXX" sur le
+      compte réel alors que le solde est bien en EUR.
+    - Resynchroniser deux fois de suite ne change ni le solde ni le nombre de
+      transactions.
+  validations:
+    - npm test
+    - Synchronisation réelle sur le compte de l'utilisateur, puis relance
+      immédiate — le solde et le nombre de transactions doivent être identiques.
+    - Deux applications existent chez Enable Banking ; l'une répond 403
+      "Application is not active". Le kid retenu est celui vérifié actif le
+      2026-07-31 (93fca3d0-...). Un 403 à l'authentification signifie mauvaise
+      application, pas mauvais code.
+  hors_perimetre:
+    - Authentification forte initiée depuis le mobile — hors périmètre du MVP,
+      mais ce n'est PAS un choix d'architecture — le callback est encaissé par
+      le serveur, et la seule chose qui l'empêche est que
+      https://localhost:3000/ ne résout que sur la machine serveur. Le jour où
+      la redirect_url devient https://gestio.software/auth/callback, ça marche
+      sans retoucher le code. Ne rien coder qui interdise structurellement ce
+      cas — pas de contrôle sur l'appareil appelant, pas de chemin en dur.
+    - Toute exposition publique de l'instance (ni Tailscale Funnel, ni nom .ts.net).
+
+T5:
+  objectif: >-
+    Importer un relevé CSV bancaire et l'intégrer sans doublon, en refusant
+    explicitement tout format non reconnu.
+  probleme_resolu: >-
+    P3 (absence de norme CSV bancaire française : encodage, séparateur, formats
+    de date et de montant variables selon la banque).
+  projets: [gestio]
+  dependances: [T1, T2]
+  parallelisable_avec: [T4, T6, T7]
+  criteres_acceptation:
+    - Registre de formats par banque ; La Banque Postale est couverte, les deux
+      CSV réels du lab servent de référence.
+    - Un fichier dont le format n'est pas reconnu est refusé avec un message
+      nommant ce qui n'est pas compris. Jamais d'ingestion partielle, jamais de
+      parsing approximatif.
+    - Les variations d'encodage et de séparateur sont gérées sans perte
+      d'accents.
+    - Importer deux fois le même fichier ne change pas le solde.
+    - Un import croisant une période déjà synchronisée par l'API ne crée aucun
+      doublon et ne perd aucune transaction.
+  validations:
+    - npm test
+    - Importer les deux CSV réels du lab sur une base déjà synchronisée par
+      l'API, puis vérifier l'absence de doublon et d'orphelin.
+  hors_perimetre:
+    - Détection automatique d'une banque inconnue.
+    - Correction ou complétion des données du fichier.
+
+T6:
+  objectif: >-
+    Importer un relevé PDF en s'appuyant sur sa couche texte, pour constituer
+    l'historique ancien que le CSV ne couvre pas.
+  probleme_resolu: >-
+    L'état des lieux au-delà de la fenêtre de 90 jours : l'historique ancien de
+    l'utilisateur n'existe que sous forme de relevés PDF.
+  projets: [gestio]
+  dependances: [T1, T2]
+  parallelisable_avec: [T4, T5, T7]
+  criteres_acceptation:
+    - Extraction depuis la couche texte du PDF, sans OCR.
+    - Un PDF dépourvu de couche texte est refusé avec un message explicite
+      proposant le CSV ou la saisie manuelle.
+    - Un relevé multi-comptes est ventilé sur les bons comptes.
+    - Les 12 relevés réels La Banque Postale servent de référence ; le projet
+      antérieur gestio-releves sert de référence de logique, sans être appelé
+      ni porté tel quel.
+    - Importer deux fois le même relevé ne change pas le solde.
+  validations:
+    - npm test
+    - Importer les relevés PDF réels et comparer les totaux extraits aux soldes
+      de début et de fin imprimés sur les relevés.
+  hors_perimetre:
+    - OCR et PDF scannés.
+    - PDF protégés par mot de passe.
+
+T7:
+  objectif: >-
+    L'interface mobile et desktop : voir son solde disponible, sa fraîcheur, sa
+    répartition par compte et ses transactions.
+  probleme_resolu: >-
+    P1 (la Core Feature, pour sa partie visible) ;
+    P16 (mode hors connexion, imposé par la limite assumée du PC hôte).
+  projets: [gestio]
+  dependances: [T1]
+  parallelisable_avec: [T2, T3, T4, T5, T6]
+  criteres_acceptation:
+    - À l'ouverture, le solde agrégé s'affiche sans aucune action préalable,
+      accompagné de sa date de fraîcheur.
+    - La répartition par compte est atteignable en un geste, sans navigation.
+    - Hors connexion — cas courant lorsque le PC hôte est éteint — le dernier
+      solde connu s'affiche avec sa date ("solde au 30/07 à 18 h 12"), stocké
+      en IndexedDB. Jamais d'écran d'erreur nu.
+    - Aucun cas limite ne mène à une page blanche — consentement expiré, banque
+      indisponible, aucun compte connecté, trou d'historique — chacun mène à
+      une destination et à une action claires.
+    - La navigation suit la question de l'utilisateur (combien j'ai, où, quoi),
+      jamais l'architecture technique. Synchroniser et importer ne sont pas des
+      rubriques de navigation mais des actions situées là où le besoin apparaît.
+    - Premier lancement — l'écran d'accueil est le couloir d'onboarding qui mène
+      à la première valeur — voir son vrai solde — et non un écran vide.
+    - Chaque action clé produit un retour immédiat (comptes connectés, solde mis
+      à jour, transactions ajoutées et doublons ignorés).
+    - Layouts mobile et desktop différenciés par breakpoints, logique métier et
+      state partagés.
+  validations:
+    - npm run typecheck
+    - npm test
+    - Parcourir les cas limites un par un et vérifier qu'aucun ne mène à une
+      page blanche.
+  hors_perimetre:
+    - Notifications, aucune au MVP.
+    - Catégories, budgets, prévisions, graphiques.
+    - Simulateur "et si je dépense X".
