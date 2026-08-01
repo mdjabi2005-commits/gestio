@@ -15,11 +15,11 @@
     "hebergement": "Raspberry Pi (always-on, cible finale) → PC hôte (phase MVP)",
     "acces_mobile": "Tailscale (WireGuard mesh VPN, 0 port ouvert, 0€/mois, E2EE)",
     "redirect_url_enablebanking": "https://<machine>.tailnet.ts.net (Tailscale Funnel, certificat auto Let's Encrypt)",
-    "sauvegarde": "sqlite3 .backup en cron journalier, rotation 30 jours"
+    "sauvegarde": "sqlcipher_export() en cron journalier, rotation 30 jours (PAS sqlite3 .backup : impossible sur base SQLCipher — voir P20)"
   },
   "constraints": [
     "frontend et backend unifiés, UI différenciée mobile/desktop depuis une base de code unique",
-    "Enable Banking API : historique 90 jours, consentement 180 jours",
+    "Enable Banking — trois durées distinctes. (1) Historique : 90 jours en arrière CONSTATÉ SUR LA BANQUE POSTALE, qui refuse au-delà (HTTP 422, WRONG_TRANSACTIONS_PERIOD, vérifié en direct le 2026-07-31) ; ce n'est PAS une constante Enable Banking, leur doc indique que la plupart des ASPSP donnent au moins un an — toute autre banque exige de re-constater sa fenêtre. (2) Consentement : durée demandée dans valid_until du POST /auth, PLAFONNÉE par maximum_consent_validity (en secondes) renvoyé par GET /aspsps pour la banque visée — 180 jours pour la majorité des ASPSP, plafond issu de l'amendement EBA RTS de 2022 (renouvellement de SCA porté de 90 à 180 jours pour l'accès AIS) ; la valeur accordée se lit dans access.valid_until de GET /sessions/{id}, la session réelle porte 2027-01-01. Les 180 jours sont donc un vrai plafond par banque, jamais une durée à coder en dur. (3) Jeton d'accès ASPSP : courte durée, rafraîchi automatiquement par Enable Banking, rien à gérer côté client. Libellé corrigé le 2026-08-01, voir P2 et P22",
     "fallback CSV puis PDF si compte non disponible sur API",
     "1 utilisateur, mot de passe local, maintenance minimale",
     "backend et données sur RPi : portabilité PC→RPi sans réécriture"
@@ -33,7 +33,7 @@
     "Backend unique, frontend partagé, UI différente mobile/desktop",
     "Stack technique : Fullstack TypeScript (Fastify + React Vite PWA + Drizzle + SQLCipher)",
     "Accès réseau : Tailscale (RPi always-on = mobile toujours connecté, problème offline PWA sans objet)",
-    "Chiffrement tokens Enable Banking : better-sqlite3-multiple-ciphers (SQLCipher AES-256), clé dans .env chmod 600",
+    "Chiffrement de TOUTE la base au repos : better-sqlite3-multiple-ciphers (SQLCipher AES-256), clé dans .env chmod 600 — jetons Enable Banking inclus, ainsi que comptes, soldes et transactions. Libellé corrigé le 2026-08-01 : il disait 'chiffrement tokens', périmètre du rapport de faisabilité, alors que PRAGMA key chiffre le fichier entier (voir P21)",
     "SCA Enable Banking mobile : pattern Out-of-Band Auth + polling (compatible iOS et Android)",
     "Moteur de déduplication : validé sur données réelles (27/27 CSV+API, Jaccard moyen 98.6%)"
   ],
