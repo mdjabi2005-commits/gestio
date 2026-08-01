@@ -55,17 +55,17 @@ T1:
   parallelisable_avec: []
   criteres_acceptation:
   - Créer un compte, y saisir des transactions et obtenir son solde par l'API.
-  - MODÈLE À DEUX NIVEAUX — un ÉTABLISSEMENT groupe des COMPTES, et seul un compte porte un solde et des
-    transactions. Décision de Lamoms du 2026-08-01 (P28). Six comptes au départ, tous utilisés — La Banque
-    Postale groupe le Compte Courant Postal, le Livret A et le Livret Jeune Swing ; Revolut groupe son
-    compte et ses pockets ; Nickel et Trade Republic ont un compte chacun. Ne rien coder qui suppose un
-    seul niveau ni un seul compte par établissement.
+  - LE MODÈLE À DEUX NIVEAUX N'EST PAS DANS CETTE TÂCHE — décision de Lamoms du 2026-08-01, prise APRÈS
+    la livraison de l'issue 7. Il est porté par T4, où une connexion bancaire rend plusieurs comptes d'un
+    même établissement et où le niveau manquant se fait sentir pour de bon. T1 livre donc UN SEUL niveau,
+    des comptes à plat, sans groupe. CE QU'IL FAUT SAVOIR ET NE PAS DÉCOUVRIR PLUS TARD — T4 ROUVRIRA
+    la table des comptes et l'endpoint d'agrégat livrés ici. C'est assumé, pas un débordement. Ce qui
+    protège cette réouverture est le critère suivant — tant que l'agrégat somme des COMPTES et rien d'autre,
+    ajouter un niveau au-dessus ne le casse pas.
   - Le solde agrégé est exactement la somme des soldes DES COMPTES, eux-mêmes sommes de leurs transactions.
-    Aucun recalcul manuel nulle part. UN ÉTABLISSEMENT N'A PAS DE SOLDE STOCKÉ — le sien est calculé à
-    la volée comme la somme de ses comptes, et l'agrégat somme les COMPTES, jamais les groupes. Additionner
-    un groupe avec ses propres comptes compterait tout deux fois, et le total serait faux EN AYANT L'AIR
-    JUSTE — le mode de panne que ce projet doit empêcher. Un test couvre explicitement ce cas — un établissement
-    à trois comptes ne contribue à l'agrégat que pour la somme de ces trois-là.
+    Aucun recalcul manuel nulle part. L'agrégat somme les COMPTES et RIEN D'AUTRE — cette règle vaut à
+    un niveau comme à deux, et c'est elle qui empêchera le double comptage le jour où T4 posera les établissements
+    au-dessus. Les montants sont des entiers de centimes, le sens est porté par le signe.
   - Les montants sont stockés en entiers de centimes, jamais en flottants.
   - Chaque transaction porte sa SOURCE (api, csv, pdf, manuel) et son EMPREINTE D'IDENTITÉ, définie comme
     le condensé stable de (compte, date ISO, montant en centimes, sens CRDT/DBIT, libellé normalisé).
@@ -200,8 +200,22 @@ T4:
   parallelisable_avec:
   - T5
   - T6
-  - T7
   criteres_acceptation:
+  - UN ÉTABLISSEMENT N'A PAS DE SOLDE STOCKÉ — le sien est calculé à la volée comme la somme de ses comptes,
+    et l'agrégat somme les COMPTES, jamais les groupes. Additionner un groupe avec ses propres comptes
+    compterait tout deux fois, et le total serait faux EN AYANT L'AIR JUSTE — le mode de panne que ce
+    projet doit empêcher. Un test couvre explicitement ce cas — un établissement à trois comptes ne contribue
+    à l'agrégat que pour la somme de ces trois-là. La migration qui ajoute le niveau doit rattacher les
+    comptes existants sans changer le total agrégé — même chiffre avant et après, c'est la preuve attendue.
+  - MODÈLE À DEUX NIVEAUX — un ÉTABLISSEMENT groupe des COMPTES, et seul un compte porte un solde et des
+    transactions. Décision de Lamoms du 2026-08-01 (P28), rattachée à T4 et non à T1 par choix du même
+    jour, l'issue 7 étant déjà livrée et relue. Six comptes au départ, tous utilisés — La Banque Postale
+    groupe le Compte Courant Postal, le Livret A et le Livret Jeune Swing ; Revolut groupe son compte
+    et ses pockets ; Nickel et Trade Republic ont un compte chacun. C'EST ICI QUE LE NIVEAU MANQUE VRAIMENT
+    — une seule session Enable Banking rend PLUSIEURS comptes pour un même établissement, et rien ne permettrait
+    de les rattacher. CETTE TÂCHE ROUVRE DONC LE SCHÉMA DES COMPTES ET L'ENDPOINT D'AGRÉGAT livrés par
+    T1 ; c'est prévu et cadré, pas un hors-sujet. Ne rien coder qui suppose un seul niveau ni un seul
+    compte par établissement.
   - Connexion par le pattern Out-of-Band — le backend produit l'URL bancaire, le client l'ouvre à l'extérieur
     puis interroge le backend jusqu'à ce que la session soit établie. Le backend reçoit le retour de la
     banque.
@@ -444,15 +458,17 @@ T7:
   objectif: 'L''interface mobile et desktop : voir son solde disponible, sa fraîcheur, sa répartition
     par compte et ses transactions.'
   probleme_resolu: P1 (la Core Feature, pour sa partie visible) ; P16 (mode hors connexion, imposé par
-    la limite assumée du PC hôte).
+    la limite assumée du PC hôte). DÉPENDANCE AJOUTÉE LE 2026-08-01 — T4, parce que le critère des deux
+    niveaux (répartition établissement puis comptes) ne peut pas être satisfait avant que T4 ait posé
+    ce modèle. L'ordre conseillé T1 puis T4 puis T7 le prévoyait déjà.
   projets:
   - gestio
   dependances:
   - T1
+  - T4
   parallelisable_avec:
   - T2
   - T3
-  - T4
   - T5
   - T6
   criteres_acceptation:
