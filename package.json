@@ -1,0 +1,25 @@
+{
+  "name": "gestio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --import tsx --test-reporter=spec \"src/**/*.test.ts\"",
+    "backup": "scripts/backup.sh"
+  },
+  "dependencies": {
+    "better-sqlite3": "npm:better-sqlite3-multiple-ciphers@^12.11.1",
+    "better-sqlite3-multiple-ciphers": "^12.11.1",
+    "drizzle-orm": "^0.45.2",
+    "fastify": "^5.11.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  }
+}
