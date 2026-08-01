@@ -1,451 +1,493 @@
-_principe: |
-  Principe de l'arbre (posé par l'utilisateur, 2026-07-31).
+_principe: 'Principe de l''arbre (posé par l''utilisateur, 2026-07-31).
+
   La racine est la Core Feature : savoir son solde disponible à tout moment.
-  Tout ce qu'on ajoute doit pousser à partir d'elle et la servir.
-  On n'ajoute jamais pour ajouter : si un ajout n'apporte pas de valeur réelle
-  à la racine, il n'entre pas. Ce qui manque se rajoutera quand le besoin sera
+
+  Tout ce qu''on ajoute doit pousser à partir d''elle et la servir.
+
+  On n''ajoute jamais pour ajouter : si un ajout n''apporte pas de valeur réelle
+
+  à la racine, il n''entre pas. Ce qui manque se rajoutera quand le besoin sera
+
   démontré, pas par anticipation.
 
-_sources_a_lire: |
-  Le lab AGY n'est PAS dans git (données bancaires réelles + session vivante),
-  mais tout est local : on y va par chemin absolu, depuis le maître comme
-  depuis un worktree.
-    /mnt/c/Users/djabi/gestio/.lamoms/lab/agy/rapport_architecture_gestio.md
-  Sa section Q4 dit, banque par banque et relevé à la source, quels champs de
-  transaction sont réellement fournis et jusqu'où remonte l'historique
-  (La Banque Postale 90 j, Trade Republic 90 j, Revolut 3727 j).
-  À lire avant de coder T2 et T4. Ne rien recopier de ce dossier dans le dépôt.
+  '
+_sources_a_lire: "Le lab AGY n'est PAS dans git (données bancaires réelles + session vivante),\nmais tout\
+  \ est local : on y va par chemin absolu, depuis le maître comme\ndepuis un worktree.\n  /mnt/c/Users/djabi/gestio/.lamoms/lab/agy/rapport_architecture_gestio.md\n\
+  Sa section Q4 dit, banque par banque et relevé à la source, quels champs de\ntransaction sont réellement\
+  \ fournis et jusqu'où remonte l'historique\n(La Banque Postale 90 j, Trade Republic 90 j, Revolut 3727\
+  \ j).\nÀ lire avant de coder T2 et T4. Ne rien recopier de ce dossier dans le dépôt.\n  /mnt/c/Users/djabi/gestio/.lamoms/lab/agy/rapport_agy_recherche.md\n\
+  Le rapport de mesure du 2026-08-01 — fenêtre d'historique, pagination, clé de\ncontinuation, régimes\
+  \ de quota. Chaque réponse y est marquée sourcée, mesurée\nou non trouvée, et pointe le script qui l'a\
+  \ produite (mesure_phase2_*.py,\nmesure_phase3_sca.py) plus les journaux d'appels. À lire avant de coder\
+  \ T4.\n"
+_ordre_conseille: 'Chemin le plus court vers une application utilisable : T1 → T4 → T7.
 
-_ordre_conseille: |
-  Chemin le plus court vers une application utilisable : T1 → T4 → T7.
-  À ce stade l'app affiche le vrai solde, synchronisé automatiquement.
-  T3 sécurise. T5 et T6 apportent l'état des lieux au-delà de la fenêtre servie
-  par l'API — fenêtre qui dépend de la banque (LBP 90 j, Revolut 3727 j).
-  CORRIGÉ LE 2026-08-01 — cet ordre disait « T2 devient nécessaire dès qu'un
-  second canal arrive ». C'est FAUX depuis P24 — La Banque Postale ne fournit
-  aucun identifiant de transaction utilisable, donc l'idempotence de la toute
-  première synchro repose déjà sur l'empreinte de contenu, qui est le cœur de
-  T2. T2 n'est pas différable — c'est une dépendance de T4, comme le déclare
-  d'ailleurs déjà la clé dependances de T4.
+  À ce stade l''app affiche le vrai solde, synchronisé automatiquement.
 
+  T3 sécurise. T5 et T6 apportent l''état des lieux au-delà de la fenêtre servie
+
+  par l''API — fenêtre qui dépend de la banque (LBP 90 j, Revolut 3727 j).
+
+  CORRIGÉ LE 2026-08-01 — cet ordre disait « T2 devient nécessaire dès qu''un
+
+  second canal arrive ». C''est FAUX depuis P24 — La Banque Postale ne fournit
+
+  aucun identifiant de transaction utilisable, donc l''idempotence de la toute
+
+  première synchro repose déjà sur l''empreinte de contenu, qui est le cœur de
+
+  T2. T2 n''est pas différable — c''est une dépendance de T4, comme le déclare
+
+  d''ailleurs déjà la clé dependances de T4.
+
+  '
 T1:
-  objectif: >-
-    Un backend Fastify + SQLite servi en HTTPS local, qui expose le solde
-    disponible agrégé et par compte, et permet de saisir manuellement comptes
-    et transactions. Vérifiable de bout en bout sans aucune dépendance externe.
-  probleme_resolu: >-
-    P1 (pas de vue fiable sur la trésorerie) pour sa partie calcul ;
-    P13 (l'instance fait foi, le client ne stocke qu'un cache) ;
-    P19 (le Livret A, absent de l'API, est alimenté par la saisie manuelle).
-  projets: [gestio]
+  objectif: Un backend Fastify + SQLite servi en HTTPS local, qui expose le solde disponible agrégé et
+    par compte, et permet de saisir manuellement comptes et transactions. Vérifiable de bout en bout sans
+    aucune dépendance externe.
+  probleme_resolu: P1 (pas de vue fiable sur la trésorerie) pour sa partie calcul ; P13 (l'instance fait
+    foi, le client ne stocke qu'un cache) ; P19 (le Livret A, absent de l'API, est alimenté par la saisie
+    manuelle) ; P28 (Nickel non plus n'a d'accès API — vérifié sur le catalogue le 2026-08-01 — donc la
+    saisie manuelle sert DEUX comptes, pas un, et n'est pas un repli mais le seul chemin pour eux).
+  projets:
+  - gestio
   dependances: []
   parallelisable_avec: []
   criteres_acceptation:
-    - Créer un compte, y saisir des transactions et obtenir son solde par l'API.
-    - Le solde agrégé est exactement la somme des soldes par compte, eux-mêmes
-      sommes de leurs transactions. Aucun recalcul manuel nulle part.
-    - Les montants sont stockés en entiers de centimes, jamais en flottants.
-    - Chaque transaction porte sa SOURCE (api, csv, pdf, manuel) et son EMPREINTE
-      D'IDENTITÉ, définie comme le condensé stable de (compte, date ISO, montant
-      en centimes, sens CRDT/DBIT, libellé normalisé). Cette empreinte porte
-      l'idempotence — réingérer la même transaction ne crée pas de seconde ligne.
-      PRÉCISION DU 2026-08-01, parce que trois notions circulaient sous le même
-      mot — cette empreinte d'IDENTITÉ (T1) n'est PAS la clé de RAPPROCHEMENT de
-      T2, qui vaut (date ISO, montant en centimes) et est volontairement plus
-      lâche pour que le même mouvement vu par deux canaux différents se retrouve
-      malgré des libellés qui divergent. Identité stricte d'un côté,
-      rapprochement tolérant de l'autre — les deux coexistent et ne se
-      remplacent pas.
-      Elle n'est PAS entry_reference — ce champ est synthétique chez La Banque
-      Postale et absent chez d'autres banques (P24, P25).
-      LA SOURCE N'ENTRE PAS DANS L'EMPREINTE. Elle est stockée à côté, jamais
-      hachée avec. Sinon le MÊME mouvement reçu par l'API puis par un import CSV
-      produit deux empreintes différentes, donc deux lignes, et l'empreinte ne
-      remplit plus son seul rôle — reconnaître un mouvement déjà connu quel que
-      soit le canal qui l'apporte.
-      PRÉCISION AJOUTÉE LE 2026-08-01 parce que le critère d'origine, « chaque
-      transaction porte sa source et son empreinte », se lisait dans les deux
-      sens et a été implémenté avec la source DANS le hachage. Ambiguïté de ce
-      plan, pas erreur de lecture.
-      Le libellé est NORMALISÉ avant hachage — casse, accents et espaces
-      multiples réduits. Mesuré sur les données réelles — le même mouvement
-      s'écrit « DEFAULT REFERENCE » côté CSV et « REFERENCE » côté API,
-      « LMW*SNCF » ici et « LMW SNCF » là. Sans normalisation, l'empreinte
-      diverge sur des différences typographiques.
-      UN INDEX UNIQUE porte l'empreinte en base. Sans lui elle ne garantit rien —
-      l'idempotence doit être imposée par le schéma, pas seulement calculée.
-      Le SENS est porté par le SIGNE du montant en centimes — négatif au débit,
-      positif au crédit — et non par une colonne séparée. Le signe vient de
-      credit_debit_indicator lorsque la source est l'API (P2), jamais du libellé.
-    - La base est chiffrée au repos (SQLCipher via better-sqlite3-multiple-ciphers),
-      la clé venant d'une variable d'environnement hors dépôt.
-    - Le serveur répond en HTTPS sur le port 3443, soit https://localhost:3443/
-      (certificat auto-signé — la redirection est faite par le navigateur de
-      l'utilisateur, aucune autorité de certification n'intervient).
-      Ce n'est pas un choix — c'est l'URL de redirection enregistrée chez
-      Enable Banking, et la banque y renvoie le navigateur APRÈS
-      l'authentification forte. Un serveur en clair, ou sur un autre port,
-      ferait échouer la connexion bancaire au dernier moment, une fois
-      l'utilisateur déjà authentifié (P18).
-      NE PAS utiliser le port 3000 — il est occupé en permanence sur la machine
-      hôte par le serveur Lamoms (vérifié le 2026-08-01), ce qui empêche aussi
-      de lancer les tests.
-      Posé dès le socle parce que HTTPS touche l'origine servie au frontend et
-      les cookies de session — le rétrofit coûte bien plus cher que la pose.
-    - Une sauvegarde quotidienne est en place, avec rotation sur 30 jours.
-      Elle se fait par `sqlcipher_export()` — PAS par `.backup`.
-      CORRECTION DU 2026-08-01, erreur de ce plan signalée par Codex — le
-      critère demandait `sqlite3 .backup` sur une base SQLCipher, ce qui est
-      contradictoire — le shell répond "backup is not supported with encrypted
-      databases", la copie page à page étant refusée entre bases chiffrées.
-      `sqlcipher_export()` est l'outil documenté par Zetetic pour dupliquer une
-      base vers une base attachée chiffrée.
-      La sauvegarde doit rester CHIFFRÉE (vérifier que l'en-tête du fichier
-      n'est pas du SQLite en clair) et se rouvrir avec la même clé — la preuve
-      attendue est une lecture réelle dans le fichier de sauvegarde, pas sa
-      seule existence.
+  - Créer un compte, y saisir des transactions et obtenir son solde par l'API.
+  - MODÈLE À DEUX NIVEAUX — un ÉTABLISSEMENT groupe des COMPTES, et seul un compte porte un solde et des
+    transactions. Décision de Lamoms du 2026-08-01 (P28). Six comptes au départ, tous utilisés — La Banque
+    Postale groupe le Compte Courant Postal, le Livret A et le Livret Jeune Swing ; Revolut groupe son
+    compte et ses pockets ; Nickel et Trade Republic ont un compte chacun. Ne rien coder qui suppose un
+    seul niveau ni un seul compte par établissement.
+  - Le solde agrégé est exactement la somme des soldes DES COMPTES, eux-mêmes sommes de leurs transactions.
+    Aucun recalcul manuel nulle part. UN ÉTABLISSEMENT N'A PAS DE SOLDE STOCKÉ — le sien est calculé à
+    la volée comme la somme de ses comptes, et l'agrégat somme les COMPTES, jamais les groupes. Additionner
+    un groupe avec ses propres comptes compterait tout deux fois, et le total serait faux EN AYANT L'AIR
+    JUSTE — le mode de panne que ce projet doit empêcher. Un test couvre explicitement ce cas — un établissement
+    à trois comptes ne contribue à l'agrégat que pour la somme de ces trois-là.
+  - Les montants sont stockés en entiers de centimes, jamais en flottants.
+  - Chaque transaction porte sa SOURCE (api, csv, pdf, manuel) et son EMPREINTE D'IDENTITÉ, définie comme
+    le condensé stable de (compte, date ISO, montant en centimes, sens CRDT/DBIT, libellé normalisé).
+    Cette empreinte porte l'idempotence — réingérer la même transaction ne crée pas de seconde ligne.
+    PRÉCISION DU 2026-08-01, parce que trois notions circulaient sous le même mot — cette empreinte d'IDENTITÉ
+    (T1) n'est PAS la clé de RAPPROCHEMENT de T2, qui vaut (date ISO, montant en centimes) et est volontairement
+    plus lâche pour que le même mouvement vu par deux canaux différents se retrouve malgré des libellés
+    qui divergent. Identité stricte d'un côté, rapprochement tolérant de l'autre — les deux coexistent
+    et ne se remplacent pas. Elle n'est PAS entry_reference — ce champ est synthétique chez La Banque
+    Postale et absent chez d'autres banques (P24, P25). LA SOURCE N'ENTRE PAS DANS L'EMPREINTE. Elle est
+    stockée à côté, jamais hachée avec. Sinon le MÊME mouvement reçu par l'API puis par un import CSV
+    produit deux empreintes différentes, donc deux lignes, et l'empreinte ne remplit plus son seul rôle
+    — reconnaître un mouvement déjà connu quel que soit le canal qui l'apporte. PRÉCISION AJOUTÉE LE 2026-08-01
+    parce que le critère d'origine, « chaque transaction porte sa source et son empreinte », se lisait
+    dans les deux sens et a été implémenté avec la source DANS le hachage. Ambiguïté de ce plan, pas erreur
+    de lecture. Le libellé est NORMALISÉ avant hachage — casse, accents et espaces multiples réduits.
+    Mesuré sur les données réelles — le même mouvement s'écrit « DEFAULT REFERENCE » côté CSV et « REFERENCE
+    » côté API, « LMW*SNCF » ici et « LMW SNCF » là. Sans normalisation, l'empreinte diverge sur des différences
+    typographiques. UN INDEX UNIQUE porte l'empreinte en base. Sans lui elle ne garantit rien — l'idempotence
+    doit être imposée par le schéma, pas seulement calculée. Le SENS est porté par le SIGNE du montant
+    en centimes — négatif au débit, positif au crédit — et non par une colonne séparée. Le signe vient
+    de credit_debit_indicator lorsque la source est l'API (P2), jamais du libellé.
+  - La base est chiffrée au repos (SQLCipher via better-sqlite3-multiple-ciphers), la clé venant d'une
+    variable d'environnement hors dépôt.
+  - Le serveur répond en HTTPS sur le port 3443, soit https://localhost:3443/ (certificat auto-signé —
+    la redirection est faite par le navigateur de l'utilisateur, aucune autorité de certification n'intervient).
+    Ce n'est pas un choix — c'est l'URL de redirection enregistrée chez Enable Banking, et la banque y
+    renvoie le navigateur APRÈS l'authentification forte. Un serveur en clair, ou sur un autre port, ferait
+    échouer la connexion bancaire au dernier moment, une fois l'utilisateur déjà authentifié (P18). NE
+    PAS utiliser le port 3000 — il est occupé en permanence sur la machine hôte par le serveur Lamoms
+    (vérifié le 2026-08-01), ce qui empêche aussi de lancer les tests. Posé dès le socle parce que HTTPS
+    touche l'origine servie au frontend et les cookies de session — le rétrofit coûte bien plus cher que
+    la pose.
+  - Une sauvegarde quotidienne est en place, avec rotation sur 30 jours. Elle se fait par `sqlcipher_export()`
+    — PAS par `.backup`. CORRECTION DU 2026-08-01, erreur de ce plan signalée par Codex — le critère demandait
+    `sqlite3 .backup` sur une base SQLCipher, ce qui est contradictoire — le shell répond "backup is not
+    supported with encrypted databases", la copie page à page étant refusée entre bases chiffrées. `sqlcipher_export()`
+    est l'outil documenté par Zetetic pour dupliquer une base vers une base attachée chiffrée. La sauvegarde
+    doit rester CHIFFRÉE (vérifier que l'en-tête du fichier n'est pas du SQLite en clair) et se rouvrir
+    avec la même clé — la preuve attendue est une lecture réelle dans le fichier de sauvegarde, pas sa
+    seule existence.
   validations:
-    - npm run typecheck
-    - npm test
-    - Créer un compte + 3 transactions, vérifier le solde renvoyé par l'API.
+  - npm run typecheck
+  - npm test
+  - Créer un compte + 3 transactions, vérifier le solde renvoyé par l'API.
   hors_perimetre:
-    - Aucune interface graphique.
-    - Aucune synchronisation bancaire.
-    - Aucun import de fichier.
-
+  - Aucune interface graphique.
+  - Aucune synchronisation bancaire.
+  - Aucun import de fichier.
 T2:
-  objectif: >-
-    Un moteur de déduplication qui, recevant des transactions de plusieurs
-    canaux, produit un jeu sans doublon et sans perte. Traduction en TypeScript
-    de l'algorithme déjà validé sur données réelles.
-  probleme_resolu: >-
-    P5 (deux transactions distinctes de même montant le même jour écrasées par
-    une clé naïve) ; P11 (les preuves doivent s'appuyer sur les données réelles
-    du lab, pas sur des jeux fabriqués).
-  projets: [gestio]
-  dependances: [T1]
-  parallelisable_avec: [T3, T7]
+  objectif: Un moteur de déduplication qui, recevant des transactions de plusieurs canaux, produit un
+    jeu sans doublon et sans perte. Traduction en TypeScript de l'algorithme déjà validé sur données réelles.
+  probleme_resolu: P5 (deux transactions distinctes de même montant le même jour écrasées par une clé
+    naïve) ; P11 (les preuves doivent s'appuyer sur les données réelles du lab, pas sur des jeux fabriqués).
+  projets:
+  - gestio
+  dependances:
+  - T1
+  parallelisable_avec:
+  - T3
+  - T7
   criteres_acceptation:
-    - Clé primaire (date ISO, montant en centimes), file FIFO par clé.
-    - Le score de Jaccard sur les mots du libellé ne sert QUE de départage
-      lorsque plusieurs candidats partagent la même clé.
-    - Le signe du montant vient de credit_debit_indicator (CRDT/DBIT), jamais
-      déduit du libellé.
-    - Rejoue le résultat de référence sur les données réelles du lab —
-      27 mouvements CSV contre 27 transactions API, 27 rapprochements,
-      0 orphelin de chaque côté.
-    - Deux transactions réellement distinctes de même montant le même jour
-      restent deux transactions. ATTENTION — ce cas n'existe PAS dans les 43
-      transactions réelles du lab (vérifié le 2026-07-31 — zéro collision
-      date+montant). Il figure uniquement dans enable_banking_juin_bp.json,
-      qui est un fichier FABRIQUÉ à partir du PDF — ne pas s'en servir comme
-      preuve. Le cas doit donc être couvert par un test construit à la main.
-    - L'ABSENCE DE LIBELLÉ est un cas traité, pas un effet de bord. Mesuré le
-      2026-08-01 sur Data Insights — Trade Republic n'expose ni
-      remittance_information ni entry_reference, seulement booking_date,
-      credit_debit_indicator, status et transaction_amount (voir P25). Le
-      départage par Jaccard y est donc impossible par construction.
-      RÈGLE — quand le libellé manque et que plusieurs candidats partagent la
-      clé (date, montant), on NE FUSIONNE PAS. On conserve les transactions
-      distinctes. Perdre un mouvement fausse le solde en silence ; en garder un
-      en trop se voit et se corrige.
-      Un test couvre explicitement ce cas — deux mouvements de même date et même
-      montant, sans libellé, restent deux mouvements.
-    - Un rapprochement indécidable est MARQUÉ « à départager », jamais tranché au
-      hasard ni masqué. Les deux mouvements sont conservés en attendant
-      l'arbitrage. Décision de Lamoms du 2026-08-01 — quand (date, montant, sens)
-      ne suffisent pas et qu'il n'y a pas de libellé, les seules issues sont
-      humaines ou documentaires — attendre le relevé de la banque, ou vérifier et
-      départager à la main. Aucune heuristique n'est inventée pour combler ce
-      trou (voir P25).
-      Ce cas ne concerne QUE le croisement de canaux — sur un canal unique, deux
-      mouvements de même date et même montant sont simplement deux mouvements.
-    - Rejouer la même ingestion deux fois ne change ni le solde ni le nombre
-      de transactions.
+  - Clé primaire (date ISO, montant en centimes), file FIFO par clé.
+  - Le score de Jaccard sur les mots du libellé ne sert QUE de départage lorsque plusieurs candidats partagent
+    la même clé.
+  - Le signe du montant vient de credit_debit_indicator (CRDT/DBIT), jamais déduit du libellé.
+  - Rejoue le résultat de référence sur les données réelles du lab — 27 mouvements CSV contre 27 transactions
+    API, 27 rapprochements, 0 orphelin de chaque côté.
+  - Deux transactions réellement distinctes de même montant le même jour restent deux transactions. ATTENTION
+    — ce cas n'existe PAS dans les 43 transactions réelles du lab (vérifié le 2026-07-31 — zéro collision
+    date+montant). Il figure uniquement dans enable_banking_juin_bp.json, qui est un fichier FABRIQUÉ
+    à partir du PDF — ne pas s'en servir comme preuve. Le cas doit donc être couvert par un test construit
+    à la main.
+  - L'ABSENCE DE LIBELLÉ est un cas traité, pas un effet de bord. Mesuré le 2026-08-01 sur Data Insights
+    — Trade Republic n'expose ni remittance_information ni entry_reference, seulement booking_date, credit_debit_indicator,
+    status et transaction_amount (voir P25). Le départage par Jaccard y est donc impossible par construction.
+    RÈGLE — quand le libellé manque et que plusieurs candidats partagent la clé (date, montant), on NE
+    FUSIONNE PAS. On conserve les transactions distinctes. Perdre un mouvement fausse le solde en silence
+    ; en garder un en trop se voit et se corrige. Un test couvre explicitement ce cas — deux mouvements
+    de même date et même montant, sans libellé, restent deux mouvements.
+  - Un rapprochement indécidable est MARQUÉ « à départager », jamais tranché au hasard ni masqué. Les
+    deux mouvements sont conservés en attendant l'arbitrage. Décision de Lamoms du 2026-08-01 — quand
+    (date, montant, sens) ne suffisent pas et qu'il n'y a pas de libellé, les seules issues sont humaines
+    ou documentaires — attendre le relevé de la banque, ou vérifier et départager à la main. Aucune heuristique
+    n'est inventée pour combler ce trou (voir P25). Ce cas ne concerne QUE le croisement de canaux — sur
+    un canal unique, deux mouvements de même date et même montant sont simplement deux mouvements.
+  - Rejouer la même ingestion deux fois ne change ni le solde ni le nombre de transactions.
   validations:
-    - npm test
-    - Jeu de test constitué des fichiers réels de .lamoms/lab/agy/
-      (enable_banking_transactions_reelles.json et les deux CSV La Banque Postale).
+  - npm test
+  - Jeu de test constitué des fichiers réels de .lamoms/lab/agy/ (enable_banking_transactions_reelles.json
+    et les deux CSV La Banque Postale).
   hors_perimetre:
-    - Aucun seuil de similarité flou pour décider d'une fusion.
-    - Aucune règle liée au contenu ou au commerçant.
-
+  - Aucun seuil de similarité flou pour décider d'une fusion.
+  - Aucune règle liée au contenu ou au commerçant.
 T3:
-  objectif: >-
-    Authentification locale par mot de passe, et protection au repos des
-    secrets de l'application.
-  probleme_resolu: >-
-    Exigence de sécurité du PRD : données financières, 1 utilisateur, aucune
-    authentification cloud.
-  projets: [gestio]
-  dependances: [T1]
-  parallelisable_avec: [T2, T7]
+  objectif: Authentification locale par mot de passe, et protection au repos des secrets de l'application.
+  probleme_resolu: 'Exigence de sécurité du PRD : données financières, 1 utilisateur, aucune authentification
+    cloud.'
+  projets:
+  - gestio
+  dependances:
+  - T1
+  parallelisable_avec:
+  - T2
+  - T7
   criteres_acceptation:
-    - Mot de passe stocké en Argon2id, jamais en clair ni réversible.
-    - Une session invalide ou expirée interdit tout accès aux données.
-    - Les secrets Enable Banking résident dans la base chiffrée ou hors dépôt —
-      identifiant d'application, chemin de la clé privée, session_id des sessions
-      autorisées.
-      CORRIGÉ LE 2026-08-01 — ce critère disait « les jetons Enable Banking » et
-      contredisait T4, qui établit qu'on ne gère AUCUN jeton d'accès ASPSP —
-      Enable Banking les rafraîchit en interne. Il n'y a donc pas d'access token
-      à stocker ; ce qui doit l'être, c'est l'identité de l'application et les
-      sessions.
-    - Aucun secret lisible en clair sur le disque, ni dans le dépôt.
+  - Mot de passe stocké en Argon2id, jamais en clair ni réversible.
+  - Une session invalide ou expirée interdit tout accès aux données.
+  - Les secrets Enable Banking résident dans la base chiffrée ou hors dépôt — identifiant d'application,
+    chemin de la clé privée, session_id des sessions autorisées. CORRIGÉ LE 2026-08-01 — ce critère disait
+    « les jetons Enable Banking » et contredisait T4, qui établit qu'on ne gère AUCUN jeton d'accès ASPSP
+    — Enable Banking les rafraîchit en interne. Il n'y a donc pas d'access token à stocker ; ce qui doit
+    l'être, c'est l'identité de l'application et les sessions.
+  - Aucun secret lisible en clair sur le disque, ni dans le dépôt.
   validations:
-    - npm test
-    - Vérifier qu'aucun secret n'apparaît en clair dans la base ni dans les logs.
+  - npm test
+  - Vérifier qu'aucun secret n'apparaît en clair dans la base ni dans les logs.
   hors_perimetre:
-    - Multi-utilisateur, comptes, rôles.
-    - Biométrie et déverrouillage sans mot de passe.
-
+  - Multi-utilisateur, comptes, rôles.
+  - Biométrie et déverrouillage sans mot de passe.
 T4:
-  objectif: >-
-    Connecter une banque via Enable Banking, rapatrier les transactions réelles
-    et tenir à jour la fraîcheur du solde.
-  probleme_resolu: >-
-    P2 (l'accès production fonctionne, avec ses limites mesurées) ;
-    P12 (authentification forte encaissée par le serveur — PC puis RPi) ;
-    P18 (redirect_url : ne pas reprendre celle du script du lab) ;
-    P5 pour sa part MVP (idempotence de la resynchronisation).
-  projets: [gestio]
-  dependances: [T1, T2]
-  parallelisable_avec: [T5, T6, T7]
+  objectif: Connecter une banque via Enable Banking, rapatrier les transactions réelles et tenir à jour
+    la fraîcheur du solde.
+  probleme_resolu: 'P2 (l''accès production fonctionne, avec ses limites mesurées) ; P12 (authentification
+    forte encaissée par le serveur — PC puis RPi) ; P18 (redirect_url : ne pas reprendre celle du script
+    du lab) ; P5 pour sa part MVP (idempotence de la resynchronisation).'
+  projets:
+  - gestio
+  dependances:
+  - T1
+  - T2
+  parallelisable_avec:
+  - T5
+  - T6
+  - T7
   criteres_acceptation:
-    - Connexion par le pattern Out-of-Band — le backend produit l'URL bancaire,
-      le client l'ouvre à l'extérieur puis interroge le backend jusqu'à ce que
-      la session soit établie. Le backend reçoit le retour de la banque.
-    - redirect_url = https://localhost:3443/ — l'URL du MVP, réellement
-      enregistrée par l'utilisateur. Le port 3000 est occupé par le serveur
-      Lamoms sur la machine hôte, donc https://localhost:3000/ (également
-      enregistrée) n'est PAS utilisable ici. NE PAS reprendre
-      http://localhost:3000/callback, présente dans le script du lab et non
-      enregistrée — l'échec surviendrait après l'authentification forte.
-    - Le libellé est lu dans remittance_information (liste de chaînes, à joindre),
-      et non dans remittance_information_unstructured.
-    - Le montant de transaction_amount est non signé — le sens vient de
-      credit_debit_indicator.
-    - La PREMIÈRE récupération de transactions après l'établissement d'une
-      session se fait avec strategy=longest et IMMÉDIATEMENT — pas de synchro
-      différée, pas de file d'attente, pas de premier appel borné aux 90
-      derniers jours. La documentation Enable Banking est explicite — l'historique
-      complet n'est disponible qu'environ UNE HEURE après l'autorisation
-      initiale ; passé ce délai beaucoup de banques retombent à 90 jours. Rater
-      cette fenêtre fait perdre l'historique ancien jusqu'à la prochaine
-      réautorisation, SANS aucune erreur visible (voir P23).
-      strategy=longest cherche la transaction la plus ancienne disponible et
-      remonte tout depuis ce point, au lieu d'échouer quand la période demandée
-      n'est pas servie ; date_from n'y est qu'une borne basse indicative et
-      date_to est ignoré.
-      À CONFIRMER AVANT DE CODER — la valeur longest est nommée par la FAQ mais
-      absente de la page de référence consultée ; vérifier l'énumération
-      TransactionsFetchStrategy sur la spécification OpenAPI.
-    - Le nombre de transactions rapatriées et la date de la plus ancienne sont
-      journalisés à chaque synchro, pour que la profondeur réellement obtenue
-      soit constatable au lieu d'être supposée.
-    - Chaque compte porte une DATE D'HORIZON CONNU — la date de sa plus ancienne
-      transaction effectivement obtenue. Elle est stockée, pas recalculée à la
-      volée, et jamais reculée par une synchro ultérieure plus courte.
-      RAISON — deux situations sont indiscernables dans une réponse HTTP 200 —
-      « aucune transaction sur cette période » et « la banque a tronqué sans le
-      dire ». Le 422 WRONG_TRANSACTIONS_PERIOD est un refus EXPLICITE et se
-      traite ; la troncature silencieuse, elle, ne s'annonce pas. On ne peut donc
-      pas prouver l'absence de transactions avant l'horizon connu — on ne peut
-      que dire jusqu'où l'on sait. Tout ce qui précède cette date est INCONNU,
-      jamais VIDE (voir P22, P23).
-      L'horizon obtenu est une BORNE BASSE de ce compte à cet instant, pas le
-      plafond de la banque — un compte ouvert il y a huit mois rend huit mois,
-      ce qui ne dit rien de ce que la banque aurait servi sur un compte plus
-      ancien. Ne jamais promouvoir une mesure en constante par banque —
-      c'est l'erreur de P21 et P22, la troisième fois qu'elle se présente.
-    - La fenêtre d'historique est respectée et rendue visible — au-delà, le
-      manque est signalé, jamais présenté comme un solde complet. La banque
-      refuse elle-même toute demande plus ancienne — HTTP 422,
-      error = WRONG_TRANSACTIONS_PERIOD (vérifié en direct le 2026-07-31 sur
-      La Banque Postale, à 200 jours).
-      Ce code doit être traité, pas laissé remonter en erreur brute — et c'est
-      LUI qui fait autorité sur la fenêtre réelle.
-      PRÉCISION DU 2026-08-01 — les 90 jours sont constatés SUR LA BANQUE
-      POSTALE, ce n'est pas une constante Enable Banking (leur documentation
-      indique que la plupart des ASPSP donnent au moins un an). Ne pas coder 90
-      en dur comme une propriété de l'API — toute autre banque aura sa propre
-      fenêtre.
-    - L'expiration du consentement est lue dans access.valid_until renvoyé par
-      GET /sessions/{id} — JAMAIS une durée codée en dur. La session réelle du
-      lab porte valid_until = 2027-01-01, la valeur demandée à la création et
-      accordée par la banque. Son expiration est détectée et donne lieu à un
-      chemin de reconnexion, sans effacer le dernier solde connu.
-    - La durée demandée dans valid_until du POST /auth ne dépasse pas
-      maximum_consent_validity, valeur en SECONDES que GET /aspsps renvoie pour
-      la banque visée. C'est un plafond PAR BANQUE — 180 jours pour la majorité
-      des ASPSP, plafond issu de l'amendement EBA RTS de 2022 qui a porté le
-      renouvellement de SCA de 90 à 180 jours pour l'accès AIS. On lit ce
-      plafond, on ne le suppose pas. PRÉCISION DU 2026-08-01 — les 180 jours
-      sont donc réels comme plafond ; ce qui était faux, c'est de les traiter
-      comme la durée effective.
-    - Le jeton d'accès ASPSP n'est PAS à gérer — Enable Banking le rafraîchit en
-      interne lors des requêtes de données. Ne rien coder qui stocke, rafraîchisse
-      ou fasse expirer un access token ; seule la session porte une échéance.
-    - La devise vient du solde (balances[].balance_amount.currency), jamais du
-      compte — GET /accounts/{uid}/details renvoie currency = "XXX" sur le
-      compte réel alors que le solde est bien en EUR.
-    - L'identité d'une transaction NE repose PAS sur entry_reference. Mesuré sur
-      les 43 transactions réelles du lab — entry_reference vaut toujours
-      booking_date suivi d'un rang dans la journée (2026-07-20.0 à .4), et
-      transaction_id est null 43/43. Il n'existe donc aucun identifiant émis par
-      la banque, et un rang se décale dès qu'une transaction s'ajoute sur une
-      date déjà connue. L'idempotence repose sur une empreinte calculée à partir
-      du contenu — compte, date ISO, montant en centimes, sens CRDT/DBIT,
-      libellé normalisé (voir P24).
-      CE POINT EST INFÉRÉ, PAS MESURÉ — le décalage des rangs se déduit de la
-      structure du champ ; il se prouverait en relisant la même période et en
-      comparant les entry_reference. Tant que ce test n'a pas eu lieu, on ne
-      pose pas d'index unique sur ce champ.
-    - Resynchroniser deux fois de suite ne change ni le solde ni le nombre de
-      transactions.
+  - Connexion par le pattern Out-of-Band — le backend produit l'URL bancaire, le client l'ouvre à l'extérieur
+    puis interroge le backend jusqu'à ce que la session soit établie. Le backend reçoit le retour de la
+    banque.
+  - redirect_url = https://localhost:3443/ — l'URL du MVP, réellement enregistrée par l'utilisateur. Le
+    port 3000 est occupé par le serveur Lamoms sur la machine hôte, donc https://localhost:3000/ (également
+    enregistrée) n'est PAS utilisable ici. NE PAS reprendre http://localhost:3000/callback, présente dans
+    le script du lab et non enregistrée — l'échec surviendrait après l'authentification forte.
+  - Le libellé est lu dans remittance_information (liste de chaînes, à joindre), et non dans remittance_information_unstructured.
+  - Le montant de transaction_amount est non signé — le sens vient de credit_debit_indicator.
+  - La PREMIÈRE récupération de transactions après l'établissement d'une session se fait avec strategy=longest
+    et immédiatement. RÉSERVE LEVÉE LE 2026-08-01 — l'énumération TransactionsFetchStrategy ne compte
+    que DEUX valeurs, default et longest, vérifié sur la page de référence Enable Banking. longest cherche
+    la transaction la plus ancienne disponible et remonte depuis ce point au lieu d'échouer quand la période
+    demandée n'est pas servie ; date_from n'y est qu'une borne basse indicative, date_to est IGNORÉ, et
+    longest ne renvoie jamais WRONG_TRANSACTIONS_PERIOD — au pire une liste vide. CE QUE LA MESURE A CHANGÉ
+    — la documentation promet un historique complet pendant environ une heure après l'autorisation. Mesuré
+    sur La Banque Postale, cette fenêtre n'apporte RIEN — trente secondes après une authentification forte
+    neuve, deux heures plus tard, et sur une session vieille de deux jours, les trois appels rendent EXACTEMENT
+    les mêmes 43 transactions remontant au 2026-05-04, identiques ligne à ligne (P23). NE PAS bâtir de
+    course contre la montre autour du premier appel. Garder longest et l'appel immédiat reste juste, mais
+    comme précaution bon marché pour une banque plus généreuse — pas comme un sauvetage.
+  - Le nombre de transactions rapatriées et la date de la plus ancienne sont journalisés à chaque synchro,
+    pour que la profondeur réellement obtenue soit constatable au lieu d'être supposée.
+  - LA PAGINATION VA JUSQU'À DISPARITION DE LA CLÉ, jamais jusqu'à la première page vide. La documentation
+    Enable Banking est explicite — on peut recevoir une liste VIDE accompagnée d'une continuation_key,
+    ce qui signifie que les transactions ne sont pas disponibles pour l'instant mais qu'il peut y en avoir
+    d'autres. S'arrêter sur une réponse vide, réflexe naturel, tronque l'historique au milieu sans erreur
+    ni message (P33). MESURÉ EN DIRECT LE 2026-08-01 — avec strategy=longest, La Banque Postale renvoie
+    QUATRE pages VIDES portant chacune une clé, puis une cinquième page qui contient les 43 transactions.
+    La clé décodée montre un état de recherche interne, stage égal à search et un numéro d'étape de 1
+    à 4. Un code qui s'arrête à la première page vide rapatrie ZÉRO transaction sur cette banque, sans
+    la moindre erreur. Ce n'est pas un cas de bord théorique, c'est le comportement NOMINAL de la première
+    aspiration.
+  - L'aspiration profonde écrit en base PAGE PAR PAGE, jamais en accumulant pour n'écrire qu'à la fin.
+    Un plantage à la douzième page doit laisser les onze premières acquises. La progression est journalisée
+    — pages parcourues, transactions écrites, date de la plus ancienne, et si l'arrêt vient de l'épuisement
+    des clés ou d'une erreur. Sans ce journal, un historique tronqué ressemble à un historique complet.
+  - Le HTTP 429 / ASPSP_RATE_LIMIT_EXCEEDED est un état NORMAL, pas une panne. Beaucoup de banques limitent
+    à 4 récupérations par jour hors présence de l'utilisateur, et la documentation dit qu'il n'existe
+    aucun contournement — la reprise se fait après 6 heures. Le code le traite comme tel et le rend visible
+    avec la date de la dernière synchro réussie. COROLLAIRE — ne PAS resynchroniser à chaque ouverture
+    d'écran. Afficher le dernier solde connu avec sa date ne coûte aucun appel ; une app trop bavarde
+    épuise le quota en une matinée puis fige le solde sans le dire. NON RÉSOLU — ce qui déclenche le régime
+    « PSU absent » chez nos banques reste inconnu ; elles n'exigent aucun en-tête PSU (mesuré, P33). Question
+    confiée à AGY. Concevoir prudemment en attendant.
+  - Chaque compte porte une DATE D'HORIZON CONNU — la date de sa plus ancienne transaction effectivement
+    obtenue. Elle est stockée, pas recalculée à la volée, et jamais reculée par une synchro ultérieure
+    plus courte. RAISON — deux situations sont indiscernables dans une réponse HTTP 200 — « aucune transaction
+    sur cette période » et « la banque a tronqué sans le dire ». Le 422 WRONG_TRANSACTIONS_PERIOD est
+    un refus EXPLICITE et se traite ; la troncature silencieuse, elle, ne s'annonce pas. On ne peut donc
+    pas prouver l'absence de transactions avant l'horizon connu — on ne peut que dire jusqu'où l'on sait.
+    Tout ce qui précède cette date est INCONNU, jamais VIDE (voir P22, P23). L'horizon obtenu est une
+    BORNE BASSE de ce compte à cet instant, pas le plafond de la banque — un compte ouvert il y a huit
+    mois rend huit mois, ce qui ne dit rien de ce que la banque aurait servi sur un compte plus ancien.
+    Ne jamais promouvoir une mesure en constante par banque — c'est l'erreur de P21 et P22, la troisième
+    fois qu'elle se présente.
+  - La fenêtre d'historique est respectée et rendue visible — au-delà, le manque est signalé, jamais présenté
+    comme un solde complet. La banque refuse elle-même toute demande plus ancienne — HTTP 422, error =
+    WRONG_TRANSACTIONS_PERIOD (vérifié en direct le 2026-07-31 sur La Banque Postale, à 200 jours). Ce
+    code doit être traité, pas laissé remonter en erreur brute — et c'est LUI qui fait autorité sur la
+    fenêtre réelle. PRÉCISION DU 2026-08-01 — les 90 jours sont constatés SUR LA BANQUE POSTALE, ce n'est
+    pas une constante Enable Banking (leur documentation indique que la plupart des ASPSP donnent au moins
+    un an). Ne pas coder 90 en dur comme une propriété de l'API — toute autre banque aura sa propre fenêtre.
+  - L'expiration du consentement est lue dans access.valid_until renvoyé par GET /sessions/{id} — JAMAIS
+    une durée codée en dur. La session réelle du lab porte valid_until = 2027-01-01, la valeur demandée
+    à la création et accordée par la banque. Son expiration est détectée et donne lieu à un chemin de
+    reconnexion, sans effacer le dernier solde connu.
+  - La durée demandée dans valid_until du POST /auth ne dépasse pas maximum_consent_validity, valeur en
+    SECONDES que GET /aspsps renvoie pour la banque visée. C'est un plafond PAR BANQUE — 180 jours pour
+    la majorité des ASPSP, plafond issu de l'amendement EBA RTS de 2022 qui a porté le renouvellement
+    de SCA de 90 à 180 jours pour l'accès AIS. On lit ce plafond, on ne le suppose pas. PRÉCISION DU 2026-08-01
+    — les 180 jours sont donc réels comme plafond ; ce qui était faux, c'est de les traiter comme la durée
+    effective.
+  - Le jeton d'accès ASPSP n'est PAS à gérer — Enable Banking le rafraîchit en interne lors des requêtes
+    de données. Ne rien coder qui stocke, rafraîchisse ou fasse expirer un access token ; seule la session
+    porte une échéance.
+  - La devise vient du solde (balances[].balance_amount.currency), jamais du compte — GET /accounts/{uid}/details
+    renvoie currency = "XXX" sur le compte réel alors que le solde est bien en EUR.
+  - L'identité d'une transaction NE repose PAS sur entry_reference. Mesuré sur les 43 transactions réelles
+    du lab — entry_reference vaut toujours booking_date suivi d'un rang dans la journée (2026-07-20.0
+    à .4), et transaction_id est null 43/43. Il n'existe donc aucun identifiant émis par la banque, et
+    un rang se décale dès qu'une transaction s'ajoute sur une date déjà connue. L'idempotence repose sur
+    une empreinte calculée à partir du contenu — compte, date ISO, montant en centimes, sens CRDT/DBIT,
+    libellé normalisé (voir P24). CE POINT EST INFÉRÉ, PAS MESURÉ — le décalage des rangs se déduit de
+    la structure du champ ; il se prouverait en relisant la même période et en comparant les entry_reference.
+    Tant que ce test n'a pas eu lieu, on ne pose pas d'index unique sur ce champ.
+  - Resynchroniser deux fois de suite ne change ni le solde ni le nombre de transactions.
+  - UNE CLÉ DE CONTINUATION NE SE REJOUE JAMAIS SEULE — tous les paramètres de la requête initiale doivent
+    être renvoyés avec elle, strategy comprise. Mesuré le 2026-08-01 — la clé renvoyée sans strategy=longest
+    produit un HTTP 422 WRONG_CONTINUATION_KEY. C'est la faute exacte qui a interrompu le premier script
+    de mesure ; le second, qui conservait les paramètres, a paginé en cinq pages sans incident. Le piège
+    est sournois — le premier appel réussit, seul le second échoue (P34).
+  - LE SOLDE NE SE RECALCULE PAS À PARTIR DES TRANSACTIONS. Mesuré le 2026-08-01 — balance_after_transaction
+    est null sur 43 transactions sur 43 chez La Banque Postale. Le solde vient de GET /accounts/{uid}/balances,
+    et de là seulement. Un cumul maison partirait du plus ancien mouvement disponible, qui est une troncature
+    à quatre-vingt-dix jours et non l'ouverture du compte — donc d'un point de départ inconnu, pour dériver
+    ensuite en silence (P36).
+  - La synchronisation déclenchée par l'utilisateur PORTE les en-têtes PSU, psu-ip-address et psu-user-agent
+    ; la synchronisation automatique de fond ne les porte pas. Sourcé le 2026-08-01 — « when at least
+    one PSU header is included, any limitations imposed by the ASPSP on background transaction fetching
+    do not apply », et la documentation RECOMMANDE fortement de les fournir dès qu'un utilisateur est
+    détecté présent. Les trois banques du périmètre ne les EXIGENT pas, ce qui ne dispense pas de les
+    envoyer — c'est ce qui distingue les deux régimes de quota (P33). Ne pas les inventer quand personne
+    n'est là.
   validations:
-    - npm test
-    - Synchronisation réelle sur le compte de l'utilisateur, puis relance
-      immédiate — le solde et le nombre de transactions doivent être identiques.
-    - Deux applications existent chez Enable Banking ; l'une répond 403
-      "Application is not active". Le kid retenu est celui vérifié actif le
-      2026-07-31 (93fca3d0-...). Un 403 à l'authentification signifie mauvaise
-      application, pas mauvais code.
+  - npm test
+  - Synchronisation réelle sur le compte de l'utilisateur, puis relance immédiate — le solde et le nombre
+    de transactions doivent être identiques.
+  - Deux applications existent chez Enable Banking ; l'une répond 403 "Application is not active". Le
+    kid retenu est celui vérifié actif le 2026-07-31 (93fca3d0-...). Un 403 à l'authentification signifie
+    mauvaise application, pas mauvais code.
   hors_perimetre:
-    - Authentification forte initiée depuis le mobile — hors périmètre du MVP,
-      mais ce n'est PAS un choix d'architecture — le callback est encaissé par
-      le serveur, et la seule chose qui l'empêche est que
-      https://localhost:3443/ ne résout que sur la machine serveur. Le jour où
-      la redirect_url devient https://gestio.software/auth/callback, ça marche
-      sans retoucher le code. Ne rien coder qui interdise structurellement ce
-      cas — pas de contrôle sur l'appareil appelant, pas de chemin en dur.
-    - Toute exposition publique de l'instance (ni Tailscale Funnel, ni nom .ts.net).
-
+  - Authentification forte initiée depuis le mobile — hors périmètre du MVP, mais ce n'est PAS un choix
+    d'architecture — le callback est encaissé par le serveur, et la seule chose qui l'empêche est que
+    https://localhost:3443/ ne résout que sur la machine serveur. Le jour où la redirect_url devient https://gestio.software/auth/callback,
+    ça marche sans retoucher le code. Ne rien coder qui interdise structurellement ce cas — pas de contrôle
+    sur l'appareil appelant, pas de chemin en dur.
+  - Toute exposition publique de l'instance (ni Tailscale Funnel, ni nom .ts.net).
 T5:
-  objectif: >-
-    Importer un relevé CSV bancaire et l'intégrer sans doublon, en refusant
-    explicitement tout format non reconnu.
-  probleme_resolu: >-
-    P3 (absence de norme CSV bancaire française : encodage, séparateur, formats
-    de date et de montant variables selon la banque).
-  projets: [gestio]
-  dependances: [T1, T2]
-  parallelisable_avec: [T4, T6, T7]
+  objectif: Importer un relevé CSV bancaire et l'intégrer sans doublon, en refusant explicitement tout
+    format non reconnu.
+  probleme_resolu: 'P3 (absence de norme CSV bancaire française : encodage, séparateur, formats de date
+    et de montant variables selon la banque).'
+  projets:
+  - gestio
+  dependances:
+  - T1
+  - T2
+  parallelisable_avec:
+  - T4
+  - T6
+  - T7
   criteres_acceptation:
-    - Registre de formats par banque ; La Banque Postale est couverte, les deux
-      CSV réels du lab servent de référence.
-    - Un fichier dont le format n'est pas reconnu est refusé avec un message
-      nommant ce qui n'est pas compris. Jamais d'ingestion partielle, jamais de
-      parsing approximatif.
-    - Les variations d'encodage et de séparateur sont gérées sans perte
-      d'accents.
-    - Importer deux fois le même fichier ne change pas le solde.
-    - Un import croisant une période déjà synchronisée par l'API ne crée aucun
-      doublon et ne perd aucune transaction.
+  - Registre de formats par banque. DEUX banques à couvrir, pas une — les comptes sont réels et portent
+    de l'argent (P28). La Banque Postale — les deux CSV réels du lab servent de référence. Format constaté
+    le 2026-08-01 — encodage ISO-8859-1 et NON UTF-8 (« Numéro Compte » est illisible si on lit en UTF-8),
+    séparateur point-virgule, un en-tête de 5 lignes clé;valeur suivi d'une ligne vide, puis l'en-tête
+    réel « Date;Libellé;Montant(EUROS) ». Date au format JJ/MM/AAAA, montant SIGNÉ avec la virgule pour
+    décimale (-10,00). Les libellés sont entre guillemets et portent une espace finale. L'en-tête donne
+    le solde de fin et sa date, utilisables en contrôle. Revolut — référence dans "/mnt/c/Users/djabi/Documents/relevé
+    pdf/revolut/", relevé de 254 lignes couvrant 2025-09-01 à 2026-06-14. Format constaté le 2026-08-01
+    — UTF-8, séparateur virgule, en-têtes en français (Type, Produit, Date de début, Date de fin, Description,
+    Montant, Frais, Devise, État, Solde). Le montant est SIGNÉ dans la colonne Montant, il n'y a pas d'indicateur
+    de sens comme sur l'API. Une colonne Solde donne le solde après opération et sert de contrôle. Les
+    dates portent l'heure (2025-09-27 13:05:08) — la clé de rapprochement de T2 est la date SEULE, donc
+    tronquer à la date ISO sans perdre l'heure en base. Attention aussi à la colonne Frais, distincte
+    du montant.
+  - Un fichier dont le format n'est pas reconnu est refusé avec un message nommant ce qui n'est pas compris.
+    Jamais d'ingestion partielle, jamais de parsing approximatif.
+  - Les variations d'encodage et de séparateur sont gérées sans perte d'accents. Le cas est RÉEL et mesuré,
+    pas théorique — les deux banques du registre s'opposent sur les trois axes à la fois. La Banque Postale
+    est en ISO-8859-1 avec séparateur point-virgule, virgule décimale et date JJ/MM/AAAA ; Revolut est
+    en UTF-8 avec séparateur virgule, point décimal et date ISO horodatée. Lire l'un avec les règles de
+    l'autre produit soit des accents cassés, soit des montants faux.
+  - Le libellé d'un même mouvement DIFFÈRE entre l'API et le CSV de la même banque. Vérifié sur les trois
+    virements du Livret A — le CSV écrit « VIREMENT DE MR <NOM> DEFAULT REFERENCE » là où l'API écrit
+    « VIREMENT DE MR <NOM> REFERENCE », le reste du libellé (deux-points, espace, numéro de référence)
+    étant identique, et le CSV ajoute en plus une espace finale. La normalisation du libellé (T1) doit
+    absorber cet écart, sinon le même mouvement porte deux empreintes et l'import crée un doublon.
+  - Importer deux fois le même fichier ne change pas le solde.
+  - Un import croisant une période déjà synchronisée par l'API ne crée aucun doublon et ne perd aucune
+    transaction.
   validations:
-    - npm test
-    - Importer les deux CSV réels du lab sur une base déjà synchronisée par
-      l'API, puis vérifier l'absence de doublon et d'orphelin.
+  - npm test
+  - Importer les deux CSV réels du lab sur une base déjà synchronisée par l'API, puis vérifier l'absence
+    de doublon et d'orphelin.
   hors_perimetre:
-    - Détection automatique d'une banque inconnue.
-    - Correction ou complétion des données du fichier.
-
+  - Détection automatique d'une banque inconnue.
+  - Correction ou complétion des données du fichier.
 T6:
-  objectif: >-
-    Importer un relevé PDF en s'appuyant sur sa couche texte, pour constituer
-    l'historique ancien que le CSV ne couvre pas.
-  probleme_resolu: >-
-    L'état des lieux au-delà de la fenêtre servie par l'API — l'historique ancien
-    de l'utilisateur n'existe que sous forme de relevés PDF.
-    JUSTIFICATION CONFIRMÉE le 2026-08-01 après vérification (P23). Elle avait
-    été mise en doute quelques heures plus tôt, à tort — Enable Banking publie
-    « Available transaction period: 90 days » pour La Banque Postale dans Data
-    Insights, ce qui corrobore le HTTP 422 mesuré en direct. Deux sources
-    indépendantes — l'historique ancien est donc bien hors de portée de l'API en
-    régime courant, et l'import PDF garde tout son sens.
-    SEULE RÉSERVE, non bloquante — la documentation annonce un historique complet
-    pendant environ une heure après l'autorisation, avec strategy=longest. Si
-    cette fenêtre tient sur La Banque Postale, une partie de l'état des lieux
-    passerait par l'API et le volume à couvrir ici diminuerait. Ni publié par
-    banque, ni mesuré chez nous. T6 se planifie normalement en attendant —
-    la supprimer à tort ferait perdre l'état des lieux, la garder à tort ne
-    coûte qu'un effort.
-  projets: [gestio]
-  dependances: [T1, T2]
-  parallelisable_avec: [T4, T5, T7]
+  objectif: Importer un relevé PDF en s'appuyant sur sa couche texte, pour constituer l'historique ancien
+    que le CSV ne couvre pas.
+  probleme_resolu: 'L''état des lieux au-delà de la fenêtre servie par l''API — l''historique ancien de
+    l''utilisateur n''existe que sous forme de relevés PDF. JUSTIFICATION CONFIRMÉE le 2026-08-01 après
+    vérification (P23). Elle avait été mise en doute quelques heures plus tôt, à tort — Enable Banking
+    publie « Available transaction period: 90 days » pour La Banque Postale dans Data Insights, ce qui
+    corrobore le HTTP 422 mesuré en direct. Deux sources indépendantes — l''historique ancien est donc
+    bien hors de portée de l''API en régime courant, et l''import PDF garde tout son sens. RÉSERVE LEVÉE
+    LE 2026-08-01, PAR LA MESURE — la fenêtre d''une heure annoncée par la documentation n''apporte RIEN
+    chez La Banque Postale. Trois aspirations avec strategy=longest, l''une trente secondes après une
+    authentification forte neuve, l''une deux heures plus tard, l''une sur une session vieille de deux
+    jours, rendent EXACTEMENT le même jeu de 43 transactions remontant au 2026-05-04, identiques ligne
+    à ligne. Et le plancher est bien une TRONCATURE, pas l''âge du compte — la plus ancienne transaction
+    rendue est un DÉBIT de 180 euros, impossible sur un compte qui viendrait de naître, et douze relevés
+    PDF remontent à juillet 2025. T6 n''est donc PAS un repli — c''est le SEUL chemin vers l''état des
+    lieux au-delà de quatre-vingt-dix jours glissants, et ce plancher glisse d''un jour par jour (P35).'
+  projets:
+  - gestio
+  dependances:
+  - T1
+  - T2
+  parallelisable_avec:
+  - T4
+  - T5
+  - T7
   criteres_acceptation:
-    - Extraction depuis la couche texte du PDF, sans OCR.
-    - Un PDF dépourvu de couche texte est refusé avec un message explicite
-      proposant le CSV ou la saisie manuelle.
-    - Un relevé multi-comptes est ventilé sur les bons comptes.
-    - Les 12 relevés réels La Banque Postale servent de référence. Ils vivent
-      hors du dépôt, et se lisent par chemin absolu —
-        /mnt/c/Users/djabi/Documents/relevé pdf/bp/
-      ATTENTION AU NOMMAGE, deux pièges vérifiés le 2026-08-01 — le dossier
-      s'écrit « relevé pdf », avec accent et avec une espace ; et les fichiers
-      BP n'ont AUCUNE EXTENSION, ils s'appellent releve_CCP0984209Z024_AAAAMMJJ.
-      Les énumérer par motif releve_* et non par *.pdf, sans quoi on n'en trouve
-      aucun. Ce sont bien des PDF — vérifié, PDF 1.6, 4 pages, 100 objets /Font,
-      couche texte présente, donc parsables sans OCR.
-      Couverture — 08/07/2025 à 08/06/2026, un relevé par mois.
-      Le projet antérieur /mnt/c/Users/djabi/Documents/releves-pdf sert de
-      référence de LOGIQUE de parsing, sans être appelé ni porté tel quel — le
-      parsing est réécrit en TypeScript. Il ne s'appelle PAS gestio-releves,
-      contrairement à ce que ce plan indiquait.
-    - Importer deux fois le même relevé ne change pas le solde.
+  - Extraction depuis la couche texte du PDF, sans OCR.
+  - Un PDF dépourvu de couche texte est refusé avec un message explicite proposant le CSV ou la saisie
+    manuelle.
+  - Un relevé multi-comptes est ventilé sur les bons comptes. CE N'EST PAS UN CAS THÉORIQUE — le relevé
+    de La Banque Postale contient TROIS comptes, vérifié le 2026-08-01 sur les 12 relevés réels (P32).
+    Structure à exploiter, dans cet ordre — a) le bloc « Situation de vos comptes au <date> », qui donne
+    le solde de chaque compte à la date du relevé (Compte Courant Postal, Livret A, Livret Jeune Swing)
+    ; b) la section du compte courant ; c) la section « Comptes d'Épargne », qui est un relevé COMPLET
+    du Livret A — son IBAN, un « Ancien solde au <date> », ses mouvements ligne à ligne, un « Nouveau
+    solde au <date> ». SEGMENTER PAR COMPTE AVANT DE LIRE LA MOINDRE LIGNE. Lire le texte du document
+    sans le découper attribue les mouvements au mauvais solde — le récurrent « VIREMENT DE M DJABI BAMBURAM
+    15,00 » est un versement sur le LIVRET A, pas sur le compte courant, et c'est l'erreur que j'ai moi-même
+    commise en analysant ces relevés.
+  - L'arithmétique de chaque compte est vérifiée à l'import — ancien solde plus mouvements égale nouveau
+    solde, par compte. Contrôle gratuit et sans appel, qui échoue bruyamment si la segmentation ou le
+    parsing dérape.
+  - Le Livret A n'est PAS alimenté seulement par saisie manuelle. Ces relevés fournissent 12 points de
+    solde et 45 mouvements, intérêts capitalisés au 31 décembre inclus. La saisie manuelle ne sert qu'entre
+    deux relevés.
+  - Les 12 relevés réels La Banque Postale servent de référence. Ils vivent hors du dépôt, et se lisent
+    par chemin absolu — /mnt/c/Users/djabi/Documents/relevé pdf/bp/ ATTENTION AU NOMMAGE, deux pièges
+    vérifiés le 2026-08-01 — le dossier s'écrit « relevé pdf », avec accent et avec une espace ; et les
+    fichiers BP n'ont AUCUNE EXTENSION, ils s'appellent releve_CCP0984209Z024_AAAAMMJJ. Les énumérer par
+    motif releve_* et non par *.pdf, sans quoi on n'en trouve aucun. Ce sont bien des PDF — vérifié, PDF
+    1.6, 4 pages, 100 objets /Font, couche texte présente, donc parsables sans OCR. Couverture — 08/07/2025
+    à 08/06/2026, un relevé par mois.
+  - NICKEL est le SECOND format de relevé à couvrir, pas une extension optionnelle. Nickel n'a AUCUN accès
+    API chez Enable Banking — vérifié le 2026-08-01, zéro occurrence sur les 2632 banques du catalogue
+    (P28) — donc le PDF est, avec la saisie manuelle, son seul canal. 9 relevés dans "/mnt/c/Users/djabi/Documents/relevé
+    pdf/nickel/", de 2025-09 à 2026-05, nommés AAAA-M-JJMMAARM40001128530.pdf. Vérifiés — PDF 1.4, 1 page,
+    couche texte présente, parsables sans OCR. Le dossier contient aussi des fichiers sans rapport (apk,
+    exe, zip, une convocation) — n'énumérer que le motif *RM*.pdf. Le projet antérieur /mnt/c/Users/djabi/Documents/releves-pdf
+    sert de référence de LOGIQUE de parsing, sans être appelé ni porté tel quel — le parsing est réécrit
+    en TypeScript. Il ne s'appelle PAS gestio-releves, contrairement à ce que ce plan indiquait.
+  - Importer deux fois le même relevé ne change pas le solde.
   validations:
-    - npm test
-    - Importer les 12 relevés réels de "/mnt/c/Users/djabi/Documents/relevé pdf/bp/"
-      (motif releve_*, sans extension) et comparer les totaux extraits aux soldes
-      de début et de fin imprimés sur les relevés.
+  - npm test
+  - Importer les 12 relevés réels de "/mnt/c/Users/djabi/Documents/relevé pdf/bp/" (motif releve_*, sans
+    extension) et comparer les totaux extraits aux soldes de début et de fin imprimés sur les relevés.
   hors_perimetre:
-    - OCR et PDF scannés.
-    - PDF protégés par mot de passe.
-
+  - OCR et PDF scannés.
+  - PDF protégés par mot de passe.
 T7:
-  objectif: >-
-    L'interface mobile et desktop : voir son solde disponible, sa fraîcheur, sa
-    répartition par compte et ses transactions.
-  probleme_resolu: >-
-    P1 (la Core Feature, pour sa partie visible) ;
-    P16 (mode hors connexion, imposé par la limite assumée du PC hôte).
-  projets: [gestio]
-  dependances: [T1]
-  parallelisable_avec: [T2, T3, T4, T5, T6]
+  objectif: 'L''interface mobile et desktop : voir son solde disponible, sa fraîcheur, sa répartition
+    par compte et ses transactions.'
+  probleme_resolu: P1 (la Core Feature, pour sa partie visible) ; P16 (mode hors connexion, imposé par
+    la limite assumée du PC hôte).
+  projets:
+  - gestio
+  dependances:
+  - T1
+  parallelisable_avec:
+  - T2
+  - T3
+  - T4
+  - T5
+  - T6
   criteres_acceptation:
-    - À l'ouverture, le solde agrégé s'affiche sans aucune action préalable,
-      accompagné de sa date de fraîcheur.
-    - La répartition par compte est atteignable en un geste, sans navigation.
-    - Hors connexion — cas courant lorsque le PC hôte est éteint — le dernier
-      solde connu s'affiche avec sa date ("solde au 30/07 à 18 h 12"), stocké
-      en IndexedDB. Jamais d'écran d'erreur nu.
-    - Les rapprochements marqués « à départager » sont atteignables et
-      arbitrables par l'utilisateur — c'est lui qui tranche, avec son relevé.
-      Tant qu'un doute n'est pas levé, il est visible ; le solde n'est jamais
-      présenté comme certain en le passant sous silence.
-    - Rien n'est jamais présenté comme un historique complet avant la date
-      d'horizon connu du compte. L'interface dit « connu depuis le JJ/MM », pas
-      « aucune transaction avant » — la différence n'est pas cosmétique — un
-      solde calculé sur un historique tronqué a l'air juste et ne l'est pas,
-      c'est le mode de panne que la Core Feature ne tolère pas.
-    - Aucun cas limite ne mène à une page blanche — consentement expiré, banque
-      indisponible, aucun compte connecté, trou d'historique — chacun mène à
-      une destination et à une action claires.
-    - La navigation suit la question de l'utilisateur (combien j'ai, où, quoi),
-      jamais l'architecture technique. Synchroniser et importer ne sont pas des
-      rubriques de navigation mais des actions situées là où le besoin apparaît.
-    - Premier lancement — l'écran d'accueil est le couloir d'onboarding qui mène
-      à la première valeur — voir son vrai solde — et non un écran vide.
-    - Chaque action clé produit un retour immédiat (comptes connectés, solde mis
-      à jour, transactions ajoutées et doublons ignorés).
-    - Layouts mobile et desktop différenciés par breakpoints, logique métier et
-      state partagés.
+  - À l'ouverture, le solde agrégé s'affiche sans aucune action préalable, accompagné de sa date de fraîcheur.
+  - La répartition suit les DEUX NIVEAUX — établissement, puis comptes. La Banque Postale montre son Compte
+    Courant, son Livret A et son Livret Jeune Swing ; Revolut montre son compte et ses pockets (P28).
+    Le solde d'un établissement affiché est la somme de ses comptes, jamais un chiffre stocké.
+  - La répartition par compte est atteignable en un geste, sans navigation. Ce n'est pas un raffinement
+    de l'agrégat — c'est la moitié de la réponse. Formulation de Lamoms le 2026-08-01 — savoir combien
+    il a lui dit combien il a dépensé, et surtout COMBIEN IL PEUT DÉPENSER ET OÙ. Un total sans sa ventilation
+    ne permet pas de décider d'une dépense (P29).
+  - Hors connexion — cas courant lorsque le PC hôte est éteint — le dernier solde connu s'affiche avec
+    sa date ("solde au 30/07 à 18 h 12"), stocké en IndexedDB. Jamais d'écran d'erreur nu.
+  - Les rapprochements marqués « à départager » sont atteignables et arbitrables par l'utilisateur — c'est
+    lui qui tranche, avec son relevé. Tant qu'un doute n'est pas levé, il est visible ; le solde n'est
+    jamais présenté comme certain en le passant sous silence.
+  - Rien n'est jamais présenté comme un historique complet avant la date d'horizon connu du compte. L'interface
+    dit « connu depuis le JJ/MM », pas « aucune transaction avant » — la différence n'est pas cosmétique
+    — un solde calculé sur un historique tronqué a l'air juste et ne l'est pas, c'est le mode de panne
+    que la Core Feature ne tolère pas.
+  - Aucun cas limite ne mène à une page blanche — consentement expiré, banque indisponible, aucun compte
+    connecté, trou d'historique — chacun mène à une destination et à une action claires.
+  - La navigation suit la question de l'utilisateur (combien j'ai, où, quoi), jamais l'architecture technique.
+    Synchroniser et importer ne sont pas des rubriques de navigation mais des actions situées là où le
+    besoin apparaît.
+  - Premier lancement — l'écran d'accueil est le couloir d'onboarding qui mène à la première valeur —
+    voir son vrai solde — et non un écran vide.
+  - Chaque action clé produit un retour immédiat (comptes connectés, solde mis à jour, transactions ajoutées
+    et doublons ignorés).
+  - Layouts mobile et desktop différenciés par breakpoints, logique métier et state partagés.
   validations:
-    - npm run typecheck
-    - npm test
-    - Parcourir les cas limites un par un et vérifier qu'aucun ne mène à une
-      page blanche.
+  - npm run typecheck
+  - npm test
+  - Parcourir les cas limites un par un et vérifier qu'aucun ne mène à une page blanche.
   hors_perimetre:
-    - Notifications, aucune au MVP.
-    - Catégories, budgets, prévisions, graphiques.
-    - Simulateur "et si je dépense X".
+  - Notifications, aucune au MVP.
+  - Catégories, budgets, prévisions, graphiques.
+  - Simulateur "et si je dépense X".
