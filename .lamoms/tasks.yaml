@@ -135,7 +135,14 @@ T2:
   criteres_acceptation:
   - Clé primaire (date ISO, montant en centimes), file FIFO par clé.
   - Le score de Jaccard sur les mots du libellé ne sert QUE de départage lorsque plusieurs candidats partagent
-    la même clé.
+    la même clé. UNE SEULE EXCEPTION, AJOUTÉE LE 2026-08-02 — quand les DEUX libellés sont présents et ne
+    partagent AUCUN mot après normalisation, il n'y a pas de rapprochement, quel que soit le nombre de
+    candidats. Ce n'est pas un seuil de similarité, interdit par le hors-périmètre — c'est le cas zéro,
+    binaire, un mot commun au moins ou aucun. Un libellé absent d'un côté ne déclenche rien, on ne peut
+    rien exiger de ce qui n'existe pas (cas Trade Republic, voir plus bas). CETTE EXCEPTION EST PORTÉE PAR
+    T8, PAS PAR L'ISSUE 8. Décision de Lamoms du 2026-08-02 — le défaut ne mord sur aucune donnée réelle
+    (mesuré, aucun rapprochement sous 0,5 de score), il n'est donc pas urgent et ne justifie pas de rouvrir
+    une issue relue et validée. Le code livré par l'issue 8 reste conforme au plan tel qu'il était écrit.
   - Le signe du montant vient de credit_debit_indicator (CRDT/DBIT), jamais déduit du libellé.
   - Rejoue le résultat de référence sur les données réelles du lab — 27 mouvements CSV contre 27 transactions
     API, 27 rapprochements, 0 orphelin de chaque côté.
@@ -162,6 +169,12 @@ T2:
   - npm test
   - Jeu de test constitué des fichiers réels de .lamoms/lab/agy/ (enable_banking_transactions_reelles.json
     et les deux CSV La Banque Postale).
+  - Rejeu réel, REPRODUCTIBLE — lancer depuis la racine `node_modules/.bin/tsx .lamoms/lab/agy/rejeu-t2.ts`
+    et vérifier 27 rapprochements, 0 orphelin et 0 à départager dans les deux ordres de canaux. AJOUTÉ LE
+    2026-08-02 — ce rejeu avait été fait deux fois à la main puis jeté, il ne survivait que dans un
+    commentaire de l'issue 8. Le script vit dans le lab, hors dépôt, parce qu'il lit des données bancaires
+    réelles qui ne doivent jamais être versionnées ; aucun test de src/ ne peut donc en dépendre, et c'est
+    pourquoi cette vérification reste manuelle. Variable GESTIO_DEDUP_MODULE pour viser un worktree.
   hors_perimetre:
   - Aucun seuil de similarité flou pour décider d'une fusion.
   - Aucune règle liée au contenu ou au commerçant.
@@ -528,17 +541,19 @@ T7:
   - Catégories, budgets, prévisions, graphiques.
   - Simulateur "et si je dépense X".
 T8:
-  objectif: Rendre fiables les deux mécanismes de T1 qui donnent une fausse impression de marcher —
-    la sauvegarde quotidienne et le certificat HTTPS local. Chacun paraît fonctionner et se dégrade
-    sans le dire.
-  probleme_resolu: Dette laissée par l'issue 7, close le 2026-08-02 et non rouverte. Le critère 8 de
+  objectif: Rendre fiables les trois mécanismes déjà livrés qui donnent une fausse impression de marcher —
+    la sauvegarde quotidienne, le certificat HTTPS local, et le rapprochement d'un candidat unique dans le
+    moteur de déduplication. Chacun paraît fonctionner et se dégrade sans le dire.
+  probleme_resolu: Dette laissée par des issues relues et validées, qu'on ne rouvre pas. Le critère 8 de
     T1 demandait une sauvegarde qui SE ROUVRE, preuve par lecture réelle ; seule la production du
-    fichier a été livrée. S'y ajoutent deux échecs muets constatés le 2026-08-02 en relisant le code —
-    une sauvegarde absente annoncée comme un succès, et un certificat expiré jamais remplacé.
+    fichier a été livrée. S'y ajoutent trois échecs muets constatés le 2026-08-02 en relisant le code —
+    une sauvegarde absente annoncée comme un succès, un certificat expiré jamais remplacé, et deux
+    dépenses distinctes fusionnées en une. Aucun n'est urgent, tous faussent en silence.
   projets:
   - gestio
   dependances:
   - T1
+  - T2
   parallelisable_avec:
   - T3
   - T4
@@ -562,15 +577,45 @@ T8:
   - Un test place un certificat DÉJÀ EXPIRÉ dans un répertoire temporaire et vérifie que
     localHttpsOptions() le remplace. Le cas de renouvellement est celui qu'on ne verra jamais venir
     autrement, puisqu'il ne se produit qu'une fois par an.
+  - UN CANDIDAT UNIQUE NE SUFFIT PAS À FUSIONNER. Dans src/deduplication.ts, quand candidates.length vaut
+    1, le rapprochement est fait sans jamais lire le libellé — le score de Jaccard est calculé puis jeté.
+    Deux dépenses réellement distinctes, même jour et même montant, une par canal, libellés sans aucun
+    rapport, fusionnent donc en silence, et le solde affiche un mouvement de moins EN AYANT L'AIR JUSTE.
+    RÈGLE — quand les DEUX libellés sont présents et ne partagent AUCUN mot après normalisation, il n'y a
+    pas de rapprochement, quel que soit le nombre de candidats. Un libellé absent d'un côté ne déclenche
+    rien, on ne peut rien exiger de ce qui n'existe pas (Trade Republic, P25). Ce n'est pas un seuil de
+    similarité — c'est le cas zéro, binaire.
+  - Un test couvre ce cas — deux mouvements du même jour et du même montant, libellés « CARTE X0486
+    RESTAURANT » d'un côté et « VIREMENT A MARIE » de l'autre, restent DEUX mouvements et sont marqués à
+    départager.
+  - NON-RÉGRESSION SUR LES DONNÉES RÉELLES — après le changement, le rejeu du lab rend toujours 27
+    rapprochements, 0 orphelin et 0 à départager dans les DEUX ordres de canaux. Mesuré le 2026-08-02
+    AVANT le changement — aucun des 27 rapprochements ne descend sous 0,5 de score, la nouvelle règle ne
+    peut donc en casser aucun. Si un rapprochement disparaît, c'est le changement qui est faux, pas la
+    mesure.
+  - LA FAUTE EST DANS LE PLAN, PAS DANS LE CODE LIVRÉ. Le critère de T2 réservait Jaccard au départage
+    entre plusieurs candidats et Codex l'a suivi à la lettre. L'issue 8 n'est ni rouverte ni blâmée ;
+    seul son verdict reste acquis. À noter pour ne pas le redécouvrir — le défaut ne mord sur AUCUNE
+    donnée réelle actuelle, c'est ce qui a permis de le différer ici plutôt que de le traiter à chaud.
   validations:
   - npm test
   - Lancer scripts/backup.sh sans GESTIO_DB_KEY et vérifier que le code de sortie n'est pas 0.
+  - Rejeu réel — node_modules/.bin/tsx .lamoms/lab/agy/rejeu-t2.ts, code de sortie 0 attendu.
   fichiers:
   - scripts/backup.sh
   - src/tls.ts
+  - src/deduplication.ts
+  - src/deduplication.test.ts
   - src/backup.test.ts (à créer)
   - src/tls.test.ts (à créer)
   hors_perimetre:
   - Ne pas toucher au schéma de rotation sur 30 jours, ni à la planification cron.
   - Ne pas traiter la sauvegarde vers un support secondaire — c'est P37, après le MVP.
   - Ne pas modifier src/db.ts ni le chiffrement de la base ; T3 y travaille en parallèle.
+  - Ne pas toucher à src/server.ts, à l'empreinte d'identité ni à normalizeTransactionLabel — l'empreinte
+    des transactions déjà enregistrées ne doit pas bouger.
+  - Aucun seuil de similarité chiffré, aucune règle liée au commerçant — hors périmètre de T2, inchangé.
+  - PRÉREQUIS, PAS DU TRAVAIL DE T8 — la branche issue-8 doit être fusionnée dans master avant que T8
+    commence, sans quoi src/deduplication.ts n'y existe pas. Constaté le 2026-08-02 — le commit de fusion
+    d0028ba annonce « main (T2+T3) » alors que seul T3 y est ; git merge-base --is-ancestor répond NON
+    pour le commit de l'issue 8. Fusion due de toute façon, elle n'a rien à voir avec cette tâche.
