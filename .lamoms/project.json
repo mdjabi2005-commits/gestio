@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "projectId": "gestio",
+  "objective": "Savoir la situation financière à tout moment pour gérer les imprévus",
+  "targetUsers": "1 utilisateur auto-hébergé",
+  "features": [
+    "tréso disponible agrégée + par compte",
+    "synchro bancaire Enable Banking (43 transactions réelles validées)",
+    "import CSV/PDF (état des lieux + bilan mensuel)",
+    "saisie manuelle fallback",
+    "UI différente mobile/desktop sur même frontend"
+  ],
+  "stack": "Fullstack TypeScript (Node.js/Fastify + React Vite PWA + Drizzle + better-sqlite3-multiple-ciphers)",
+  "infrastructure": {
+    "hebergement": "Raspberry Pi (always-on, cible finale) → PC hôte (phase MVP)",
+    "acces_mobile": "Tailscale (WireGuard mesh VPN, 0 port ouvert, 0€/mois, E2EE)",
+    "redirect_url_enablebanking": "https://<machine>.tailnet.ts.net (Tailscale Funnel, certificat auto Let's Encrypt)",
+    "sauvegarde": "sqlcipher_export() en cron journalier, rotation 30 jours (PAS sqlite3 .backup : impossible sur base SQLCipher — voir P20)"
+  },
+  "constraints": [
+    "frontend et backend unifiés, UI différenciée mobile/desktop depuis une base de code unique",
+    "Enable Banking — trois durées distinctes. (1) Historique : 90 jours GLISSANTS chez La Banque Postale, MESURÉ TROIS FOIS le 2026-08-01 — une aspiration hors fenêtre, une trente secondes après une authentification forte neuve, une deux heures plus tard ; les trois rendent le même jeu de 43 transactions, identique ligne à ligne, remontant au 2026-05-04. La fenêtre d'environ une heure annoncée par la documentation n'apporte donc RIEN chez cette banque (P23), et le plancher est une troncature, pas l'âge du compte. Ce n'est PAS une constante Enable Banking — Revolut rend 3727 jours, Trade Republic 90 ; toute banque exige de re-constater sa fenêtre. CONSÉQUENCE DATÉE — le plancher avance d'un jour par jour et les relevés PDF s'arrêtent au 2026-06-08 ; sans téléchargement des relevés de juin à août 2026, un trou définitif s'ouvre le 2026-09-06 (P35). (2) Consentement : durée demandée dans valid_until du POST /auth, PLAFONNÉE par maximum_consent_validity (en secondes) renvoyé par GET /aspsps pour la banque visée — 180 jours pour la majorité des ASPSP, plafond issu de l'amendement EBA RTS de 2022 (renouvellement de SCA porté de 90 à 180 jours pour l'accès AIS) ; la valeur accordée se lit dans access.valid_until de GET /sessions/{id}, la session réelle porte 2027-01-01. Les 180 jours sont donc un vrai plafond par banque, jamais une durée à coder en dur. (3) Jeton d'accès ASPSP : courte durée, rafraîchi automatiquement par Enable Banking, rien à gérer côté client. Libellé corrigé le 2026-08-01, voir P2 et P22",
+    "fallback CSV puis PDF si compte non disponible sur API",
+    "1 utilisateur, mot de passe local, maintenance minimale",
+    "backend et données sur RPi : portabilité PC→RPi sans réécriture"
+  ],
+  "approvedDecisions": [
+    "Problème : pas de vue fiable sur la tréso disponible",
+    "Core Feature : affichage tréso disponible agrégée + par compte",
+    "Périmètre des comptes, tranché par Lamoms le 2026-08-01 (P28) — SIX comptes, tous utilisés, tous dans l'agrégat. La Banque Postale CCP, Livret A, Livret Jeune Swing, Revolut, Trade Republic, Nickel. MODÈLE À DEUX NIVEAUX — un ÉTABLISSEMENT groupe des COMPTES, et seul un compte porte un solde ; l'établissement n'a pas de solde stocké, il affiche la somme des siens. Livret A et Livret Jeune sont des comptes de l'établissement La Banque Postale, pas des attributs du CCP. Remplace « bancaire + Livret A », qui rendait l'agrégat faux par construction.",
+    "État des lieux par import CSV/PDF complet",
+    "Fonctionnement mensuel par import CSV/PDF + synchro Enable Banking",
+    "Backend unique, frontend partagé, UI différente mobile/desktop",
+    "Stack technique — Fullstack TypeScript (Fastify + React Vite PWA + Drizzle + SQLCipher)",
+    "Accès réseau — Tailscale. LIMITE ASSUMÉE EN PHASE MVP, tranchée par Lamoms le 2026-07-31 (P16) — le MVP tourne sur le PC hôte, donc le mobile ne fonctionne QUE lorsque le PC est allumé. La promesse « savoir sa situation à tout moment » n'est pas tenue sur mobile hors domicile en phase 1, et le Verdict doit juger sur ce périmètre annoncé. Le mode hors connexion n'est donc PAS sans objet — il affiche le dernier solde connu avec sa date de fraîcheur. Le Raspberry Pi lèvera la limite sans réécriture.",
+    "Chiffrement de TOUTE la base au repos : better-sqlite3-multiple-ciphers (SQLCipher AES-256), clé dans .env chmod 600 — jetons Enable Banking inclus, ainsi que comptes, soldes et transactions. Libellé corrigé le 2026-08-01 : il disait 'chiffrement tokens', périmètre du rapport de faisabilité, alors que PRAGMA key chiffre le fichier entier (voir P21)",
+    "SCA Enable Banking mobile : pattern Out-of-Band Auth + polling (compatible iOS et Android)",
+    "Moteur de déduplication — éprouvé sur les 43 transactions réelles de La Banque Postale, PAS universel. Deux réserves à ne pas perdre. (1) Le « 27/27, Jaccard 98,6 % » du rapport de faisabilité comparait un jeu fabriqué à partir du PDF, pas une lecture d'API (P11) ; la vraie réconciliation croisée date du 2026-07-31. (2) Trade Republic ne fournit AUCUN libellé — 4 champs seulement — donc l'arbitrage par Jaccard y est structurellement inapplicable (P25). L'identité d'une transaction repose sur une empreinte de contenu, jamais sur entry_reference, qui est synthétique chez LBP (P24)."
+  ],
+  "abandonedDecisions": [
+    "Cloudflare Tunnel : exclu (terminaison TLS côté Cloudflare = données bancaires déchiffrées par tiers)",
+    "Offline PWA complexe (IndexedDB + Service Worker en stratégie avancée) — écarté pour sa complexité, PAS parce qu'il serait sans objet. Correction du 2026-08-01 — la formulation précédente disait « sans objet si RPi always-on », or le RPi n'existe pas encore et le MVP tourne sur le PC (P16). Un mode hors connexion minimal reste au périmètre (T7) — dernier solde connu et date de fraîcheur, jamais un chiffre périmé présenté comme actuel."
+  ],
+  "qualityCriteria": [
+    "Le besoin est couvert",
+    "Les validations du projet passent",
+    "La livraison est relue avant le verdict"
+  ],
+  "cycleId": "",
+  "updatedAt": "2026-08-01T22:15:00.000Z"
+}

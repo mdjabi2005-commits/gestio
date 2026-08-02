@@ -1,8 +1,29 @@
+# ---- Code (issue-7 / main) ----
 node_modules/
 dist/
 data/
 backups/
 .local/
-.env
 .graphify/
-.lamoms/
+
+# ---- Secrets & config locale ----
+.env
+.env.*
+
+# Worktrees git imbriqués dans le dépôt — jamais versionnés (ce sont des
+# copies de travail, pas du contenu de projet).
+.worktrees/
+
+# Lab AGY — JAMAIS versionné. Contient des données bancaires réelles (IBAN,
+# nom, 43 transactions authentiques) et .session_cache.json, qui porte une
+# session Enable Banking VIVANTE donnant accès en lecture au compte réel
+# (valid_until = 2027-01-01). Le dossier reste sur la machine locale ; les
+# agents y accèdent par chemin absolu, ils n'en copient rien dans le dépôt.
+.lamoms/lab/
+
+# Etat local Lamoms, propre à chaque workspace/worktree
+.lamoms/journey.json
+.lamoms/usage.json
+.lamoms/handoff.json
+.lamoms/task-state.json
+.lamoms/waiting.json
