@@ -7,6 +7,7 @@ import { accounts, accountTypes, institutions, transactions, transactionSources,
 import { openDatabase, type AppDatabase } from "./db.js";
 import { deduplicateTransactions, normalizeTransactionLabel } from "./deduplication.js";
 import { CsvFormatError, parseBankCsv } from "./csv-import.js";
+import { parsePdfStatement, PdfStatementError } from "./pdf-import.js";
 import {
   EnableBankingError,
   enableBankingFromEnvironment,
@@ -267,6 +268,112 @@ export function buildApp(options: BuildAppOptions = {}) {
       imported,
       duplicates: parsed.transactions.length - imported,
       ignored: parsed.ignored
+    });
+  });
+
+  app.post("/imports/pdf", async (request, reply) => {
+    const data = objectBody(request.body);
+    const pdf = requiredBase64(data.pdfBase64, "pdfBase64");
+    const mapping = objectBody(data.accountIds);
+    let statement;
+    try {
+      statement = await parsePdfStatement(pdf);
+    } catch (error) {
+      if (error instanceof PdfStatementError) {
+        return reply.code(400).send({ error: "pdf_format_unrecognized", message: error.message });
+      }
+      throw error;
+    }
+
+    const ids = statement.accounts.map(account => mapping[account.key]);
+    if (ids.some(id => id === undefined)) {
+      badRequest(`accountIds must map every statement account: ${statement.accounts.map(account => account.key).join(", ")}`);
+    }
+    const accountIds = ids.map((id, index) => requiredInteger(id, `accountIds.${statement.accounts[index].key}`));
+    if (new Set(accountIds).size !== accountIds.length) {
+      badRequest("each statement account must map to a different accountId");
+    }
+
+    let imported = 0;
+    let balancesImported = 0;
+    let reviewNeeded = 0;
+    database.sqlite.transaction(() => {
+      for (const [index, statementAccount] of statement.accounts.entries()) {
+        const accountId = accountIds[index];
+        if (!database.orm.select({ id: accounts.id }).from(accounts).where(eq(accounts.id, accountId)).get()) {
+          badRequest(`accountId mapped from ${statementAccount.key} does not exist`);
+        }
+
+        // ponytail: full account scan is enough for one user; filter by statement period if history becomes large.
+        const existing = database.sqlite.prepare(`
+          SELECT transaction_date AS transactionDate, amount_cents AS amountCents, label
+          FROM transactions WHERE account_id = ? ORDER BY id
+        `).all(accountId) as Array<{ transactionDate: string; amountCents: number; label: string }>;
+        const occurrences = new Map<string, number>();
+        const candidates = statementAccount.transactions.map(transaction => {
+          const input = readTransactionInput({ ...transaction, accountId, source: "PDF_RELEVE" });
+          const occurrence = occurrences.get(input.fingerprint) ?? 0;
+          occurrences.set(input.fingerprint, occurrence + 1);
+          return { ...input, transactionAt: null, occurrence };
+        });
+        const candidateSet = new Set(candidates);
+        const deduplicated = deduplicateTransactions([existing, candidates]);
+        const pending = deduplicated.transactions.filter(
+          (transaction): transaction is typeof candidates[number] => candidateSet.has(transaction as typeof candidates[number])
+        );
+        const review = new Set(deduplicated.toReview);
+        const insert = database.sqlite.prepare(`
+          INSERT OR IGNORE INTO transactions
+            (account_id, transaction_date, transaction_at, label, amount_cents, source, fingerprint, occurrence, needs_review)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        for (const transaction of pending) {
+          imported += insert.run(
+            transaction.accountId,
+            transaction.transactionDate,
+            transaction.transactionAt,
+            transaction.label,
+            transaction.amountCents,
+            transaction.source,
+            transaction.fingerprint,
+            transaction.occurrence,
+            review.has(transaction) ? 1 : 0
+          ).changes;
+        }
+        reviewNeeded += pending.filter(transaction => review.has(transaction)).length;
+
+        database.sqlite.prepare(`
+          UPDATE accounts
+          SET known_since = CASE
+            WHEN known_since IS NULL OR ? < known_since THEN ?
+            ELSE known_since
+          END
+          WHERE id = ?
+        `).run(statement.periodStart, statement.periodStart, accountId);
+        balancesImported += database.sqlite.prepare(`
+          UPDATE accounts
+          SET balance_cents = ?, currency = 'EUR', last_synced_at = ?
+          WHERE id = ? AND external_hash IS NULL
+            AND (last_synced_at IS NULL OR substr(last_synced_at, 1, 10) < ?
+              OR (substr(last_synced_at, 1, 10) = ? AND balance_cents IS NOT ?))
+        `).run(
+          statementAccount.closingBalanceCents,
+          `${statementAccount.balanceDate}T23:59:59.999Z`,
+          accountId,
+          statementAccount.balanceDate,
+          statementAccount.balanceDate,
+          statementAccount.closingBalanceCents
+        ).changes;
+      }
+    })();
+
+    const total = statement.accounts.reduce((count, account) => count + account.transactions.length, 0);
+    return reply.code(200).send({
+      institution: statement.institution,
+      imported,
+      duplicates: total - imported,
+      balancesImported,
+      reviewNeeded
     });
   });
 
