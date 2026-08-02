@@ -5,6 +5,7 @@ import Fastify, { type FastifyHttpsOptions, type FastifyServerOptions } from "fa
 import { eq } from "drizzle-orm";
 import { accounts, accountTypes, transactions, transactionSources, type AccountType } from "./schema.js";
 import { openDatabase, type AppDatabase } from "./db.js";
+import { normalizeTransactionLabel } from "./deduplication.js";
 
 type BuildAppOptions = {
   database?: AppDatabase;
@@ -234,19 +235,8 @@ function hashFingerprint(input: {
   amountCents: number;
 }) {
   return createHash("sha256")
-    .update(`${input.accountId}\0${input.transactionDate}\0${input.amountCents}\0${normalizeLabel(input.label)}`)
+    .update(`${input.accountId}\0${input.transactionDate}\0${input.amountCents}\0${normalizeTransactionLabel(input.label)}`)
     .digest("hex");
-}
-
-function normalizeLabel(label: string) {
-  return label
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase()
-    .replace(/\bdefault\b/g, " ")
-    .replace(/[^\p{Letter}\p{Number}]+/gu, " ")
-    .trim()
-    .replace(/\s+/g, " ");
 }
 
 function badRequest(message: string): never {
