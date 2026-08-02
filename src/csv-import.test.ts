@@ -1,0 +1,142 @@
+import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import test from "node:test";
+import { openDatabase } from "./db.js";
+import { buildApp } from "./server.js";
+
+test("imports LBP and Revolut CSV atomically without cross-channel duplicates", async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "gestio-csv-"));
+  const database = openDatabase({ path: join(dir, "gestio.db"), key: "test-db-key-32-random-characters" });
+  const app = buildApp({ database, logger: false });
+  t.after(async () => {
+    await app.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  const setup = await app.inject({ method: "POST", url: "/auth/setup", payload: { password: "correct horse battery staple" } });
+  const cookie = (setup.headers["set-cookie"] as string).split(";", 1)[0];
+  const accountResponse = await app.inject({
+    method: "POST", url: "/accounts", headers: { cookie }, payload: { name: "Compte test", type: "BANK" }
+  });
+  const accountId = (accountResponse.json() as { id: number }).id;
+  await app.inject({
+    method: "POST",
+    url: "/transactions",
+    headers: { cookie },
+    payload: { accountId, transactionDate: "2026-08-01", label: "Virement référence", amountCents: 399, source: "ENABLE_BANKING" }
+  });
+
+  const invalidLbp = lbpCsv([
+    '01/08/2026;"Nouvelle opération";5,00',
+    '02/08/2026;"Montant cassé";invalide'
+  ]);
+  const invalidResponse = await importCsv(app, cookie, accountId, "LA_BANQUE_POSTALE", invalidLbp);
+  assert.equal(invalidResponse.statusCode, 400);
+  assert.match((invalidResponse.json() as { message: string }).message, /séparateur décimal/);
+  assert.equal(transactionCount(database), 1);
+
+  const lbp = lbpCsv([
+    '01/08/2026;"VIREMENT DEFAULT RÉFÉRENCE ";3,99',
+    '02/08/2026;"Café été ";-10,00'
+  ]);
+  const firstLbp = await importCsv(app, cookie, accountId, "LA_BANQUE_POSTALE", lbp);
+  assert.deepEqual(firstLbp.json(), { read: 2, imported: 1, duplicates: 1, ignored: 0 });
+  const secondLbp = await importCsv(app, cookie, accountId, "LA_BANQUE_POSTALE", lbp);
+  assert.deepEqual(secondLbp.json(), { read: 2, imported: 0, duplicates: 2, ignored: 0 });
+
+  const revolut = Buffer.from(
+    "Type,Produit,Date de début,Date de fin,Description,Montant,Frais,Devise,État,Solde\n" +
+    "Virement,Épargne,2026-08-03 12:34:56,2026-08-03 12:35:00,Crédit hôtel,20.00,0.00,EUR,TERMINÉ,20.00\n" +
+    "Virement,Épargne,2026-08-03 13:34:56,2026-08-03 13:35:00,Crédit hôtel,20.00,0.00,EUR,TERMINÉ,40.00\n" +
+    "Paiement par carte,Épargne,2026-08-04 10:00:00,,Opération renvoyée,-2.00,0.00,EUR,RENVOYÉ,\n",
+    "utf8"
+  );
+  const revolutResponse = await importCsv(app, cookie, accountId, "REVOLUT", revolut);
+  assert.deepEqual(revolutResponse.json(), { read: 2, imported: 2, duplicates: 0, ignored: 1 });
+
+  const rows = database.sqlite.prepare(`
+    SELECT transaction_at AS transactionAt, label FROM transactions ORDER BY transaction_date
+  `).all() as Array<{ transactionAt: string | null; label: string }>;
+  assert.deepEqual(rows, [
+    { transactionAt: null, label: "Virement référence" },
+    { transactionAt: null, label: "Café été" },
+    { transactionAt: "2026-08-03T12:34:56", label: "Crédit hôtel" },
+    { transactionAt: "2026-08-03T13:34:56", label: "Crédit hôtel" }
+  ]);
+  const balance = await app.inject({ method: "GET", url: "/balance", headers: { cookie } });
+  assert.equal((balance.json() as { totalCents: number }).totalCents, 3_399);
+
+  const unknown = await importCsv(app, cookie, accountId, "BANQUE_INCONNUE", Buffer.from("x"));
+  assert.equal(unknown.statusCode, 400);
+  assert.match((unknown.json() as { message: string }).message, /Banque .* non prise en charge/);
+  assert.equal(transactionCount(database), 4);
+});
+
+test("migrates existing fingerprints to FIFO occurrences without losing data", () => {
+  const dir = mkdtempSync(join(tmpdir(), "gestio-csv-migration-"));
+  const path = join(dir, "gestio.db");
+  const key = "test-db-key-32-random-characters";
+  const previous = openDatabase({ path, key });
+  previous.sqlite.exec(`
+    INSERT INTO accounts (name, type) VALUES ('Compte existant', 'BANK');
+    INSERT INTO transactions
+      (account_id, transaction_date, label, amount_cents, source, fingerprint)
+    VALUES (1, '2026-08-01', 'Existant', 100, 'MANUEL', 'same-fingerprint');
+    DROP INDEX transactions_fingerprint_occurrence_unique_idx;
+    ALTER TABLE transactions DROP COLUMN transaction_at;
+    ALTER TABLE transactions DROP COLUMN occurrence;
+    CREATE UNIQUE INDEX transactions_fingerprint_unique_idx ON transactions(fingerprint);
+  `);
+  previous.close();
+
+  const migrated = openDatabase({ path, key });
+  try {
+    const columns = migrated.sqlite.pragma("table_info(transactions)") as Array<{ name: string }>;
+    assert.equal(columns.some(column => column.name === "transaction_at"), true);
+    assert.equal(columns.some(column => column.name === "occurrence"), true);
+    migrated.sqlite.prepare(`
+      INSERT INTO transactions
+        (account_id, transaction_date, label, amount_cents, source, fingerprint, occurrence)
+      VALUES (1, '2026-08-01', 'Existant', 100, 'CSV_IMPORT', 'same-fingerprint', 1)
+    `).run();
+    assert.equal(transactionCount(migrated), 2);
+  } finally {
+    migrated.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+function lbpCsv(rows: string[]) {
+  return Buffer.from([
+    "Numéro Compte   ;0000",
+    "Type         ;Compte courant",
+    "Compte tenu en  ;EUR",
+    "Date            ;04/08/2026",
+    "Solde (EUROS)   ;13,99",
+    "",
+    "Date;Libellé;Montant(EUROS)",
+    ...rows,
+    ""
+  ].join("\r\n"), "latin1");
+}
+
+function importCsv(
+  app: ReturnType<typeof buildApp>,
+  cookie: string,
+  accountId: number,
+  bank: string,
+  contents: Buffer
+) {
+  return app.inject({
+    method: "POST",
+    url: "/imports/csv",
+    headers: { cookie },
+    payload: { accountId, bank, contentBase64: contents.toString("base64") }
+  });
+}
+
+function transactionCount(database: ReturnType<typeof openDatabase>) {
+  return database.sqlite.prepare("SELECT COUNT(*) FROM transactions").pluck().get();
+}
