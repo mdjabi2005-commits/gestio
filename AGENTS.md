@@ -109,7 +109,7 @@ AGY : chercher les faits et les options avec leurs sources | modifie : uniquemen
 
 Claude : analyser les problèmes, conséquences et risques avant le PRD | modifie : PRD et tâches dans le parcours usine ; l'exception directe passe par une action explicite de Lamoms | produit : brief de problèmes, impacts, risques, critères et PRD | précédent : AGY ou Hermès | suivant : Codex, Copilot si nécessaire | limites : ne code pas, ne choisit pas seul la valeur produit et ne masque pas les problèmes non résolus.
 
-Copilot : préparer le git-ops puis relire la livraison | modifie : branches, worktrees et intégration selon l'étape ; pas le périmètre fonctionnel de Codex | produit : issues, worktrees ou rapport de review | précédent : Claude ou Codex | suivant : Codex ou Hermès | limites : ne réécrit pas la tâche pour contourner un verdict ROUGE.
+Copilot : préparer le git-ops puis relire la livraison | modifie : branches, worktrees et intégration selon l'étape ; pas le périmètre fonctionnel de Codex | produit : issues, worktrees ou rapport de review | précédent : Claude ou Codex | suivant : Codex ou Hermès | limites : ne réécrit pas la tâche pour contourner un verdict ROUGE ; fait respecter les garde-fous d'intégration en comparant systématiquement la livraison au main courant et en signalant toute collision d'intégration.
 
 Codex : implémenter l'issue approuvée dans son worktree | modifie : le code du périmètre de l'issue uniquement | produit : code et validations exécutées | précédent : Claude ou Copilot | suivant : Copilot ou Hermès | limites : ne commit, ne push ni ne fusionne pendant la phase code.
 
@@ -117,3 +117,13 @@ Codex : implémenter l'issue approuvée dans son worktree | modifie : le code du
 ```
 Hermès → AGY → Claude → Codex → Copilot (si nécessaire) → Hermès-juge
 ```
+
+## Garde-fous d'intégration (actés le 2026-08-02 après la review ROUGE de l'issue #12)
+
+Les livraisons parallèles ne se voient pas : T6 et T5 ont résolu le même problème (deux transactions identiques) sous deux noms (`fingerprint_occurrence` vs `occurrence`) parce que chacune travaillait sur un socle différent. Aucun graphe initial ne peut prévoir ces collisions avant le code — la review de diff contre `main` à jour est le filet obligatoire, et deux règles complètent le graphe :
+
+4. **Avant de lancer une issue, recalculer ses dépendances à partir de `main` et des acquis consignés**, pas uniquement du graphe créé au début du projet.
+5. **Avant de coder, vérifier que le worktree part du dernier `origin/main`.** Les tâches touchant les mêmes tables ou invariants doivent être séquencées, sauf interface commune explicitement actée.
+
+Après chaque livraison relue (VERT ou ROUGE), les acquis empiriques sont consignés au graphe : choix de schéma actés, colonnes/index existants, dépendances de fait découvertes entre tâches, pièges de nommage. Toute issue lancée ensuite lit ces acquis avant de coder — on réutilise un mécanisme consigné, on n'en invente pas un parallèle.
+
