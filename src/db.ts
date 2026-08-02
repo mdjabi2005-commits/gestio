@@ -43,10 +43,25 @@ export function openDatabase(options: OpenDatabaseOptions = {}): AppDatabase {
 
 function migrate(sqlite: RawDatabase) {
   sqlite.exec(`
-    CREATE TABLE IF NOT EXISTS accounts (
+    CREATE TABLE IF NOT EXISTS institutions (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
+      country TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(name, country)
+    );
+
+    CREATE TABLE IF NOT EXISTS accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      institution_id INTEGER REFERENCES institutions(id),
+      name TEXT NOT NULL,
       type TEXT NOT NULL CHECK (type IN ('BANK', 'LIVRET_A', 'OTHER')),
+      external_uid TEXT,
+      external_hash TEXT,
+      balance_cents INTEGER,
+      currency TEXT,
+      last_synced_at TEXT,
+      known_since TEXT,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -58,7 +73,22 @@ function migrate(sqlite: RawDatabase) {
       amount_cents INTEGER NOT NULL,
       source TEXT NOT NULL CHECK (source IN ('MANUEL', 'ENABLE_BANKING', 'CSV_IMPORT', 'PDF_RELEVE')),
       fingerprint TEXT NOT NULL,
+      external_reference TEXT,
+      needs_review INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE TABLE IF NOT EXISTS bank_connections (
+      authorization_id TEXT PRIMARY KEY,
+      institution_id INTEGER NOT NULL REFERENCES institutions(id),
+      state TEXT NOT NULL UNIQUE,
+      session_id TEXT,
+      consent_valid_until TEXT,
+      status TEXT NOT NULL,
+      last_sync_at TEXT,
+      last_sync_error TEXT,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
     CREATE TABLE IF NOT EXISTS local_auth (
@@ -80,7 +110,35 @@ function migrate(sqlite: RawDatabase) {
     );
 
     CREATE INDEX IF NOT EXISTS transactions_account_id_idx ON transactions(account_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS institutions_name_country_unique_idx ON institutions(name, country);
     DROP INDEX IF EXISTS transactions_fingerprint_idx;
     CREATE UNIQUE INDEX IF NOT EXISTS transactions_fingerprint_unique_idx ON transactions(fingerprint);
   `);
+
+  addColumn(sqlite, "accounts", "institution_id", "INTEGER REFERENCES institutions(id)");
+  addColumn(sqlite, "accounts", "external_uid", "TEXT");
+  addColumn(sqlite, "accounts", "external_hash", "TEXT");
+  addColumn(sqlite, "accounts", "balance_cents", "INTEGER");
+  addColumn(sqlite, "accounts", "currency", "TEXT");
+  addColumn(sqlite, "accounts", "last_synced_at", "TEXT");
+  addColumn(sqlite, "accounts", "known_since", "TEXT");
+  addColumn(sqlite, "transactions", "external_reference", "TEXT");
+  addColumn(sqlite, "transactions", "needs_review", "INTEGER NOT NULL DEFAULT 0");
+  sqlite.exec("CREATE UNIQUE INDEX IF NOT EXISTS accounts_external_hash_unique_idx ON accounts(external_hash)");
+
+  if (sqlite.prepare("SELECT 1 FROM accounts WHERE institution_id IS NULL LIMIT 1").get()) {
+    sqlite.prepare("INSERT OR IGNORE INTO institutions (name, country) VALUES ('Comptes manuels', 'XX')").run();
+    sqlite.prepare(`
+      UPDATE accounts
+      SET institution_id = (SELECT id FROM institutions WHERE name = 'Comptes manuels' AND country = 'XX')
+      WHERE institution_id IS NULL
+    `).run();
+  }
+}
+
+function addColumn(sqlite: RawDatabase, table: string, column: string, definition: string) {
+  const columns = sqlite.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+  if (!columns.some(candidate => candidate.name === column)) {
+    sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  }
 }

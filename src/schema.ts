@@ -7,12 +7,30 @@ export const transactionSources = ["MANUEL", "ENABLE_BANKING", "CSV_IMPORT", "PD
 export type AccountType = (typeof accountTypes)[number];
 export type TransactionSource = (typeof transactionSources)[number];
 
-export const accounts = sqliteTable("accounts", {
+export const institutions = sqliteTable("institutions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
-  type: text("type", { enum: accountTypes }).notNull(),
+  country: text("country").notNull(),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
-});
+}, (table) => [
+  uniqueIndex("institutions_name_country_unique_idx").on(table.name, table.country)
+]);
+
+export const accounts = sqliteTable("accounts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  institutionId: integer("institution_id").references(() => institutions.id),
+  name: text("name").notNull(),
+  type: text("type", { enum: accountTypes }).notNull(),
+  externalUid: text("external_uid"),
+  externalHash: text("external_hash"),
+  balanceCents: integer("balance_cents"),
+  currency: text("currency"),
+  lastSyncedAt: text("last_synced_at"),
+  knownSince: text("known_since"),
+  createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
+}, (table) => [
+  uniqueIndex("accounts_external_hash_unique_idx").on(table.externalHash)
+]);
 
 export const transactions = sqliteTable("transactions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -22,6 +40,8 @@ export const transactions = sqliteTable("transactions", {
   amountCents: integer("amount_cents").notNull(),
   source: text("source", { enum: transactionSources }).notNull(),
   fingerprint: text("fingerprint").notNull(),
+  externalReference: text("external_reference"),
+  needsReview: integer("needs_review", { mode: "boolean" }).notNull().default(false),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
 }, (table) => [
   uniqueIndex("transactions_fingerprint_unique_idx").on(table.fingerprint)
