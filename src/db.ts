@@ -62,6 +62,7 @@ function migrate(sqlite: RawDatabase) {
     );
 
     CREATE INDEX IF NOT EXISTS transactions_account_id_idx ON transactions(account_id);
-    CREATE INDEX IF NOT EXISTS transactions_fingerprint_idx ON transactions(fingerprint);
+    DROP INDEX IF EXISTS transactions_fingerprint_idx;
+    CREATE UNIQUE INDEX IF NOT EXISTS transactions_fingerprint_unique_idx ON transactions(fingerprint);
   `);
 }

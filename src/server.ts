@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { Server as HttpsServer, ServerOptions as HttpsServerOptions } from "node:https";
 import Fastify, { type FastifyHttpsOptions, type FastifyServerOptions } from "fastify";
 import { eq } from "drizzle-orm";
-import { accounts, accountTypes, transactions, transactionSources, type AccountType, type TransactionSource } from "./schema.js";
+import { accounts, accountTypes, transactions, transactionSources, type AccountType } from "./schema.js";
 import { openDatabase, type AppDatabase } from "./db.js";
 
 type BuildAppOptions = {
@@ -42,8 +42,15 @@ export function buildApp(options: BuildAppOptions = {}) {
       return reply.code(404).send({ error: "account_not_found" });
     }
 
-    const transaction = database.orm.insert(transactions).values(input).returning().get();
-    return reply.code(201).send(transaction);
+    const inserted = database.orm.insert(transactions)
+      .values(input)
+      .onConflictDoNothing({ target: transactions.fingerprint })
+      .returning()
+      .get();
+    const transaction = inserted ?? database.orm.select().from(transactions)
+      .where(eq(transactions.fingerprint, input.fingerprint))
+      .get();
+    return reply.code(inserted ? 201 : 200).send(transaction);
   });
 
   app.get("/balance", async () => {
@@ -89,9 +96,7 @@ function readTransactionInput(body: unknown) {
   const label = requiredString(data.label, "label");
   const amountCents = requiredInteger(data.amountCents, "amountCents");
   const source = oneOf(data.source ?? "MANUEL", transactionSources, "source");
-  const fingerprint = typeof data.fingerprint === "string" && data.fingerprint.trim()
-    ? data.fingerprint.trim()
-    : hashFingerprint({ accountId, transactionDate, label, amountCents, source });
+  const fingerprint = hashFingerprint({ accountId, transactionDate, label, amountCents });
 
   return { accountId, transactionDate, label, amountCents, source, fingerprint };
 }
@@ -137,11 +142,21 @@ function hashFingerprint(input: {
   transactionDate: string;
   label: string;
   amountCents: number;
-  source: TransactionSource;
 }) {
   return createHash("sha256")
-    .update(`${input.source}\0${input.accountId}\0${input.transactionDate}\0${input.amountCents}\0${input.label}`)
+    .update(`${input.accountId}\0${input.transactionDate}\0${input.amountCents}\0${normalizeLabel(input.label)}`)
     .digest("hex");
+}
+
+function normalizeLabel(label: string) {
+  return label
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/\bdefault\b/g, " ")
+    .replace(/[^\p{Letter}\p{Number}]+/gu, " ")
+    .trim()
+    .replace(/\s+/g, " ");
 }
 
 function badRequest(message: string): never {

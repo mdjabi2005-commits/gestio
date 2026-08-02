@@ -24,18 +24,39 @@ test("creates an account, records transactions, and returns exact balances", asy
   assert.equal(accountResponse.statusCode, 201);
   const account = accountResponse.json() as { id: number };
 
+  const createdTransactions: Array<{ id: number; source: string; fingerprint: string; amountCents: number }> = [];
   for (const payload of [
     { accountId: account.id, transactionDate: "2026-08-01", label: "Salaire", amountCents: 100_00 },
     { accountId: account.id, transactionDate: "2026-08-01", label: "Courses", amountCents: -25_99 },
-    { accountId: account.id, transactionDate: "2026-08-02", label: "Remboursement", amountCents: 3_99 }
+    { accountId: account.id, transactionDate: "2026-08-02", label: "Virement DEFAULT RÉFÉRENCE", amountCents: 3_99 }
   ]) {
     const response = await app.inject({ method: "POST", url: "/transactions", payload });
     assert.equal(response.statusCode, 201);
-    const transaction = response.json() as { source: string; fingerprint: string; amountCents: number };
+    const transaction = response.json() as { id: number; source: string; fingerprint: string; amountCents: number };
     assert.equal(transaction.source, "MANUEL");
     assert.equal(Number.isInteger(transaction.amountCents), true);
     assert.match(transaction.fingerprint, /^[a-f0-9]{64}$/);
+    createdTransactions.push(transaction);
   }
+
+  const duplicateResponse = await app.inject({
+    method: "POST",
+    url: "/transactions",
+    payload: {
+      accountId: account.id,
+      transactionDate: "2026-08-02",
+      label: "  virement reference ",
+      amountCents: 3_99,
+      source: "CSV_IMPORT",
+      fingerprint: "client-controlled-value"
+    }
+  });
+  assert.equal(duplicateResponse.statusCode, 200);
+  const duplicate = duplicateResponse.json() as { id: number; source: string; fingerprint: string };
+  assert.equal(duplicate.id, createdTransactions[2].id);
+  assert.equal(duplicate.source, "MANUEL");
+  assert.equal(duplicate.fingerprint, createdTransactions[2].fingerprint);
+  assert.equal(database.sqlite.prepare("SELECT COUNT(*) FROM transactions").pluck().get(), 3);
 
   const balanceResponse = await app.inject({ method: "GET", url: "/balance" });
   assert.equal(balanceResponse.statusCode, 200);

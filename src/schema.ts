@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core";
 
 export const accountTypes = ["BANK", "LIVRET_A", "OTHER"] as const;
 export const transactionSources = ["MANUEL", "ENABLE_BANKING", "CSV_IMPORT", "PDF_RELEVE"] as const;
@@ -23,4 +23,6 @@ export const transactions = sqliteTable("transactions", {
   source: text("source", { enum: transactionSources }).notNull(),
   fingerprint: text("fingerprint").notNull(),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
-});
+}, (table) => [
+  uniqueIndex("transactions_fingerprint_unique_idx").on(table.fingerprint)
+]);
