@@ -54,10 +54,12 @@ function migrate(sqlite: RawDatabase) {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       account_id INTEGER NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
       transaction_date TEXT NOT NULL,
+      transaction_at TEXT,
       label TEXT NOT NULL,
       amount_cents INTEGER NOT NULL,
       source TEXT NOT NULL CHECK (source IN ('MANUEL', 'ENABLE_BANKING', 'CSV_IMPORT', 'PDF_RELEVE')),
       fingerprint TEXT NOT NULL,
+      occurrence INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
@@ -81,6 +83,18 @@ function migrate(sqlite: RawDatabase) {
 
     CREATE INDEX IF NOT EXISTS transactions_account_id_idx ON transactions(account_id);
     DROP INDEX IF EXISTS transactions_fingerprint_idx;
-    CREATE UNIQUE INDEX IF NOT EXISTS transactions_fingerprint_unique_idx ON transactions(fingerprint);
+  `);
+
+  const columns = sqlite.pragma("table_info(transactions)") as Array<{ name: string }>;
+  if (!columns.some(column => column.name === "transaction_at")) {
+    sqlite.exec("ALTER TABLE transactions ADD COLUMN transaction_at TEXT");
+  }
+  if (!columns.some(column => column.name === "occurrence")) {
+    sqlite.exec("ALTER TABLE transactions ADD COLUMN occurrence INTEGER NOT NULL DEFAULT 0");
+  }
+  sqlite.exec(`
+    DROP INDEX IF EXISTS transactions_fingerprint_unique_idx;
+    CREATE UNIQUE INDEX IF NOT EXISTS transactions_fingerprint_occurrence_unique_idx
+      ON transactions(fingerprint, occurrence);
   `);
 }

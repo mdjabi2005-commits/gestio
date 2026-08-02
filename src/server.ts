@@ -5,7 +5,8 @@ import Fastify, { type FastifyHttpsOptions, type FastifyServerOptions } from "fa
 import { eq } from "drizzle-orm";
 import { accounts, accountTypes, transactions, transactionSources, type AccountType } from "./schema.js";
 import { openDatabase, type AppDatabase } from "./db.js";
-import { normalizeTransactionLabel } from "./deduplication.js";
+import { deduplicateTransactions, normalizeTransactionLabel } from "./deduplication.js";
+import { CsvFormatError, parseBankCsv } from "./csv-import.js";
 
 type BuildAppOptions = {
   database?: AppDatabase;
@@ -104,13 +105,74 @@ export function buildApp(options: BuildAppOptions = {}) {
 
     const inserted = database.orm.insert(transactions)
       .values(input)
-      .onConflictDoNothing({ target: transactions.fingerprint })
+      .onConflictDoNothing({ target: [transactions.fingerprint, transactions.occurrence] })
       .returning()
       .get();
     const transaction = inserted ?? database.orm.select().from(transactions)
       .where(eq(transactions.fingerprint, input.fingerprint))
       .get();
     return reply.code(inserted ? 201 : 200).send(transaction);
+  });
+
+  app.post("/imports/csv", async (request, reply) => {
+    const data = objectBody(request.body);
+    const accountId = requiredInteger(data.accountId, "accountId");
+    const bank = requiredString(data.bank, "bank");
+    const bytes = requiredBase64(data.contentBase64, "contentBase64");
+    if (!database.orm.select({ id: accounts.id }).from(accounts).where(eq(accounts.id, accountId)).get()) {
+      return reply.code(404).send({ error: "account_not_found" });
+    }
+
+    let parsed;
+    try {
+      parsed = parseBankCsv(bank, bytes);
+    } catch (error) {
+      if (error instanceof CsvFormatError) {
+        return reply.code(400).send({ error: "csv_format_unrecognized", message: error.message });
+      }
+      throw error;
+    }
+
+    const imported = database.sqlite.transaction(() => {
+      // ponytail: full account scan is enough for one user; filter by imported date range if history becomes large.
+      const existing = database.sqlite.prepare(`
+        SELECT transaction_date AS transactionDate, amount_cents AS amountCents, label
+        FROM transactions WHERE account_id = ? ORDER BY id
+      `).all(accountId) as Array<{ transactionDate: string; amountCents: number; label: string }>;
+      const occurrences = new Map<string, number>();
+      const candidates = parsed.transactions.map(transaction => {
+        const input = readTransactionInput({ ...transaction, accountId, source: "CSV_IMPORT" });
+        const occurrence = occurrences.get(input.fingerprint) ?? 0;
+        occurrences.set(input.fingerprint, occurrence + 1);
+        return { ...transaction, ...input, occurrence };
+      });
+      const candidateSet = new Set(candidates);
+      const pending = deduplicateTransactions([existing, candidates]).transactions.filter(
+        (transaction): transaction is typeof candidates[number] => candidateSet.has(transaction as typeof candidates[number])
+      );
+      const insert = database.sqlite.prepare(`
+        INSERT OR IGNORE INTO transactions
+          (account_id, transaction_date, transaction_at, label, amount_cents, source, fingerprint, occurrence)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `);
+      return pending.reduce((count, transaction) => count + insert.run(
+        transaction.accountId,
+        transaction.transactionDate,
+        transaction.transactionAt,
+        transaction.label,
+        transaction.amountCents,
+        transaction.source,
+        transaction.fingerprint,
+        transaction.occurrence
+      ).changes, 0);
+    })();
+
+    return reply.code(200).send({
+      read: parsed.transactions.length,
+      imported,
+      duplicates: parsed.transactions.length - imported,
+      ignored: parsed.ignored
+    });
   });
 
   app.get("/balance", async () => {
@@ -189,7 +251,7 @@ function readTransactionInput(body: unknown) {
   const source = oneOf(data.source ?? "MANUEL", transactionSources, "source");
   const fingerprint = hashFingerprint({ accountId, transactionDate, label, amountCents });
 
-  return { accountId, transactionDate, label, amountCents, source, fingerprint };
+  return { accountId, transactionDate, label, amountCents, source, fingerprint, occurrence: 0 };
 }
 
 function objectBody(value: unknown): Record<string, unknown> {
@@ -211,6 +273,14 @@ function requiredInteger(value: unknown, field: string): number {
     badRequest(`${field} must be an integer`);
   }
   return value as number;
+}
+
+function requiredBase64(value: unknown, field: string) {
+  const base64 = requiredString(value, field);
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(base64)) {
+    badRequest(`${field} must be valid base64`);
+  }
+  return Buffer.from(base64, "base64");
 }
 
 function requiredDate(value: unknown, field: string) {

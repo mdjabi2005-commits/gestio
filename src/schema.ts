@@ -18,11 +18,13 @@ export const transactions = sqliteTable("transactions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   accountId: integer("account_id").notNull().references(() => accounts.id, { onDelete: "cascade" }),
   transactionDate: text("transaction_date").notNull(),
+  transactionAt: text("transaction_at"),
   label: text("label").notNull(),
   amountCents: integer("amount_cents").notNull(),
   source: text("source", { enum: transactionSources }).notNull(),
   fingerprint: text("fingerprint").notNull(),
+  occurrence: integer("occurrence").notNull().default(0),
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
 }, (table) => [
-  uniqueIndex("transactions_fingerprint_unique_idx").on(table.fingerprint)
+  uniqueIndex("transactions_fingerprint_occurrence_unique_idx").on(table.fingerprint, table.occurrence)
 ]);
