@@ -96,6 +96,12 @@ Tout est local, donc **tout agent peut et doit s'y rendre par chemin absolu** qu
 - Les validations du projet passent.
 - La livraison est relue avant le verdict.
 
+## Workflow git
+- `master` est la version fonctionnelle officielle de l'application.
+- Pour toute feature : PRD/milestone d'abord, puis code dans un worktree isolé avec sa branche et son issue, puis push sur `main`.
+- `main` sert à tester l'intégration de la feature ; une fois validée, elle est mergée dans `master`.
+- Cela permet de ne pas fusionner dans la version officielle une feature qui n'apporte pas la valeur attendue.
+
 ## Contrat de l'équipe
 Hermès : cadrer le besoin, arbitrer et rendre le verdict | modifie : AGENTS.md et `.lamoms/project.json` uniquement pendant le bootstrap ; aucune modification applicative | produit : décision, synthèse ou verdict | précédent : humain ou étape précédente | suivant : AGY, Claude ou l'humain selon le handoff | limites : ne code pas, ne remplace pas la recherche technique d'AGY et ne déverrouille l'équipe qu'après un bootstrap cohérent.
 
