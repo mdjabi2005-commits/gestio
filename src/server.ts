@@ -1,5 +1,6 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import type { Server as HttpsServer, ServerOptions as HttpsServerOptions } from "node:https";
+import { argon2id, hash as hashPassword, verify as verifyPassword } from "argon2";
 import Fastify, { type FastifyHttpsOptions, type FastifyServerOptions } from "fastify";
 import { eq } from "drizzle-orm";
 import { accounts, accountTypes, transactions, transactionSources, type AccountType } from "./schema.js";
@@ -10,6 +11,10 @@ type BuildAppOptions = {
   https?: HttpsServerOptions;
   logger?: FastifyServerOptions["logger"];
 };
+
+const SESSION_COOKIE = "gestio_session";
+const SESSION_SECONDS = 24 * 60 * 60;
+const PUBLIC_PATHS = new Set(["/", "/auth/setup", "/auth/login"]);
 
 export function buildApp(options: BuildAppOptions = {}) {
   const database = options.database ?? openDatabase();
@@ -23,7 +28,61 @@ export function buildApp(options: BuildAppOptions = {}) {
     database.close();
   });
 
+  app.addHook("onRequest", async (request, reply) => {
+    if (PUBLIC_PATHS.has(request.url.split("?", 1)[0])) {
+      return;
+    }
+
+    const token = sessionToken(request.headers.cookie);
+    const session = token && database.sqlite.prepare(
+      "SELECT 1 FROM auth_sessions WHERE token_hash = ? AND expires_at > ?"
+    ).get(hashSessionToken(token), nowSeconds());
+    if (!session) {
+      return reply.code(401).send({ error: "unauthorized" });
+    }
+  });
+
   app.get("/", async () => ({ name: "gestio", status: "ok" }));
+
+  app.post("/auth/setup", async (request, reply) => {
+    if (database.sqlite.prepare("SELECT 1 FROM local_auth WHERE id = 1").get()) {
+      return reply.code(409).send({ error: "auth_already_configured" });
+    }
+
+    const password = readPassword(request.body);
+    const passwordHash = await hashPassword(password, { type: argon2id });
+    const inserted = database.sqlite.prepare(
+      "INSERT OR IGNORE INTO local_auth (id, password_hash) VALUES (1, ?)"
+    ).run(passwordHash);
+    if (!inserted.changes) {
+      return reply.code(409).send({ error: "auth_already_configured" });
+    }
+
+    setSession(database, reply);
+    return reply.code(204).send();
+  });
+
+  app.post("/auth/login", async (request, reply) => {
+    const password = readPassword(request.body);
+    const auth = database.sqlite.prepare(
+      "SELECT password_hash AS passwordHash FROM local_auth WHERE id = 1"
+    ).get() as { passwordHash: string } | undefined;
+    if (!auth || !await verifyPassword(auth.passwordHash, password)) {
+      return reply.code(401).send({ error: "invalid_credentials" });
+    }
+
+    setSession(database, reply);
+    return reply.code(204).send();
+  });
+
+  app.post("/auth/logout", async (request, reply) => {
+    const token = sessionToken(request.headers.cookie);
+    if (token) {
+      database.sqlite.prepare("DELETE FROM auth_sessions WHERE token_hash = ?").run(hashSessionToken(token));
+    }
+    reply.header("set-cookie", `${SESSION_COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0`);
+    return reply.code(204).send();
+  });
 
   app.post("/accounts", async (request, reply) => {
     const input = readAccountInput(request.body);
@@ -87,6 +146,37 @@ function readAccountInput(body: unknown) {
   const name = requiredString(data.name, "name");
   const type = oneOf(data.type, accountTypes, "type");
   return { name, type };
+}
+
+function readPassword(body: unknown) {
+  const password = objectBody(body).password;
+  if (typeof password !== "string" || password.length < 12 || password.length > 1024) {
+    badRequest("password must contain between 12 and 1024 characters");
+  }
+  return password;
+}
+
+function setSession(database: AppDatabase, reply: { header: (name: string, value: string) => unknown }) {
+  const token = randomBytes(32).toString("hex");
+  database.sqlite.prepare("DELETE FROM auth_sessions WHERE expires_at <= ?").run(nowSeconds());
+  database.sqlite.prepare("INSERT INTO auth_sessions (token_hash, expires_at) VALUES (?, ?)")
+    .run(hashSessionToken(token), nowSeconds() + SESSION_SECONDS);
+  reply.header(
+    "set-cookie",
+    `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${SESSION_SECONDS}`
+  );
+}
+
+function sessionToken(cookieHeader: string | undefined) {
+  return cookieHeader?.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE}=([a-f0-9]{64})(?:;|$)`))?.[1];
+}
+
+function hashSessionToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+function nowSeconds() {
+  return Math.floor(Date.now() / 1000);
 }
 
 function readTransactionInput(body: unknown) {
