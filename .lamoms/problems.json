@@ -456,6 +456,19 @@
       "etat": "clos",
       "pourCodex": "Ne JAMAIS recalculer un solde en cumulant les transactions. Le solde vient de GET /accounts/{uid}/balances, et de là seulement. balance_after_transaction est null sur 43 sur 43 chez La Banque Postale.",
       "taches": "T1 ; T4"
+    },
+    {
+      "id": "P37",
+      "title": "La sauvegarde quotidienne reste sur le même disque — la copie sur support secondaire du PRD n'est pas en place",
+      "category": "sécurité",
+      "severity": "moyenne",
+      "nature": "contrainte",
+      "consequence": "Le backup T1 (sqlcipher_export + rotation 30 j) protège contre la corruption et l'effacement accidentel, mais vit dans backups/ sur le même disque que la base. Mort du disque, vol du PC ou sinistre = perte simultanée de la base et de ses copies. Or une partie des données est irremplaçable — saisie manuelle (Livret A, Nickel, Trade Republic), état des lieux importé au-delà de la fenêtre API (90 j La Banque Postale) — et ne peut pas être re-importée. Le PRD prévoit pourtant « copie sur un support secondaire » ; ce n'est pas livré.",
+      "decisionNeeded": false,
+      "status": "NOTÉ LE 2026-08-02 par Copilot à la demande de Lamoms, en clôture de la review de l'issue 7. La sauvegarde chiffrée quotidienne + rotation 30 j est livrée et vérifiée (fichier chiffré, réouverture avec la même clé, lecture réelle faite). Deux suites, sans blocage du MVP : (1) la copie sur un support secondaire (autre disque / stockage chiffré hors de la machine), à planifier après le MVP ; (2) la note de portabilité RPi du binaire sqlcipher CLI — déjà consignée dans P20, décision au moment de la migration (ou export en interne via better-sqlite3-multiple-ciphers, déjà une dépendance).",
+      "etat": "actif",
+      "pourCodex": "Aucune action dans T1..T7. Suivi post-MVP : copier la sauvegarde chiffrée vers un support secondaire.",
+      "taches": "Hors T1..T7 — suivi après MVP"
     }
   ]
 }
