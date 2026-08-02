@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
+import Database from "better-sqlite3-multiple-ciphers";
 import { buildApp } from "./server.js";
 import { openDatabase } from "./db.js";
 
@@ -70,7 +71,7 @@ test("creates an account, records transactions, and returns exact balances", asy
     payload: { name: "Compte courant", type: "BANK" }
   });
   assert.equal(accountResponse.statusCode, 201);
-  const account = accountResponse.json() as { id: number };
+  const account = accountResponse.json() as { id: number; institutionId: number };
 
   const createdTransactions: Array<{ id: number; source: string; fingerprint: string; amountCents: number }> = [];
   for (const payload of [
@@ -115,7 +116,17 @@ test("creates an account, records transactions, and returns exact balances", asy
   };
   assert.equal(balance.totalCents, 78_00);
   assert.deepEqual(balance.accounts.map(({ updatedAt, ...accountBalance }) => accountBalance), [
-    { id: account.id, name: "Compte courant", type: "BANK", balanceCents: 78_00 }
+    {
+      id: account.id,
+      institutionId: account.institutionId,
+      institutionName: "Comptes manuels",
+      institutionCountry: "XX",
+      name: "Compte courant",
+      type: "BANK",
+      balanceCents: 78_00,
+      currency: null,
+      knownSince: null
+    }
   ]);
   assert.match(balance.accounts[0].updatedAt, /^\d{4}-\d{2}-\d{2} /);
 
@@ -150,4 +161,48 @@ test("creates an account, records transactions, and returns exact balances", asy
   assert.equal(logs.includes(password), false);
   assert.equal(logs.includes(sessionToken), false);
   assert.equal(logs.includes(applicationSecret), false);
+});
+
+test("migrates existing accounts into an institution without changing the aggregate", () => {
+  const dir = mkdtempSync(join(tmpdir(), "gestio-migration-"));
+  const path = join(dir, "gestio.db");
+  const key = "test-db-key-32-random-characters";
+  const legacy = new Database(path);
+  legacy.pragma("cipher='sqlcipher'");
+  legacy.pragma("legacy=4");
+  legacy.pragma(`key='${key}'`);
+  legacy.exec(`
+    CREATE TABLE accounts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE TABLE transactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      account_id INTEGER NOT NULL REFERENCES accounts(id),
+      transaction_date TEXT NOT NULL,
+      label TEXT NOT NULL,
+      amount_cents INTEGER NOT NULL,
+      source TEXT NOT NULL,
+      fingerprint TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+    INSERT INTO accounts (name, type) VALUES ('Compte existant', 'BANK');
+    INSERT INTO transactions (account_id, transaction_date, label, amount_cents, source, fingerprint)
+    VALUES (1, '2026-08-01', 'Solde', 12345, 'MANUEL', 'legacy-fingerprint');
+  `);
+  const before = legacy.prepare("SELECT SUM(amount_cents) FROM transactions").pluck().get();
+  legacy.close();
+
+  const migrated = openDatabase({ path, key });
+  try {
+    const after = migrated.sqlite.prepare("SELECT SUM(amount_cents) FROM transactions").pluck().get();
+    assert.equal(after, before);
+    assert.equal(migrated.sqlite.prepare("SELECT COUNT(*) FROM accounts WHERE institution_id IS NULL").pluck().get(), 0);
+    assert.equal(migrated.sqlite.prepare("SELECT COUNT(*) FROM institutions").pluck().get(), 1);
+  } finally {
+    migrated.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
