@@ -95,6 +95,7 @@ Tout est local, donc **tout agent peut et doit s'y rendre par chemin absolu** qu
 - Le besoin est couvert.
 - Les validations du projet passent.
 - La livraison est relue avant le verdict.
+- Le verdict cite la preuve qui le fonde.
 
 ## Workflow git
 - `master` est la version fonctionnelle officielle de l'application.
@@ -103,7 +104,7 @@ Tout est local, donc **tout agent peut et doit s'y rendre par chemin absolu** qu
 - Cela permet de ne pas fusionner dans la version officielle une feature qui n'apporte pas la valeur attendue.
 
 ## Contrat de l'équipe
-Hermès : cadrer le besoin, arbitrer et rendre le verdict | modifie : AGENTS.md et `.lamoms/project.json` uniquement pendant le bootstrap ; aucune modification applicative | produit : décision, synthèse ou verdict | précédent : humain ou étape précédente | suivant : AGY, Claude ou l'humain selon le handoff | limites : ne code pas, ne remplace pas la recherche technique d'AGY et ne déverrouille l'équipe qu'après un bootstrap cohérent.
+Hermès : cadrer le besoin, arbitrer et rendre le verdict | modifie : AGENTS.md et `.lamoms/project.json` uniquement pendant le bootstrap ; aucune modification applicative | produit : décision, synthèse ou verdict | précédent : humain ou étape précédente | suivant : AGY, Claude ou l'humain selon le handoff | limites : ne code pas, ne remplace pas la recherche technique d'AGY, ne déverrouille l'équipe qu'après un bootstrap cohérent, et ne rend jamais un verdict sans citer la preuve qui le fonde (voir « Verdict relisible »).
 
 AGY : chercher les faits et les options avec leurs sources | modifie : uniquement des essais bornés dans `.lamoms/lab/agy` | produit : rapport sourcé avec faits, hypothèses et incertitudes | précédent : Hermès | suivant : Hermès | limites : ne produit ni implémentation finale ni PRD.
 
@@ -126,4 +127,16 @@ Les livraisons parallèles ne se voient pas : T6 et T5 ont résolu le même prob
 5. **Avant de coder, vérifier que le worktree part du dernier `origin/main`.** Les tâches touchant les mêmes tables ou invariants doivent être séquencées, sauf interface commune explicitement actée.
 
 Après chaque livraison relue (VERT ou ROUGE), les acquis empiriques sont consignés au graphe : choix de schéma actés, colonnes/index existants, dépendances de fait découvertes entre tâches, pièges de nommage. Toute issue lancée ensuite lit ces acquis avant de coder — on réutilise un mécanisme consigné, on n'en invente pas un parallèle.
+
+## Verdict relisible (acté le 2026-08-03)
+
+Hermès est le seul nœud de la chaîne que personne ne relit. Les tests vérifient Codex, `git` vérifie Copilot, Claude est contesté — un verdict, lui, est le dernier mot. La confiance qu'on lui accorde se nourrit donc de l'absence de vérification, et non d'une vérification réussie.
+
+Le cas qui l'a montré : le critère de sauvegarde de T1 exigeait explicitement « une lecture réelle dans le fichier de sauvegarde, **pas sa seule existence** ». Seule la production du fichier a été livrée. Le verdict a été VERT. Personne ne l'a vu sur le moment — le défaut a été trouvé le 2026-08-02, par hasard, en relisant du code. Le critère était écrit, non ambigu, et en plein cœur du métier du juge.
+
+6. **Un verdict cite l'observation qui le fonde — commande et sortie, ou fichier:ligne lu — jamais la conclusion seule.** Un critère dont la preuve n'est pas citable n'est pas VERT : il est ROUGE ou explicitement « non prouvé ». L'existence d'un artefact ne prouve jamais le critère qu'il devait satisfaire.
+
+Cette règle ne rend pas le juge meilleur, elle rend son travail **relisible**. Lamoms est le seul au-dessus de lui : une preuve citée lui permet de relancer la commande et de comparer, au lieu de relire une conclusion bien formée sans moyen de la contredire. Le pouvoir décisionnel peut rester fort tant qu'il est adossé à du vérifiable.
+
+Portée : la règle s'applique aux verdicts à partir de maintenant. Les verdicts de T2 à T6 n'ont pas été rejoués et restent dans cet angle mort — risque ouvert, pas réglé.
 
