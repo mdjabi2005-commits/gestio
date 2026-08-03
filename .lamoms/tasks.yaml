@@ -619,3 +619,73 @@ T8:
     commence, sans quoi src/deduplication.ts n'y existe pas. Constaté le 2026-08-02 — le commit de fusion
     d0028ba annonce « main (T2+T3) » alors que seul T3 y est ; git merge-base --is-ancestor répond NON
     pour le commit de l'issue 8. Fusion due de toute façon, elle n'a rien à voir avec cette tâche.
+T9:
+  objectif: >-
+    Rendre démontrable ce qui n'est aujourd'hui que vrai — les critères de T2, T5 et T6 qui
+    nomment des données réelles de référence sont tenus par le code, mais aucune preuve du dépôt ne les
+    retient. Tâche de PREUVE, pas de correction — le code de production ne bouge pas.
+  probleme_resolu: 'Audit des verdicts T2 → T6 du 2026-08-03 (.lamoms/audit-verdicts-T2-T6.md). Aucun
+    faux VERT de la gravité de T1, mais un motif présent dans trois tâches sur cinq — un critère nomme
+    une donnée réelle et ne dit pas quelle observation prouverait qu''on s''en est servi. Le projet
+    connaissait déjà ce piège (P11 — le « 27/27 » du rapport de faisabilité comparait un jeu FABRIQUÉ),
+    et il est ressorti. La faute est dans les critères, donc dans le plan, pas dans le code livré :
+    Codex a suivi ce qui était écrit et Hermès a jugé sur ce qu''on lui montrait.'
+  projets:
+  - gestio
+  dependances:
+  - T2
+  - T5
+  - T6
+  parallelisable_avec:
+  - T7
+  criteres_acceptation:
+  - "UN TEST QUI EXIGE DES DONNÉES HORS DÉPÔT ÉCHOUE QUAND ELLES MANQUENT. Mesuré le 2026-08-03 —\
+    \ `GESTIO_PDF_CORPUS=/nonexistent npm test` rend aujourd'hui `pass 11, fail 0, skipped 2` et sort\
+    \ en SUCCÈS : src/pdf-import.test.ts:25 et :49 se désactivent seuls. Après la tâche, la même\
+    \ commande sort en code NON NUL. Échappatoire unique, explicite et jamais par défaut :\
+    \ GESTIO_SKIP_CORPUS=1. Un test qui s'ignore lui-même ne prouve rien et se contente de rassurer —\
+    \ règle déjà posée par T8 pour le binaire sqlcipher, appliquée ici au corpus."
+  - "LE REJEU DE RÉFÉRENCE DE T2 ENTRE DANS LE DÉPÔT. Le script existe (.lamoms/lab/agy/rejeu-t2.ts)\
+    \ mais .gitignore:22 exclut .lamoms/lab/ — il n'est PAS versionné, il n'existe que sur cette\
+    \ machine, et la validation de T8 en dépend. Le rejeu devient un test du dépôt qui lit les données\
+    \ par chemin absolu hors dépôt et vérifie 27 rapprochements, 0 orphelin et 0 à départager dans les\
+    \ DEUX ordres de canaux. Seul le SCRIPT entre au dépôt ; les données bancaires réelles restent\
+    \ dehors et le restent."
+  - "LE REGISTRE CSV EST PROUVÉ SUR LES FICHIERS RÉELS, pas sur du CSV écrit dans le test. Valeurs\
+    \ mesurées le 2026-08-03 en passant les vrais fichiers dans parseBankCsv, à reprendre telles quelles\
+    \ comme attendus. La Banque Postale, les deux CSV du lab — 19 et 8 mouvements, 0 ignoré, 0 caractère\
+    \ de remplacement ; le décodage ISO-8859-1 est prouvé par le fait même que le préambule « Numéro\
+    \ Compte » est reconnu, une lecture UTF-8 échouerait là. Revolut, le relevé de 254 lignes —\
+    \ 250 mouvements, 3 ignorés (État = RENVOYÉ), 77 libellés accentués sans perte, et transactionAt =\
+    \ 2025-09-27T13:05:08 avec transactionDate tronquée à la date ISO."
+  - "LES TROIS COMPORTEMENTS TENUS PAR LE SEUL CODE REÇOIVENT CHACUN UN TEST. (a) La synchronisation\
+    \ automatique de fond n'envoie NI psu-ip-address NI psu-user-agent — src/server.ts:56 passe {} et\
+    \ seule la moitié inverse est testée (enable-banking.test.ts:156-157). (b) known_since n'est jamais\
+    \ RECULÉ par une synchronisation plus courte — src/server.ts:775-779, la valeur n'est vérifiée\
+    \ qu'une fois (:173). (c) Un échec en cours de pagination laisse acquises les pages déjà écrites —\
+    \ src/server.ts:721-746 écrit page par page dans une transaction SQLite, rien ne le retient."
+  - "AUCUN DÉFAUT N'EST CORRIGÉ EN SILENCE. Si un test neuf révèle un vrai défaut du code de production,\
+    \ il est SIGNALÉ et devient sa propre tâche — il n'est pas réparé au passage. Cette tâche démontre\
+    \ l'existant ; un test qu'on ajuste jusqu'à ce qu'il passe ne prouve plus rien."
+  validations:
+  - npm run typecheck
+  - npm test
+  - GESTIO_PDF_CORPUS=/nonexistent npm test — doit sortir en code NON NUL.
+  - GESTIO_SKIP_CORPUS=1 GESTIO_PDF_CORPUS=/nonexistent npm test — doit sortir en 0.
+  fichiers:
+  - src/pdf-import.test.ts
+  - src/csv-import.test.ts
+  - src/deduplication.test.ts
+  - src/enable-banking.test.ts
+  - src/lab-replay.test.ts (à créer, depuis .lamoms/lab/agy/rejeu-t2.ts)
+  hors_perimetre:
+  - Aucune modification du code de production — src/csv-import.ts, src/pdf-import.ts,
+    src/deduplication.ts et src/server.ts ne bougent pas. Tâche de preuve, pas de correction.
+  - Aucune donnée bancaire réelle n'entre dans le dépôt. Les tests lisent hors dépôt, par chemin
+    absolu ou variable d'environnement ; .gitignore:22 reste tel quel pour les données.
+  - Aucun nouveau cadriciel de test. node --test et les assertions existantes suffisent.
+  - Ne pas rouvrir les verdicts de T2, T5 et T6 — ils restent acquis. On ajoute la preuve qui manquait,
+    on ne rejuge pas la livraison.
+  - SÉQUENCE AVEC T8 — T8 fait évoluer la règle de pose de needs_review et annonce que le rejeu rend
+    TOUJOURS 27 rapprochements, 0 orphelin, 0 à départager. Les attendus de T9 sont donc les mêmes
+    avant et après T8. Si l'un des deux les fait bouger, c'est le changement qui est faux, pas la mesure.
