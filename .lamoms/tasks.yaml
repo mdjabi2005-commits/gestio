@@ -499,11 +499,13 @@ T7:
   dependances:
   - T1
   - T4
+  - T10
   parallelisable_avec:
   - T2
   - T3
   - T5
   - T6
+  - T9
   criteres_acceptation:
   - À l'ouverture, le solde agrégé s'affiche sans aucune action préalable, accompagné de sa date de fraîcheur.
   - La répartition suit les DEUX NIVEAUX — établissement, puis comptes. La Banque Postale montre son Compte
@@ -513,11 +515,21 @@ T7:
     de l'agrégat — c'est la moitié de la réponse. Formulation de Lamoms le 2026-08-01 — savoir combien
     il a lui dit combien il a dépensé, et surtout COMBIEN IL PEUT DÉPENSER ET OÙ. Un total sans sa ventilation
     ne permet pas de décider d'une dépense (P29).
-  - Hors connexion — cas courant lorsque le PC hôte est éteint — le dernier solde connu s'affiche avec
-    sa date ("solde au 30/07 à 18 h 12"), stocké en IndexedDB. Jamais d'écran d'erreur nu.
-  - Les rapprochements marqués « à départager » sont atteignables et arbitrables par l'utilisateur — c'est
-    lui qui tranche, avec son relevé. Tant qu'un doute n'est pas levé, il est visible ; le solde n'est
-    jamais présenté comme certain en le passant sous silence.
+  - "Hors connexion — cas courant lorsque le PC hôte est éteint — le dernier solde connu s'affiche\
+    \ avec sa date (« solde au 30/07 à 18 h 12 »), et il est dit explicitement que le chiffre n'est\
+    \ pas actuel. Jamais d'écran d'erreur nu, jamais un chiffre périmé présenté comme actuel.\
+    \ CRITÈRE REQUALIFIÉ LE 2026-08-03 (D2, Hermès) — il imposait IndexedDB. Le besoin est de\
+    \ PERSISTER UN SEUL OBJET côté navigateur avec sa date ; localStorage suffit au MVP et tient en\
+    \ une ligne. Le moteur de stockage n'est pas le besoin, il n'entre pas dans le critère."
+  - "Les rapprochements marqués « à départager » sont atteignables et arbitrables par l'utilisateur —\
+    \ c'est lui qui tranche, avec son relevé. Tant qu'un doute n'est pas levé, il est visible ; le\
+    \ solde n'est jamais présenté comme certain en le passant sous silence. CONTRAT FIGÉ LE 2026-08-03\
+    \ (R1 puis C1, Hermès) — T7 LIT needs_review comme un marqueur opaque et POSE resolved_at quand\
+    \ l'utilisateur tranche. Il ne réimplémente jamais la règle de POSE, qui appartient à T8, ni la\
+    \ condition de REMISE, qui appartient à T10. Deux précisions d'exécution — la résolution porte sur\
+    \ TOUT le groupe et jamais sur une seule ligne, sans quoi les autres se font re-marquer à la\
+    \ synchro suivante ; et comme aucun appariement n'est stocké, le groupe se reconstitue par la clé\
+    \ de déduplication (transaction_date, amount_cents), celle du critère 1 de T2."
   - Rien n'est jamais présenté comme un historique complet avant la date d'horizon connu du compte. L'interface
     dit « connu depuis le JJ/MM », pas « aucune transaction avant » — la différence n'est pas cosmétique
     — un solde calculé sur un historique tronqué a l'air juste et ne l'est pas, c'est le mode de panne
@@ -531,15 +543,134 @@ T7:
     voir son vrai solde — et non un écran vide.
   - Chaque action clé produit un retour immédiat (comptes connectés, solde mis à jour, transactions ajoutées
     et doublons ignorés).
-  - Layouts mobile et desktop différenciés par breakpoints, logique métier et state partagés.
+  - "UNE SEULE INTERFACE, IDENTIQUE SUR PC ET SUR TÉLÉPHONE. Une colonne mobile-first, lisible telle\
+    \ quelle sur desktop. La logique métier et le state sont partagés et vivent HORS du DOM\
+    \ (src/ui-logic.ts), ce qui rend la différenciation ultérieure possible sans réécriture.\
+    \ CRITÈRE REQUALIFIÉ LE 2026-08-03 PAR LAMOMS — il exigeait des layouts mobile et desktop\
+    \ DIFFÉRENCIÉS par breakpoints. Ce n'est pas le besoin au MVP, qui est de vérifier que le\
+    \ backend et le frontend fonctionnent ensemble de bout en bout, sur les deux appareils, avec le\
+    \ MÊME parcours. La différenciation desktop est une amélioration ultérieure, hors périmètre."
+  - "LA FRAÎCHEUR D'UN AGRÉGAT EST LE updatedAt LE PLUS ANCIEN DE SES COMPTES, jamais le plus récent.\
+    \ Règle figée par Claude le 2026-08-03, à ne pas laisser au choix — sinon un total est daté\
+    \ d'aujourd'hui alors qu'un compte n'a pas bougé depuis trois semaines, et c'est exactement le\
+    \ mode de panne que la Core Feature ne tolère pas. GET /balance rend un updatedAt PAR COMPTE\
+    \ (src/server.ts:391) et aucun au niveau du total ; c'est donc au consommateur de le dériver."
+  - "QUATRE ROUTES MANQUANTES ENTRENT DANS T7 (D4, Hermès) — ce sont les conséquences directes de ses\
+    \ critères, pas du hors-sujet. (1) GET /auth/state, PUBLIQUE, rend { configured } — sans elle le\
+    \ frontend ne distingue pas « jamais configuré », qui mène à l'onboarding, de « déconnecté », qui\
+    \ mène au login. (2) GET /transactions, filtrable par compte (accountId) et par « à départager »\
+    \ (needsReview) — aucune route ne lit les transactions aujourd'hui, seul POST /transactions\
+    \ existe. Sa forme est fixée ici pour ne pas être inventée en codant — ORDER BY\
+    \ transaction_date DESC, id DESC, limit par défaut 100, offset. Quatre-vingt-dix jours font\
+    \ quelques centaines de lignes et 100 remplit l'écran ; aucun curseur tant que ce n'est pas\
+    \ mesuré. (3) L'arbitrage —\
+    \ POST /transactions/resolve pour « ce sont bien deux dépenses distinctes » et\
+    \ DELETE /transactions/:id pour « c'est le même mouvement en double ». Sans la suppression,\
+    \ l'utilisateur ne peut que confirmer, jamais corriger. (4) Le service des fichiers statiques."
+  - "LE FRONTEND VIT DANS web/, CONSTRUIT PAR VITE VERS dist/web, SERVI PAR @fastify/static (D3,\
+    \ Hermès). Un seul processus, portable vers le Raspberry Pi sans réécriture. Deux pièges à ne pas\
+    \ découvrir en codant — la branche SANS PARAMÈTRES de GET / (src/server.ts:89-91) rend désormais\
+    \ index.html, tandis que la branche code+state du rappel bancaire reste INTACTE ; et les fichiers\
+    \ statiques comme /auth/state doivent être publics, sans quoi la page de connexion reçoit elle-même\
+    \ un 401 et l'application est inatteignable."
+  - "EN DÉVELOPPEMENT, VITE PASSE PAR server.proxy VERS LE BACKEND (C3). Le cookie de session porte\
+    \ HttpOnly, Secure et SameSite=Strict (src/server.ts:532) ; deux origines distinctes, Vite sur son\
+    \ port et l'API sur le sien, empêchent son envoi et rendent la connexion impossible. Le navigateur\
+    \ ne doit voir QU'UNE origine. DESSERRER SameSite EST INTERDIT — ce serait livrer une régression de\
+    \ sécurité par accident, pour un problème d'outillage."
+  - "LE MODE HORS CONNEXION A UNE SEULE SOURCE DE VÉRITÉ (D1 et D2 combinés). Le service worker est\
+    \ MINIMAL et ne met en cache QUE la coquille de l'application — HTML, JS, CSS ; il ne met PAS\
+    \ /balance en cache. Le dernier solde connu est persisté séparément avec sa date. Deux stockages\
+    \ donneraient deux dates de fraîcheur divergentes et l'interface devrait arbitrer entre elles, ce\
+    \ qui recrée le chiffre qui a l'air juste. Sans service worker, le critère hors connexion est\
+    \ intenable — c'est le PC hôte éteint qui SERT le frontend, donc sans coquille en cache le\
+    \ navigateur n'obtient même pas la page."
+  - "LA LOGIQUE MÉTIER VISIBLE VIT DANS DES MODULES TYPESCRIPT PURS, testés par node --test (D5,\
+    \ Hermès). Fraîcheur agrégée, regroupement à deux niveaux, reconstitution des groupes à départager,\
+    \ libellé « connu depuis le JJ/MM » — tout cela se raisonne sans DOM et doit être testable sans\
+    \ lui. AUCUN runner frontend au MVP, ni vitest ni jsdom. Un écran non testé est acceptable ; une\
+    \ règle de calcul non testée ne l'est pas."
+  - "UN « À DÉPARTAGER » EST UNE PROPRIÉTÉ DU GROUPE, PAS DE LA LIGNE. Une transaction seule dans son\
+    \ groupe (transaction_date, amount_cents) n'est JAMAIS présentée comme ambiguë, même si\
+    \ needs_review vaut 1 — rien ne remet jamais needs_review à 0, src/server.ts:744 est la seule\
+    \ écriture de cette colonne et ne pose que 1. Sans cette règle, l'utilisateur supprime le doublon\
+    \ et le survivant garde son marqueur pour toujours. LE MÊME PRÉDICAT GARDE LA ROUTE —\
+    \ DELETE /transactions/:id REFUSE une transaction sans jumeau dans son groupe : sur une ligne\
+    \ isolée, la déduplication de la synchro suivante ne trouve aucun candidat\
+    \ (src/deduplication.ts:24, candidates.length === 0), la repousse dans transactions et la\
+    \ RÉINSÈRE — la suppression serait défaite en silence, il n'existe aucune pierre tombale en base.\
+    \ Supprimer une ligne APPARIÉE reste sûr, le survivant absorbe l'entrante\
+    \ (src/deduplication.ts:28-29, candidates.length === 1 apparie sans condition).\
+    \ DELETE NE POSE PAS resolved_at : sur un groupe de trois, cela éteindrait une ambiguïté encore\
+    \ réelle entre les deux lignes restantes, que le WHERE resolved_at IS NULL de T10 empêcherait\
+    \ ensuite de re-signaler. Le regroupement vit dans UNE fonction de src/ui-logic.ts et aucun\
+    \ consommateur ne lit needs_review directement, sinon un compteur affiché ailleurs réintroduit le\
+    \ défaut. Deux tests — un groupe de taille 1 n'est pas affiché, un DELETE sur ligne isolée est\
+    \ refusé."
+  - "ZÉRO DÉPENDANCE FRONTEND EN DEHORS DE REACT ET VITE. Décisions figées le 2026-08-03 pour que\
+    \ Codex ne les tranche pas en codant, chacune étant l'endroit où une dépendance aurait pu\
+    \ entrer. (1) AUCUN ROUTEUR — les deux ou trois vues tiennent dans un état, et la navigation\
+    \ passe par le FRAGMENT d'URL avec un écouteur hashchange. Pas history.pushState : une URL\
+    \ poussée entre en collision avec les routes d'API au rechargement (pousser /transactions rend\
+    \ le JSON de la route d'API, pas l'application) et exige un repli SPA côté serveur qui avalerait\
+    \ les vrais 404. Avec le fragment, le serveur ne voit jamais que / , il n'y a ni collision ni\
+    \ repli à écrire, et le bouton retour du téléphone fonctionne nativement.\
+    \ (2) AUCUNE BIBLIOTHÈQUE D'UI ni bibliothèque CSS — une seule feuille, police\
+    \ système, et color-scheme: light dark en une ligne. AUCUNE POLICE EXTERNE : un lien vers un CDN\
+    \ de polices casse le hors connexion sur PC éteint sans rien dire, ce qui est le mode de panne\
+    \ que la Core Feature ne tolère pas. (3) LE SERVICE WORKER EST ÉCRIT À LA MAIN, une dizaine de\
+    \ lignes, et il fait RÉSEAU D'ABORD, CACHE EN SECOURS — pas de vite-plugin-pwa, pas de Workbox,\
+    \ pas de liste de pré-chargement, pas de numéro de version à incrémenter, pas de skipWaiting. En\
+    \ ligne le navigateur reçoit toujours la version fraîche et le cache se remplit au passage ; PC\
+    \ éteint, le cache répond. Le cache d'abord serait le piège inverse — il figerait l'application\
+    \ sur une version ancienne sans jamais le dire, et il faudrait inventer une invalidation. Les\
+    \ noms de fichiers hachés de Vite restent tels quels : l'index.html mis en cache référence les\
+    \ fichiers mis en cache pendant la MÊME visite, donc l'ensemble est cohérent par construction.\
+    \ (4) AUCUN manifest.json AU MVP — l'installation sur l'écran d'accueil n'est requise ni par le\
+    \ hors connexion, qui tient au service worker, ni par la vérification du parcours, qui se fait à\
+    \ l'URL. Ajout ultérieur d'une quinzaine de lignes si le confort quotidien le demande."
+  - "L'APPARENCE N'EST PAS UN CRITÈRE D'ACCEPTATION DE T7 (Lamoms, 2026-08-03). Aucun verdict ne\
+    \ peut être rouge pour une raison esthétique. Le but du MVP est de vérifier que le backend et le\
+    \ frontend fonctionnent ensemble, sur PC et sur téléphone. Ce qui reste exigé est le\
+    \ COMPORTEMENT — le parcours entier, connexion, solde et sa fraîcheur, les deux niveaux,\
+    \ transactions, arbitrage d'un « à départager », puis PC éteint et dernier solde connu daté.\
+    \ « Simple » qualifie le style, jamais les cas limites : une page austère qui tient tout le\
+    \ parcours vaut mieux qu'une page soignée qui affiche un total. Seuls points non négociables\
+    \ côté rendu, parce que ce sont des décisions et non du goût — locale FR, montants en euros,\
+    \ dates JJ/MM."
   validations:
   - npm run typecheck
   - npm test
+  - npm run build
   - Parcourir les cas limites un par un et vérifier qu'aucun ne mène à une page blanche.
+  - "Vérifier que le rappel bancaire fonctionne toujours — GET /?code=…&state=… rend la page de rappel,\
+    \ pas l'application."
+  - "git diff src/server.ts ne touche pas la ligne du cookie de session (SameSite=Strict inchangé)."
+  fichiers:
+  - src/server.ts
+  - package.json
+  - web/ (à créer)
+  - vite.config.ts (à créer)
+  - src/ui-logic.ts (à créer)
+  - src/ui-logic.test.ts (à créer)
   hors_perimetre:
   - Notifications, aucune au MVP.
   - Catégories, budgets, prévisions, graphiques.
   - Simulateur "et si je dépense X".
+  - Ne pas toucher à src/deduplication.ts ni à la règle de pose de needs_review — elle appartient à T8.
+  - Ne pas toucher à la condition de remise du marqueur ni à resolved_at — elles appartiennent à T10.
+    T7 consomme la colonne, il ne la crée pas.
+  - Aucun changement de schéma. Ni src/schema.ts ni src/db.ts ne bougent. Si un besoin de schéma
+    apparaît, il est SIGNALÉ et devient sa propre tâche, il n'est pas ajouté au passage.
+  - Ne pas toucher à src/enable-banking.ts, src/csv-import.ts ni src/pdf-import.ts.
+  - Ne pas modifier la branche code+state du rappel bancaire dans GET / (src/server.ts:96-129).
+  - Aucun runner de test frontend. node --test et les assertions existantes suffisent.
+  - Aucune bibliothèque d'UI, aucune bibliothèque CSS, aucun routeur, aucune police externe, aucun
+    manifest.json. La liste des dépendances frontend s'arrête à React et Vite.
+  - Différenciation des layouts desktop et mobile — ultérieure, hors T7. Le MVP livre la MÊME
+    interface sur les deux appareils.
+  - Aucun travail esthétique. Thème, identité visuelle, animations, icônes — tout cela viendra après
+    que le parcours soit prouvé de bout en bout.
 T8:
   objectif: Rendre fiables les trois mécanismes déjà livrés qui donnent une fausse impression de marcher —
     la sauvegarde quotidienne, le certificat HTTPS local, et le rapprochement d'un candidat unique dans le
@@ -689,3 +820,63 @@ T9:
   - SÉQUENCE AVEC T8 — T8 fait évoluer la règle de pose de needs_review et annonce que le rejeu rend
     TOUJOURS 27 rapprochements, 0 orphelin, 0 à départager. Les attendus de T9 sont donc les mêmes
     avant et après T8. Si l'un des deux les fait bouger, c'est le changement qui est faux, pas la mesure.
+T10:
+  objectif: >-
+    Faire survivre l'arbitrage de l'utilisateur à une resynchronisation. Aujourd'hui il tranche un
+    « à départager » et la synchro suivante le lui reprend, sans trace.
+  probleme_resolu: >-
+    Tranché par Hermès le 2026-08-03 sur remontée de Claude (C1). needs_review est un booléen unique
+    (src/db.ts:79) et ne sait pas distinguer « jamais examiné » de « l'utilisateur a décidé ». Or
+    src/server.ts:742-744 exécute UPDATE transactions SET needs_review = 1 à chaque page de chaque
+    synchronisation, sur la sortie d'une déduplication qui prend en entrée les transactions DÉJÀ
+    STOCKÉES (src/server.ts:700 puis :716). L'utilisateur tranche, la synchro suivante retrouve la
+    même ambiguïté, remet le marqueur à 1, et sa décision disparaît EN SILENCE. Le critère 5 de T7
+    — « c'est lui qui tranche, avec son relevé » — est intenable sans cette tâche.
+  projets:
+  - gestio
+  dependances:
+  - T8
+  parallelisable_avec:
+  - T9
+  criteres_acceptation:
+  - "UNE COLONNE resolved_at SUR transactions, ajoutée par la même voie que les colonnes existantes\
+    \ (addColumn dans src/db.ts, comme needs_review ligne 141). Type TEXT, nulle par défaut. Une base\
+    \ existante se migre sans perte : les lignes déjà présentes ont resolved_at NULL, donc le\
+    \ comportement d'avant est conservé tant que personne n'a rien tranché."
+  - "LA RESYNCHRONISATION NE REMET PLUS LE MARQUEUR SUR UNE LIGNE RÉSOLUE. src/server.ts:744 devient\
+    \ conditionnel — ... SET needs_review = 1 WHERE id = ? AND resolved_at IS NULL. C'est le seul\
+    \ endroit qui pose le marqueur ; il n'y en a pas d'autre à traiter."
+  - "PREUVE PAR REJEU, PAS PAR LECTURE. Un test : ingérer un groupe ambigu, vérifier needs_review = 1,\
+    \ poser resolved_at, relancer la MÊME synchronisation, et vérifier que needs_review vaut toujours 0.\
+    \ Sans le rejeu, le test ne prouve rien — c'est précisément la deuxième synchronisation qui casse\
+    \ aujourd'hui, jamais la première."
+  - "LA RÉSOLUTION PORTE SUR TOUT LE GROUPE, JAMAIS SUR UNE SEULE LIGNE. Un « à départager » concerne\
+    \ au moins deux lignes. Si une seule reçoit resolved_at, les autres se font re-marquer à la synchro\
+    \ suivante et le groupe réapparaît à moitié résolu. La pose de resolved_at sur un ensemble d'ids se\
+    \ fait dans UNE SEULE transaction SQLite."
+  - "AUCUN APPARIEMENT N'EST STOCKÉ, ET ON N'EN AJOUTE PAS. Rien en base ne dit quelle ligne est\
+    \ ambiguë avec quelle autre. Le regroupement se reconstitue par la clé de déduplication elle-même,\
+    \ (transaction_date, amount_cents), posée par le critère 1 de T2. C'est le consommateur qui\
+    \ regroupe — pas de table d'appariement, pas de colonne de groupe."
+  - "NON-RÉGRESSION SUR LE REJEU DE RÉFÉRENCE — après le changement, le rejeu du lab rend toujours\
+    \ 27 rapprochements, 0 orphelin et 0 à départager dans les deux ordres de canaux. Aucune ligne du\
+    \ lab n'ayant resolved_at, la nouvelle condition ne peut rien changer ; si le rejeu bouge, c'est le\
+    \ changement qui est faux."
+  validations:
+  - npm run typecheck
+  - npm test
+  - Rejeu réel — node_modules/.bin/tsx .lamoms/lab/agy/rejeu-t2.ts, code de sortie 0 attendu.
+  fichiers:
+  - src/db.ts
+  - src/schema.ts
+  - src/server.ts
+  - src/enable-banking.test.ts
+  hors_perimetre:
+  - Ne pas toucher à la règle de POSE de needs_review — elle appartient à T8, qui la fait évoluer en
+    parallèle (cas zéro des libellés sans mot commun). T10 ne touche qu'à la CONDITION DE REMISE.
+  - Aucune route d'API. Les points d'entrée d'arbitrage (POST /transactions/resolve,
+    DELETE /transactions/:id) appartiennent à T7, qui consomme cette colonne.
+  - Aucune interface. T10 rend l'arbitrage POSSIBLE, il ne l'expose pas.
+  - Ne pas rouvrir le verdict de T8 ni celui de T2 — la faute est dans le plan, pas dans le code
+    livré. T2 n'a jamais demandé que la décision de l'utilisateur soit retenue, personne n'y avait
+    pensé avant l'écran de T7.
