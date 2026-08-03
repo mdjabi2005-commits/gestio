@@ -26,12 +26,12 @@ export function deduplicateTransactions<T extends TransactionForDeduplication>(
       let matchIndex = -1;
       let score = 0;
       if (candidates.length === 1) {
-        matchIndex = 0;
         score = jaccard(transaction.label, candidates[0].label);
+        if (!hasLabel(transaction) || !hasLabel(candidates[0]) || score > 0) matchIndex = 0;
       } else if (candidates.length > 1 && hasLabel(transaction) && candidates.every(hasLabel)) {
         const scores = candidates.map(candidate => jaccard(transaction.label, candidate.label));
         score = Math.max(...scores);
-        matchIndex = scores.indexOf(score);
+        if (score > 0) matchIndex = scores.indexOf(score);
       }
 
       if (matchIndex >= 0) {

@@ -95,10 +95,10 @@ test("imports a multi-account statement atomically and remains idempotent", {
   assert.equal(first.statusCode, 200);
   assert.deepEqual(first.json(), {
     institution: "LA_BANQUE_POSTALE",
-    imported: 48,
-    duplicates: 1,
+    imported: 49,
+    duplicates: 0,
     balancesImported: 3,
-    reviewNeeded: 0
+    reviewNeeded: 1
   });
 
   const second = await app.inject({ method: "POST", url: "/imports/pdf", headers: { cookie }, payload });
@@ -110,7 +110,7 @@ test("imports a multi-account statement atomically and remains idempotent", {
     balancesImported: 0,
     reviewNeeded: 0
   });
-  assert.equal(database.sqlite.prepare("SELECT COUNT(*) FROM transactions").pluck().get(), 49);
+  assert.equal(database.sqlite.prepare("SELECT COUNT(*) FROM transactions").pluck().get(), 50);
 
   const storedAccounts = () => database.sqlite.prepare(`
       SELECT id, balance_cents AS balanceCents, currency, last_synced_at AS lastSyncedAt,
