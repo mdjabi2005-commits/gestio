@@ -44,6 +44,7 @@ export const transactions = sqliteTable("transactions", {
   occurrence: integer("occurrence").notNull().default(0),
   externalReference: text("external_reference"),
   needsReview: integer("needs_review", { mode: "boolean" }).notNull().default(false),
+  resolvedAt: text("resolved_at"),
 
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
 }, (table) => [

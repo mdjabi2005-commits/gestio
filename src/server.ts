@@ -741,7 +741,9 @@ async function syncBankConnection(
 
         for (const transaction of toReview) {
           const id = "id" in transaction ? transaction.id : insertedIds.get(transaction as ParsedBankTransaction);
-          if (id !== undefined) database.sqlite.prepare("UPDATE transactions SET needs_review = 1 WHERE id = ?").run(id);
+          if (id !== undefined) database.sqlite.prepare(
+            "UPDATE transactions SET needs_review = 1 WHERE id = ? AND resolved_at IS NULL"
+          ).run(id);
         }
       })();
 
