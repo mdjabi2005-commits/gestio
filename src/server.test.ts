@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
@@ -10,16 +10,25 @@ import { openDatabase } from "./db.js";
 test("creates an account, records transactions, and returns exact balances", async (t) => {
   const dir = mkdtempSync(join(tmpdir(), "gestio-"));
   const dbPath = join(dir, "gestio.db");
+  const staticRoot = join(dir, "web");
+  mkdirSync(staticRoot);
+  writeFileSync(join(staticRoot, "index.html"), "<!doctype html><main>Gestio UI</main>");
   const database = openDatabase({ path: dbPath, key: "test-db-key-32-random-characters" });
   let logs = "";
   const app = buildApp({
     database,
-    logger: { stream: { write: (chunk: string) => { logs += chunk; } } }
+    logger: { stream: { write: (chunk: string) => { logs += chunk; } } },
+    staticRoot
   });
   t.after(async () => {
     await app.close();
     rmSync(dir, { recursive: true, force: true });
   });
+
+  const rootResponse = await app.inject({ method: "GET", url: "/" });
+  assert.equal(rootResponse.statusCode, 200);
+  assert.match(rootResponse.body, /Gestio UI/);
+  assert.deepEqual((await app.inject({ method: "GET", url: "/auth/state" })).json(), { configured: false });
 
   const unauthenticatedResponse = await app.inject({ method: "GET", url: "/balance" });
   assert.equal(unauthenticatedResponse.statusCode, 401);
@@ -36,6 +45,7 @@ test("creates an account, records transactions, and returns exact balances", asy
   const cookie = (setCookie as string).split(";", 1)[0];
   const sessionToken = cookie.split("=", 2)[1];
   assert.match(cookie, /^gestio_session=[a-f0-9]{64}$/);
+  assert.deepEqual((await app.inject({ method: "GET", url: "/auth/state" })).json(), { configured: true });
 
   const passwordHash = database.sqlite.prepare(
     "SELECT password_hash FROM local_auth WHERE id = 1"
@@ -107,6 +117,49 @@ test("creates an account, records transactions, and returns exact balances", asy
   assert.equal(duplicate.source, "MANUEL");
   assert.equal(duplicate.fingerprint, createdTransactions[2].fingerprint);
   assert.equal(database.sqlite.prepare("SELECT COUNT(*) FROM transactions").pluck().get(), 3);
+
+  const transactionList = await app.inject({ method: "GET", url: `/transactions?accountId=${account.id}&limit=2`, headers: { cookie } });
+  assert.equal(transactionList.statusCode, 200);
+  assert.deepEqual(transactionList.json().transactions.map((transaction: { id: number }) => transaction.id), [
+    createdTransactions[2].id,
+    createdTransactions[1].id
+  ]);
+  assert.equal((await app.inject({ method: "GET", url: "/transactions?needsReview=maybe", headers: { cookie } })).statusCode, 400);
+  assert.equal((await app.inject({ method: "DELETE", url: `/transactions/${createdTransactions[0].id}`, headers: { cookie } })).statusCode, 409);
+
+  const insertReview = database.sqlite.prepare(`
+    INSERT INTO transactions
+      (account_id, transaction_date, label, amount_cents, source, fingerprint, needs_review)
+    VALUES (?, ?, ?, 0, 'CSV_IMPORT', ?, 1)
+  `);
+  const firstReviewId = Number(insertReview.run(account.id, "2026-08-03", "Même mouvement A", "review-a").lastInsertRowid);
+  insertReview.run(account.id, "2026-08-03", "Même mouvement B", "review-b");
+  const reviewList = await app.inject({ method: "GET", url: "/transactions?needsReview=true", headers: { cookie } });
+  assert.equal(reviewList.statusCode, 200);
+  assert.equal(reviewList.json().transactions.length, 2);
+  const resolve = await app.inject({ method: "POST", url: "/transactions/resolve", headers: { cookie }, payload: { transactionId: firstReviewId } });
+  assert.equal(resolve.statusCode, 200);
+  assert.deepEqual(resolve.json(), { resolved: 2 });
+  assert.equal(database.sqlite.prepare("SELECT COUNT(*) FROM transactions WHERE needs_review = 1").pluck().get(), 0);
+
+  const deleteReviewId = Number(insertReview.run(account.id, "2026-08-04", "Doublon à retirer", "delete-a").lastInsertRowid);
+  insertReview.run(account.id, "2026-08-04", "Mouvement à garder", "delete-b");
+  const remove = await app.inject({ method: "DELETE", url: `/transactions/${deleteReviewId}`, headers: { cookie } });
+  assert.equal(remove.statusCode, 204);
+  assert.equal(database.sqlite.prepare("SELECT COUNT(*) FROM transactions WHERE transaction_date = '2026-08-04' AND amount_cents = 0").pluck().get(), 1);
+  assert.equal(database.sqlite.prepare("SELECT COUNT(*) FROM transactions WHERE resolved_at IS NOT NULL AND transaction_date = '2026-08-04'").pluck().get(), 0);
+
+  const insertApiReview = database.sqlite.prepare(`
+    INSERT INTO transactions
+      (account_id, transaction_date, label, amount_cents, source, fingerprint, needs_review)
+    VALUES (?, '2026-08-05', ?, 0, 'ENABLE_BANKING', ?, 1)
+  `);
+  const apiReviewId = Number(insertApiReview.run(account.id, "API A", "api-review-a").lastInsertRowid);
+  insertApiReview.run(account.id, "API B", "api-review-b");
+  const removeApi = await app.inject({ method: "DELETE", url: `/transactions/${apiReviewId}`, headers: { cookie } });
+  assert.equal(removeApi.statusCode, 409);
+  assert.deepEqual(removeApi.json(), { error: "transaction_group_api" });
+  assert.equal(database.sqlite.prepare("SELECT COUNT(*) FROM transactions WHERE transaction_date = '2026-08-05' AND source = 'ENABLE_BANKING'").pluck().get(), 2);
 
   const balanceResponse = await app.inject({ method: "GET", url: "/balance", headers: { cookie } });
   assert.equal(balanceResponse.statusCode, 200);

@@ -1,5 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import type { Server as HttpsServer, ServerOptions as HttpsServerOptions } from "node:https";
+import { resolve } from "node:path";
+import fastifyStatic from "@fastify/static";
 import { argon2id, hash as hashPassword, verify as verifyPassword } from "argon2";
 import Fastify, { LogController, type FastifyHttpsOptions, type FastifyReply, type FastifyRequest, type FastifyServerOptions } from "fastify";
 import { eq } from "drizzle-orm";
@@ -8,6 +10,7 @@ import { openDatabase, type AppDatabase } from "./db.js";
 import { deduplicateTransactions, normalizeTransactionLabel } from "./deduplication.js";
 import { CsvFormatError, parseBankCsv } from "./csv-import.js";
 import { parsePdfStatement, PdfStatementError } from "./pdf-import.js";
+import { reviewGroups, type UiTransaction } from "./ui-logic.js";
 import {
   EnableBankingError,
   enableBankingFromEnvironment,
@@ -23,11 +26,12 @@ type BuildAppOptions = {
   enableBanking?: EnableBankingApi;
   https?: HttpsServerOptions;
   logger?: FastifyServerOptions["logger"];
+  staticRoot?: string;
 };
 
 const SESSION_COOKIE = "gestio_session";
 const SESSION_SECONDS = 24 * 60 * 60;
-const PUBLIC_PATHS = new Set(["/", "/auth/setup", "/auth/login"]);
+const PUBLIC_PATHS = new Set(["/", "/auth/state", "/auth/setup", "/auth/login", "/sw.js"]);
 
 export function buildApp(options: BuildAppOptions = {}) {
   const database = options.database ?? openDatabase();
@@ -71,7 +75,8 @@ export function buildApp(options: BuildAppOptions = {}) {
   });
 
   app.addHook("onRequest", async (request, reply) => {
-    if (PUBLIC_PATHS.has(request.url.split("?", 1)[0])) {
+    const path = request.url.split("?", 1)[0];
+    if (PUBLIC_PATHS.has(path) || path.startsWith("/assets/")) {
       return;
     }
 
@@ -84,10 +89,12 @@ export function buildApp(options: BuildAppOptions = {}) {
     }
   });
 
+  app.register(fastifyStatic, { root: options.staticRoot ?? resolve("dist/web") });
+
   app.get("/", async (request, reply) => {
     const query = request.query as Record<string, unknown>;
     if (typeof query.code !== "string" && typeof query.state !== "string") {
-      return { name: "gestio", status: "ok" };
+      return reply.sendFile("index.html");
     }
     if (typeof query.code !== "string" || typeof query.state !== "string") {
       return reply.code(400).type("text/html").send(callbackPage("Retour bancaire incomplet."));
@@ -128,6 +135,10 @@ export function buildApp(options: BuildAppOptions = {}) {
       return reply.code(502).type("text/html").send(callbackPage("La connexion bancaire n’a pas pu être finalisée."));
     }
   });
+
+  app.get("/auth/state", async () => ({
+    configured: Boolean(database.sqlite.prepare("SELECT 1 FROM local_auth WHERE id = 1").get())
+  }));
 
   app.post("/auth/setup", async (request, reply) => {
     if (database.sqlite.prepare("SELECT 1 FROM local_auth WHERE id = 1").get()) {
@@ -208,6 +219,65 @@ export function buildApp(options: BuildAppOptions = {}) {
       .where(eq(transactions.fingerprint, input.fingerprint))
       .get();
     return reply.code(inserted ? 201 : 200).send(transaction);
+  });
+
+  app.get("/transactions", async (request) => {
+    const query = request.query as Record<string, unknown>;
+    const accountId = optionalQueryInteger(query.accountId, "accountId");
+    const needsReview = optionalQueryBoolean(query.needsReview, "needsReview");
+    const limit = optionalQueryInteger(query.limit, "limit") ?? 100;
+    const offset = optionalQueryInteger(query.offset, "offset") ?? 0;
+    if (limit < 1 || limit > 500) badRequest("limit must be between 1 and 500");
+
+    const conditions: string[] = [];
+    const parameters: Array<number> = [];
+    if (accountId !== undefined) {
+      conditions.push("account_id = ?");
+      parameters.push(accountId);
+    }
+    if (needsReview !== undefined) {
+      conditions.push("needs_review = ?");
+      parameters.push(needsReview ? 1 : 0);
+    }
+    const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
+    const rows = database.sqlite.prepare(`
+      SELECT id, account_id AS accountId, transaction_date AS transactionDate,
+             transaction_at AS transactionAt, label, amount_cents AS amountCents,
+             source, needs_review AS needsReview, resolved_at AS resolvedAt, created_at AS createdAt
+      FROM transactions
+      ${where}
+      ORDER BY transaction_date DESC, id DESC
+      LIMIT ? OFFSET ?
+    `).all(...parameters, limit, offset) as Array<Omit<UiTransaction, "needsReview"> & { needsReview: number }>;
+    return { transactions: rows.map(row => ({ ...row, needsReview: Boolean(row.needsReview) })), limit, offset };
+  });
+
+  app.post("/transactions/resolve", async (request, reply) => {
+    const transactionId = requiredInteger(objectBody(request.body).transactionId, "transactionId");
+    const group = transactionGroup(database, transactionId);
+    if (!group) return reply.code(404).send({ error: "transaction_not_found" });
+    if (!reviewGroups(group.transactions).length) {
+      return reply.code(409).send({ error: "transaction_group_not_ambiguous" });
+    }
+    const result = database.sqlite.prepare(`
+      UPDATE transactions SET needs_review = 0, resolved_at = CURRENT_TIMESTAMP
+      WHERE account_id = ? AND transaction_date = ? AND amount_cents = ?
+    `).run(group.accountId, group.transactionDate, group.amountCents);
+    return { resolved: result.changes };
+  });
+
+  app.delete<{ Params: { id: string } }>("/transactions/:id", async (request, reply) => {
+    const transactionId = requiredInteger(Number(request.params.id), "id");
+    const group = transactionGroup(database, transactionId);
+    if (!group) return reply.code(404).send({ error: "transaction_not_found" });
+    if (!reviewGroups(group.transactions).length) {
+      return reply.code(409).send({ error: "transaction_group_not_ambiguous" });
+    }
+    if (group.transactions.every(transaction => transaction.source === "ENABLE_BANKING")) {
+      return reply.code(409).send({ error: "transaction_group_api" });
+    }
+    database.sqlite.prepare("DELETE FROM transactions WHERE id = ?").run(transactionId);
+    return reply.code(204).send();
   });
 
   app.post("/imports/csv", async (request, reply) => {
@@ -578,6 +648,19 @@ function requiredInteger(value: unknown, field: string): number {
   return value as number;
 }
 
+function optionalQueryInteger(value: unknown, field: string) {
+  if (value === undefined) return undefined;
+  if (typeof value !== "string" || !/^\d+$/.test(value)) badRequest(`${field} must be a non-negative integer`);
+  return requiredInteger(Number(value), field);
+}
+
+function optionalQueryBoolean(value: unknown, field: string) {
+  if (value === undefined) return undefined;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  badRequest(`${field} must be true or false`);
+}
+
 function requiredBase64(value: unknown, field: string) {
   const base64 = requiredString(value, field);
   if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(base64)) {
@@ -632,6 +715,21 @@ type BankConnection = {
 };
 
 type StoredTransaction = ParsedBankTransaction & { id: number };
+
+function transactionGroup(database: AppDatabase, transactionId: number) {
+  const seed = database.sqlite.prepare(`
+    SELECT account_id AS accountId, transaction_date AS transactionDate, amount_cents AS amountCents
+    FROM transactions WHERE id = ?
+  `).get(transactionId) as Pick<UiTransaction, "accountId" | "transactionDate" | "amountCents"> | undefined;
+  if (!seed) return undefined;
+  const rows = database.sqlite.prepare(`
+    SELECT id, account_id AS accountId, transaction_date AS transactionDate, label,
+           amount_cents AS amountCents, source, needs_review AS needsReview, resolved_at AS resolvedAt
+    FROM transactions
+    WHERE account_id = ? AND transaction_date = ? AND amount_cents = ?
+  `).all(seed.accountId, seed.transactionDate, seed.amountCents) as Array<Omit<UiTransaction, "needsReview"> & { needsReview: number }>;
+  return { ...seed, transactions: rows.map(row => ({ ...row, needsReview: Boolean(row.needsReview) })) };
+}
 
 function bankConnection(database: AppDatabase, authorizationId: string) {
   return database.sqlite.prepare(`
