@@ -1,10 +1,40 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { parseBankCsv } from "./csv-import.js";
 import { openDatabase } from "./db.js";
 import { buildApp } from "./server.js";
+
+const lab = process.env.GESTIO_LAB_CORPUS ?? "/mnt/c/Users/djabi/gestio/.lamoms/lab/agy";
+const statementCorpus = process.env.GESTIO_PDF_CORPUS ?? "/mnt/c/Users/djabi/Documents/relevé pdf";
+const revolutCsv = process.env.GESTIO_REVOLUT_CSV
+  ?? join(statementCorpus, "revolut", "account-statement_2025-09-01_2026-06-14_fr-fr_646623.csv");
+const corpusTest = { skip: process.env.GESTIO_SKIP_CORPUS === "1" };
+
+test("parses the real La Banque Postale and Revolut CSV corpus", corpusTest, () => {
+  const lbpCounts = ["0984209Z0241785448406468.csv", "0984209Z0241785448417573.csv"].map(name => {
+    const path = join(lab, name);
+    assert.ok(existsSync(path), `Corpus CSV La Banque Postale absent : ${path}`);
+    const parsed = parseBankCsv("LA_BANQUE_POSTALE", readFileSync(path));
+    assert.equal(parsed.ignored, 0);
+    assert.equal(parsed.transactions.some(transaction => transaction.label.includes("�")), false);
+    return parsed.transactions.length;
+  });
+  assert.deepEqual(lbpCounts, [19, 8]);
+
+  assert.ok(existsSync(revolutCsv), `Corpus CSV Revolut absent : ${revolutCsv}`);
+  const bytes = readFileSync(revolutCsv);
+  assert.equal(bytes.toString("utf8").trimEnd().split(/\r?\n/).length, 254);
+  const revolut = parseBankCsv("REVOLUT", bytes);
+  assert.equal(revolut.transactions.length, 250);
+  assert.equal(revolut.ignored, 3);
+  assert.equal(revolut.transactions.filter(transaction => /[^\x00-\x7F]/.test(transaction.label)).length, 77);
+  assert.equal(revolut.transactions.some(transaction => transaction.label.includes("�")), false);
+  const timestamped = revolut.transactions.find(transaction => transaction.transactionAt === "2025-09-27T13:05:08");
+  assert.equal(timestamped?.transactionDate, "2025-09-27");
+});
 
 test("imports LBP and Revolut CSV atomically without cross-channel duplicates", async (t) => {
   const dir = mkdtempSync(join(tmpdir(), "gestio-csv-"));
