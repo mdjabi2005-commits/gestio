@@ -524,9 +524,15 @@ T7:
   - "Les rapprochements marqués « à départager » sont atteignables et arbitrables par l'utilisateur —\
     \ c'est lui qui tranche, avec son relevé. Tant qu'un doute n'est pas levé, il est visible ; le\
     \ solde n'est jamais présenté comme certain en le passant sous silence. CONTRAT FIGÉ LE 2026-08-03\
-    \ (R1 puis C1, Hermès) — T7 LIT needs_review comme un marqueur opaque et POSE resolved_at quand\
-    \ l'utilisateur tranche. Il ne réimplémente jamais la règle de POSE, qui appartient à T8, ni la\
-    \ condition de REMISE, qui appartient à T10. Deux précisions d'exécution — la résolution porte sur\
+    \ (R1 puis C1, Hermès) — T7 LIT needs_review comme un marqueur opaque et, quand l'utilisateur\
+    \ tranche, ÉCRIT LES DEUX COLONNES ENSEMBLE — needs_review = 0 ET resolved_at = CURRENT_TIMESTAMP,\
+    \ dans la même instruction. RELU LE 2026-08-03 APRÈS LA LIVRAISON DE T10 : poser resolved_at SEUL\
+    \ ne suffit pas. La remise du marqueur serait bien empêchée (src/server.ts:745,\
+    \ WHERE id = ? AND resolved_at IS NULL) mais needs_review resterait à 1 et le groupe garderait ses\
+    \ deux lignes — « garder les deux » n'aurait alors AUCUN effet visible, l'utilisateur tranche et\
+    \ l'écran ne bouge pas. C'est la forme que la preuve de T10 emploie déjà\
+    \ (src/enable-banking.test.ts:283). Il ne réimplémente jamais la règle de POSE, qui appartient à\
+    \ T8, ni la condition de REMISE, qui appartient à T10. Deux précisions d'exécution — la résolution porte sur\
     \ TOUT le groupe et jamais sur une seule ligne, sans quoi les autres se font re-marquer à la\
     \ synchro suivante ; et comme aucun appariement n'est stocké, le groupe se reconstitue par la clé\
     \ de déduplication (transaction_date, amount_cents), celle du critère 1 de T2."
@@ -592,14 +598,18 @@ T7:
     \ règle de calcul non testée ne l'est pas."
   - "UN « À DÉPARTAGER » EST UNE PROPRIÉTÉ DU GROUPE, PAS DE LA LIGNE. Une transaction seule dans son\
     \ groupe (transaction_date, amount_cents) n'est JAMAIS présentée comme ambiguë, même si\
-    \ needs_review vaut 1 — rien ne remet jamais needs_review à 0, src/server.ts:744 est la seule\
-    \ écriture de cette colonne et ne pose que 1. Sans cette règle, l'utilisateur supprime le doublon\
-    \ et le survivant garde son marqueur pour toujours. LE MÊME PRÉDICAT GARDE LA ROUTE —\
+    \ needs_review vaut 1 — AUCUNE ÉCRITURE NE REMET À 0 LE MARQUEUR D'UNE LIGNE DÉJÀ EN BASE. Formulation\
+    \ corrigée le 2026-08-03 : la colonne est bien écrite ailleurs, mais seulement à l'INSERT d'une ligne\
+    \ neuve (src/server.ts:327 et :727, valeur 0 ou 1) ; la seule écriture qui touche une ligne EXISTANTE\
+    \ est src/server.ts:745 et elle ne pose que 1. La résolution de T7 sera la première à écrire 0, et\
+    \ seulement sur un groupe que l'utilisateur a tranché. Sans cette règle, l'utilisateur supprime le\
+    \ doublon et le survivant garde son marqueur pour toujours. LE MÊME PRÉDICAT GARDE LA ROUTE —\
     \ DELETE /transactions/:id REFUSE une transaction sans jumeau dans son groupe : sur une ligne\
     \ isolée, la déduplication de la synchro suivante ne trouve aucun candidat\
     \ (src/deduplication.ts:24, candidates.length === 0), la repousse dans transactions et la\
     \ RÉINSÈRE — la suppression serait défaite en silence, il n'existe aucune pierre tombale en base.\
-    \ DELETE NE POSE PAS resolved_at : sur un groupe de trois, cela éteindrait une ambiguïté encore\
+    \ DELETE N'ÉCRIT NI resolved_at NI needs_review = 0 — il ne fait que supprimer : sur un groupe de\
+    \ trois, marquer le groupe résolu éteindrait une ambiguïté encore\
     \ réelle entre les deux lignes restantes, que le WHERE resolved_at IS NULL de T10 empêcherait\
     \ ensuite de re-signaler. Le regroupement vit dans UNE fonction de src/ui-logic.ts et aucun\
     \ consommateur ne lit needs_review directement, sinon un compteur affiché ailleurs réintroduit le\
@@ -654,7 +664,10 @@ T7:
     \ dates JJ/MM."
   validations:
   - npm run typecheck
-  - npm test
+  - "npm test — DEPUIS T9, LA SUITE EXIGE LE CORPUS RÉEL et sort en code non nul s'il manque. Référence\
+    \ mesurée sur master le 2026-08-03 : 25 pass, 0 fail, 0 skipped. Si les données ne sont pas sur la\
+    \ machine, l'échappatoire est GESTIO_SKIP_CORPUS=1 — jamais de modification d'un fichier de test\
+    \ pour faire passer la suite."
   - npm run build
   - Parcourir les cas limites un par un et vérifier qu'aucun ne mène à une page blanche.
   - "Vérifier que le rappel bancaire fonctionne toujours — GET /?code=…&state=… rend la page de rappel,\
@@ -946,3 +959,54 @@ T11:
   - Ne pas toucher au reste de src/tls.ts. Le contrôle d'expiration par X509Certificate ajouté par
     T8 reste tel quel.
   - Aucun changement du serveur, d'une route ou du schéma.
+T12:
+  objectif: >-
+    Prouver le refus d'un CSV de format non reconnu. Le code le fait déjà et le fait bien ; rien dans
+    la suite ne le retient, donc rien ne le protège.
+  probleme_resolu: >-
+    Relevé par Claude le 2026-08-03, en confrontant la codebase livrée au PRD avant le démarrage de
+    T7. Le critère 6 du PRD — « un fichier au format non reconnu est refusé avec un message
+    explicite, sans ingestion partielle » — est tenu des deux côtés du code : src/csv-import.ts:23
+    à :130 lèvent CsvFormatError avec des messages nommant la cause, et src/server.ts:225-227 les
+    mappe en 400 csv_format_unrecognized en renvoyant le message. Mais AUCUN test ne couvre ce
+    chemin : les trois tests de src/csv-import.test.ts portent sur le corpus réel (:16), l'atomicité
+    croisée (:39) et la migration FIFO des empreintes (:107). Seul le PDF a son test de refus
+    (src/pdf-import.test.ts:18). C'est exactement le motif que T9 devait éteindre — un comportement
+    tenu par le seul code, sans observation qui le démontre — et il en a couvert trois autres. La
+    conséquence est silencieuse : le jour où quelqu'un modifie le registre de formats et casse le
+    refus, la suite reste verte et un fichier mal formé entre dans les comptes.
+  projets:
+  - gestio
+  dependances: []
+  parallelisable_avec:
+  - T7
+  criteres_acceptation:
+  - "LE REFUS EST PROUVÉ AU NIVEAU DE LA ROUTE, PAS SEULEMENT DE LA FONCTION. POST /imports/csv avec\
+    \ un contenu qui ne correspond pas au format de la banque déclarée rend 400 et un corps portant\
+    \ error = csv_format_unrecognized ET un message non vide. Tester parseBankCsv seul laisserait le\
+    \ mapping de src/server.ts:225-227 sans preuve, et c'est lui que l'utilisateur rencontre."
+  - "AUCUNE INGESTION PARTIELLE — c'est la seconde moitié du critère du PRD et la seule qui coûte\
+    \ cher si elle lâche. Le test compte les transactions du compte AVANT et APRÈS l'appel refusé et\
+    \ vérifie que le nombre est identique. Un refus qui laisse trois lignes derrière lui est pire\
+    \ qu'une acceptation, parce qu'il annonce le contraire de ce qu'il a fait."
+  - "DEUX FORMES DE REFUS, PAS UNE. Une banque inconnue (src/csv-import.ts:23) et un contenu au\
+    \ mauvais format pour une banque connue (src/csv-import.ts:34, :37, :61 ou :67) empruntent des\
+    \ chemins différents dans le code et doivent être couvertes toutes les deux."
+  - "AUCUNE DONNÉE RÉELLE. Le contenu mal formé est écrit dans le test, en clair, quelques octets —\
+    \ c'est un format invalide qu'on éprouve, pas un relevé. Ce test ne dépend donc PAS du corpus et\
+    \ ne porte pas la condition GESTIO_SKIP_CORPUS."
+  validations:
+  - npm run typecheck
+  - npm test
+  - "Vérifier que le test échoue si on le désarme — remplacer temporairement le 400 attendu par un\
+    \ 200 doit rendre la suite rouge. Un test qui passe quoi qu'il arrive ne prouve rien."
+  fichiers:
+  - src/csv-import.test.ts
+  hors_perimetre:
+  - AUCUNE MODIFICATION DU CODE DE PRODUCTION. src/csv-import.ts et src/server.ts ne bougent pas.
+    Tâche de preuve, pas de correction — comme T9.
+  - Si le test révèle que le refus ne tient pas, le défaut est SIGNALÉ et devient sa propre tâche.
+    On n'ajuste pas le test jusqu'à ce qu'il passe, et on ne répare pas au passage.
+  - Ne pas étendre le registre de formats CSV, ne pas ajouter de banque, ne pas toucher au décodage.
+  - Ne pas rouvrir les verdicts de T5 ni de T9. On ajoute la preuve qui manquait à l'inventaire, on
+    ne rejuge pas la livraison.

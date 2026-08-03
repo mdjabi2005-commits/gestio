@@ -32,7 +32,8 @@ Résultats attendus :
 - Calcul et affichage du solde disponible agrégé et par compte, recalculé à chaque ingestion.
 - **Indicateur de fraîcheur** du solde (date de dernière synchro réussie), imposé par la nature du canal.
 - Authentification locale par mot de passe ; secrets Enable Banking chiffrés au repos.
-- Frontend unique React Vite PWA, layouts mobile et desktop différenciés par breakpoints, logique métier partagée.
+- Frontend unique React Vite, logique métier partagée et tenue hors du DOM. **Une seule interface, identique sur mobile et sur desktop** *(requalifié par Lamoms le 2026-08-03 — la ligne exigeait des layouts différenciés par breakpoints)*. Le besoin du MVP est de vérifier que le backend et le frontend fonctionnent ensemble, sur les deux appareils, avec le MÊME parcours ; la différenciation desktop est une amélioration ultérieure. La logique vivant hors du DOM, elle se fera sans réécriture.
+- **Hors connexion : service worker, sans `manifest.json` au MVP** *(précisé le 2026-08-03)*. L'installation sur l'écran d'accueil n'est requise ni par le mode hors connexion, qui tient au service worker, ni par la vérification du parcours, qui se fait à l'URL. Le mot « PWA » employé ailleurs dans ce document désigne cette cible-là, atteinte par étapes.
 
 ### Limite explicite du MVP — à ne pas masquer
 
