@@ -155,7 +155,7 @@ Une fois le premier solde affiché :
 ## 7. Critères d'acceptation
 
 1. À l'ouverture, le solde agrégé s'affiche sans action de l'utilisateur, avec sa date de fraîcheur.
-2. Le solde agrégé est exactement la somme des soldes par compte, eux-mêmes sommes de leurs transactions.
+2. Le solde agrégé est exactement la somme des soldes par compte. Le solde d'un compte est la somme de ses transactions **tant que la banque n'en publie pas un qui fasse foi** ; quand elle le publie, c'est le sien qui gagne. *(Précisé le 2026-08-04 — la ligne disait « eux-mêmes sommes de leurs transactions », ce qui est faux pour un compte synchronisé : l'API ne rend que 90 jours d'historique, donc sommer ses transactions donnerait un chiffre inférieur au solde réel. `src/server.ts:388` tranche déjà dans ce sens — `CASE WHEN a.balance_cents IS NULL THEN SUM(t.amount_cents) ELSE a.balance_cents END`.)* **Conséquence pour l'interface** : sur un compte synchronisé, ajouter, supprimer ou arbitrer une transaction ne fait PAS bouger le solde affiché. C'est correct, et cela doit être assumé à l'écran plutôt que masqué.
 3. Une synchro Enable Banking rejouée deux fois de suite ne modifie pas le solde ni le nombre de transactions.
 4. Un import croisé CSV + API sur la même période ne produit aucun doublon et ne perd aucune transaction — vérifiable sur les données réelles du lab (27 mouvements, 0 orphelin des deux côtés).
 5. Deux transactions distinctes de même montant le même jour restent deux transactions.

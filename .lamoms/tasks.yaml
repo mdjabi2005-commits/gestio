@@ -547,8 +547,16 @@ T7:
     besoin apparaît.
   - Premier lancement — l'écran d'accueil est le couloir d'onboarding qui mène à la première valeur —
     voir son vrai solde — et non un écran vide.
-  - Chaque action clé produit un retour immédiat (comptes connectés, solde mis à jour, transactions ajoutées
-    et doublons ignorés).
+  - "Chaque action clé produit un retour immédiat (comptes connectés, solde mis à jour, transactions\
+    \ ajoutées et doublons ignorés). NUANCE AJOUTÉE LE 2026-08-04, À NE PAS DÉCOUVRIR EN CODANT — SUR\
+    \ UN COMPTE SYNCHRONISÉ, LE SOLDE NE BOUGE PAS. src/server.ts:388 fait gagner le solde publié par\
+    \ la banque dès que a.balance_cents n'est pas nul, et ne somme les transactions que sinon.\
+    \ Arbitrer un « à départager », supprimer un doublon ou importer un relevé sur un compte Enable\
+    \ Banking laisse donc le total INCHANGÉ, et c'est correct — l'API ne rend que 90 jours, sommer\
+    \ ses transactions donnerait un chiffre faux. Le retour immédiat porte alors sur CE QUI A\
+    \ RÉELLEMENT CHANGÉ — la ligne a disparu, le groupe est tranché, tant de transactions ajoutées et\
+    \ tant ignorées. Annoncer « solde mis à jour » quand il ne l'est pas recrée le chiffre qui a\
+    \ l'air juste, exactement le mode de panne que la Core Feature ne tolère pas."
   - "UNE SEULE INTERFACE, IDENTIQUE SUR PC ET SUR TÉLÉPHONE. Une colonne mobile-first, lisible telle\
     \ quelle sur desktop. La logique métier et le state sont partagés et vivent HORS du DOM\
     \ (src/ui-logic.ts), ce qui rend la différenciation ultérieure possible sans réécriture.\
@@ -968,13 +976,21 @@ T12:
     T7. Le critère 6 du PRD — « un fichier au format non reconnu est refusé avec un message
     explicite, sans ingestion partielle » — est tenu des deux côtés du code : src/csv-import.ts:23
     à :130 lèvent CsvFormatError avec des messages nommant la cause, et src/server.ts:225-227 les
-    mappe en 400 csv_format_unrecognized en renvoyant le message. Mais AUCUN test ne couvre ce
-    chemin : les trois tests de src/csv-import.test.ts portent sur le corpus réel (:16), l'atomicité
-    croisée (:39) et la migration FIFO des empreintes (:107). Seul le PDF a son test de refus
-    (src/pdf-import.test.ts:18). C'est exactement le motif que T9 devait éteindre — un comportement
-    tenu par le seul code, sans observation qui le démontre — et il en a couvert trois autres. La
-    conséquence est silencieuse : le jour où quelqu'un modifie le registre de formats et casse le
-    refus, la suite reste verte et un fichier mal formé entre dans les comptes.
+    mappe en 400 csv_format_unrecognized en renvoyant le message. La couverture de ce chemin est
+    INCOMPLÈTE. RECTIFICATION DU 2026-08-04, APRÈS LIVRAISON — cette ligne affirmait qu'AUCUN test ne
+    couvrait le refus, et c'était faux. La version d'avant T12 (0414dfe:src/csv-import.test.ts:66-68
+    et :102-104) vérifiait déjà un 400 sur le séparateur décimal et un 400 sur la banque inconnue,
+    avec un comptage de transactions. Claude avait conclu du NOM des tests — corpus réel (:16),
+    atomicité croisée (:39), migration FIFO (:107) — que les assertions ne couvraient que cela ; le
+    nom disait « atomically », les assertions disaient autre chose. La faute est de plan, pas de
+    livraison, et elle est du même genre que celles que T9 devait éteindre. CE QUI MANQUAIT
+    RÉELLEMENT, et que T12 apporte : l'assertion sur le CODE d'erreur csv_format_unrecognized (avant,
+    seulement le statut et une regex sur le message), une SECONDE forme de contenu invalide pour une
+    banque connue, et le comptage PAR COMPTE au lieu du comptage global — un total global peut rester
+    juste par compensation, pas un total par compte. Renforcement d'une preuve partielle, donc, et
+    non couverture d'un trou : 25 tests avant, 25 après. La conséquence évitée reste la même — le jour
+    où quelqu'un modifie le registre de formats, c'est le code d'erreur et l'absence d'ingestion qui
+    le retiennent, pas seulement un statut.
   projets:
   - gestio
   dependances: []
