@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import test from "node:test";
+import test, { type TestContext } from "node:test";
 import { openDatabase } from "./db.js";
 import { decimalCents, EnableBankingError, parseBankTransaction, type EnableBankingApi } from "./enable-banking.js";
 import { buildApp } from "./server.js";
@@ -17,6 +17,8 @@ class FakeEnableBanking implements EnableBankingApi {
   calls: Array<{ method: string; path: string; options: ApiOptions }> = [];
   state = "";
   rateLimited = false;
+  transactionDates = ["2026-05-04", "2026-05-05"];
+  failDuringPagination = false;
 
   async request<T>(method: "GET" | "POST", path: string, options: ApiOptions = {}): Promise<T> {
     this.calls.push({ method, path, options });
@@ -50,6 +52,18 @@ class FakeEnableBanking implements EnableBankingApi {
     }
     if (method === "GET" && path === "/accounts/account-session-uid/transactions") {
       if (this.rateLimited) throw new EnableBankingError(429, "ASPSP_RATE_LIMIT_EXCEEDED", "rate limited");
+      if (this.failDuringPagination) {
+        if (options.query?.continuation_key === "failing-page-2") throw new Error("page 2 failed");
+        return {
+          transactions: [{
+            booking_date: "2026-08-03",
+            credit_debit_indicator: "CRDT",
+            transaction_amount: { amount: "12.34", currency: "EUR" },
+            remittance_information: ["Page acquise"]
+          }],
+          continuation_key: "failing-page-2"
+        } as T;
+      }
       if (options.query?.strategy === "longest" && !options.query.continuation_key) {
         return { transactions: [], continuation_key: "page-2" } as T;
       }
@@ -59,14 +73,14 @@ class FakeEnableBanking implements EnableBankingApi {
       return {
         transactions: [
           {
-            booking_date: "2026-05-04",
+            booking_date: this.transactionDates[0],
             credit_debit_indicator: "CRDT",
             transaction_amount: { amount: "10", currency: "USD" },
             remittance_information: ["Salaire"],
             entry_reference: "synthetic.0"
           },
           {
-            booking_date: "2026-05-05",
+            booking_date: this.transactionDates[1],
             credit_debit_indicator: "DBIT",
             transaction_amount: { amount: "5.00", currency: "USD" },
             remittance_information: ["Courses"],
@@ -209,3 +223,86 @@ test("connects out-of-band, exhausts empty pages, stores API balance freshness, 
   assert.equal(grouped.institutions[0].balanceCents, 15_000);
   assert.equal(grouped.institutions[0].accounts.length, 3);
 });
+
+test("background synchronization sends no PSU headers", async (t) => {
+  const { api, runBackgroundSync } = await connectedFixture(t);
+  const callCount = api.calls.length;
+
+  await runBackgroundSync();
+
+  const transactionCall = api.calls.slice(callCount).find(call => call.path.endsWith("/transactions"));
+  assert.deepEqual(transactionCall?.options.headers, {});
+});
+
+test("a shorter synchronization never moves known_since forward", async (t) => {
+  const { api, app, cookie, database } = await connectedFixture(t);
+  api.transactionDates = ["2026-07-04", "2026-07-05"];
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/enable-banking/sync/authorization-1",
+    headers: { cookie }
+  });
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(database.sqlite.prepare("SELECT known_since FROM accounts WHERE external_hash = ?")
+    .pluck().get("stable-account-hash"), "2026-05-04");
+});
+
+test("keeps pages written before a later pagination failure", async (t) => {
+  const { api, app, cookie, database } = await connectedFixture(t);
+  api.failDuringPagination = true;
+
+  const response = await app.inject({
+    method: "POST",
+    url: "/enable-banking/sync/authorization-1",
+    headers: { cookie }
+  });
+
+  assert.equal(response.statusCode, 502);
+  assert.equal(database.sqlite.prepare("SELECT COUNT(*) FROM transactions WHERE label = 'Page acquise'")
+    .pluck().get(), 1);
+});
+
+async function connectedFixture(t: TestContext) {
+  const dir = mkdtempSync(join(tmpdir(), "gestio-enable-banking-proof-"));
+  const database = openDatabase({ path: join(dir, "gestio.db"), key: "test-db-key-32-random-characters" });
+  const api = new FakeEnableBanking();
+  let runBackgroundSync: () => Promise<void> = async () => assert.fail("Background synchronization was not registered");
+  const nativeSetInterval = globalThis.setInterval;
+  globalThis.setInterval = ((callback: () => Promise<void>) => {
+    runBackgroundSync = callback;
+    return nativeSetInterval(() => {}, 2_147_483_647);
+  }) as typeof setInterval;
+  const app = (() => {
+    try {
+      return buildApp({ database, enableBanking: api, logger: false });
+    } finally {
+      globalThis.setInterval = nativeSetInterval;
+    }
+  })();
+  t.after(async () => {
+    await app.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+
+  const setup = await app.inject({
+    method: "POST",
+    url: "/auth/setup",
+    payload: { password: "correct horse battery staple" }
+  });
+  const cookie = String(setup.headers["set-cookie"]).split(";", 1)[0];
+  await app.inject({
+    method: "POST",
+    url: "/enable-banking/connect",
+    headers: { cookie },
+    payload: { name: "Banque Test", country: "fr" }
+  });
+  await app.inject({
+    method: "GET",
+    url: `/?code=bank-code&state=${api.state}`,
+    headers: { "user-agent": "Gestio test browser" },
+    remoteAddress: "192.0.2.10"
+  });
+  return { api, app, cookie, database, runBackgroundSync };
+}
