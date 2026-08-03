@@ -599,14 +599,28 @@ T7:
     \ isolée, la déduplication de la synchro suivante ne trouve aucun candidat\
     \ (src/deduplication.ts:24, candidates.length === 0), la repousse dans transactions et la\
     \ RÉINSÈRE — la suppression serait défaite en silence, il n'existe aucune pierre tombale en base.\
-    \ Supprimer une ligne APPARIÉE reste sûr, le survivant absorbe l'entrante\
-    \ (src/deduplication.ts:28-29, candidates.length === 1 apparie sans condition).\
     \ DELETE NE POSE PAS resolved_at : sur un groupe de trois, cela éteindrait une ambiguïté encore\
     \ réelle entre les deux lignes restantes, que le WHERE resolved_at IS NULL de T10 empêcherait\
     \ ensuite de re-signaler. Le regroupement vit dans UNE fonction de src/ui-logic.ts et aucun\
     \ consommateur ne lit needs_review directement, sinon un compteur affiché ailleurs réintroduit le\
     \ défaut. Deux tests — un groupe de taille 1 n'est pas affiché, un DELETE sur ligne isolée est\
     \ refusé."
+  - "LA SUPPRESSION RETIRE LA LIGNE DU CANAL QUI NE SE RESYNCHRONISE PAS, JAMAIS L'AUTRE. Quand\
+    \ l'utilisateur dit « c'est le même mouvement en double », DELETE /transactions/:id porte sur une\
+    \ ligne dont source vaut CSV_IMPORT, PDF_RELEVE ou MANUEL (src/server.ts:240, :314, :554), jamais\
+    \ sur une ligne ENABLE_BANKING. Si TOUT le groupe vient de l'API, la suppression est REFUSÉE et\
+    \ le seul arbitrage possible reste « garder les deux » — une écriture réellement postée deux fois\
+    \ par la banque n'a de toute façon pas à disparaître du dépôt.\
+    \ RAISON, MESURÉE APRÈS T8 LE 2026-08-03 : T8 a rendu l'appariement à candidat unique CONDITIONNEL\
+    \ (src/deduplication.ts:28-30, matchIndex ne vaut 0 que si un des deux libellés est vide OU si le\
+    \ score de Jaccard est strictement positif). Deux libellés sans mot commun ne s'apparient donc\
+    \ plus. Supprimer la ligne ENABLE_BANKING d'une telle paire la fait REVENIR à la synchronisation\
+    \ suivante, et le groupe se fait re-marquer ; supprimer la ligne CSV ou PDF tient, puisque la\
+    \ ligne API restante s'apparie à son entrante avec un score de 1. Sans cette règle, le résultat\
+    \ d'une suppression dépendrait de la SOURCE de la ligne choisie, ce que l'interface ne peut pas\
+    \ expliquer à l'utilisateur. Ce n'est pas théorique — le même changement a fait passer le corpus\
+    \ PDF réel de imported 48, duplicates 1, reviewNeeded 0 à 49, 0, 1 (src/pdf-import.test.ts).\
+    \ Un test : suppression refusée sur un groupe entièrement ENABLE_BANKING."
   - "ZÉRO DÉPENDANCE FRONTEND EN DEHORS DE REACT ET VITE. Décisions figées le 2026-08-03 pour que\
     \ Codex ne les tranche pas en codant, chacune étant l'endroit où une dépendance aurait pu\
     \ entrer. (1) AUCUN ROUTEUR — les deux ou trois vues tiennent dans un état, et la navigation\
@@ -880,3 +894,55 @@ T10:
   - Ne pas rouvrir le verdict de T8 ni celui de T2 — la faute est dans le plan, pas dans le code
     livré. T2 n'a jamais demandé que la décision de l'utilisateur soit retenue, personne n'y avait
     pensé avant l'écran de T7.
+T11:
+  objectif: >-
+    Empêcher gestio d'écraser un certificat TLS qu'il n'a pas créé. Aujourd'hui il le remplace en
+    silence par un auto-signé, et c'est le hors connexion du téléphone qui meurt sans cause visible.
+  probleme_resolu: >-
+    Constaté par Claude le 2026-08-03 en relisant le code livré par T8, avant le démarrage de T7.
+    src/tls.ts:6-7 rend les chemins du certificat et de la clé configurables par
+    GESTIO_TLS_CERT_FILE et GESTIO_TLS_KEY_FILE. src/tls.ts:10 régénère un auto-signé CN=localhost
+    quand le fichier est absent OU — ajout de T8 — quand il est EXPIRÉ, et il écrit à ces chemins
+    exacts. Or la remédiation prévue pour C2 consiste précisément à pointer ces variables vers le
+    certificat émis par tailscale cert, seul moyen d'obtenir un contexte sécurisé sur le téléphone
+    et donc d'enregistrer le service worker. Ces certificats durent 90 jours. Au premier
+    dépassement, gestio écrase le vrai certificat par un auto-signé, le navigateur du téléphone
+    refuse à nouveau le service worker, et rien dans les journaux ne relie la panne à sa cause. Le
+    correctif de C2 se saborde donc lui-même à échéance. Ce n'est pas une régression de T8 — T8 a
+    correctement traité l'expiration de l'auto-signé, personne n'avait encore décidé que ces chemins
+    pourraient désigner un certificat appartenant à quelqu'un d'autre.
+  projets:
+  - gestio
+  dependances: []
+  parallelisable_avec:
+  - T7
+  - T9
+  - T10
+  criteres_acceptation:
+  - "L'AUTO-GÉNÉRATION N'A LIEU QUE SUR LES CHEMINS PAR DÉFAUT. Si GESTIO_TLS_CERT_FILE ou\
+    \ GESTIO_TLS_KEY_FILE est défini, gestio ne génère JAMAIS et n'écrit JAMAIS à ces chemins. Ne\
+    \ jamais écraser un fichier qu'on n'a pas créé est la règle, la configuration explicite en est\
+    \ la frontière."
+  - "FICHIER CONFIGURÉ ABSENT OU EXPIRÉ — ERREUR EXPLICITE, JAMAIS UN ÉCRASEMENT. Le message nomme\
+    \ le chemin concerné et, si le certificat existe et a expiré, la date d'expiration lue. Sans ces\
+    \ deux éléments la panne ne ressemble à rien et se rediagnostique de zéro à chaque fois."
+  - "LE COMPORTEMENT PAR DÉFAUT NE BOUGE PAS. Sans aucune variable d'environnement, l'auto-signé est\
+    \ créé s'il manque et régénéré s'il a expiré, exactement comme T8 l'a livré. Le verdict de T8\
+    \ n'est pas rouvert."
+  - "PREUVE PAR LE FICHIER, PAS PAR LE MESSAGE. Un test pointe GESTIO_TLS_CERT_FILE vers un\
+    \ certificat expiré, appelle localHttpsOptions, et vérifie DEUX choses — l'appel échoue, et le\
+    \ contenu du fichier est identique octet pour octet avant et après. Vérifier seulement que\
+    \ l'erreur est levée ne prouve pas que le certificat a survécu, et c'est sa survie qui est le\
+    \ besoin."
+  validations:
+  - npm run typecheck
+  - npm test
+  fichiers:
+  - src/tls.ts
+  - src/tls.test.ts
+  hors_perimetre:
+  - Ne pas émettre le certificat Tailscale ni automatiser son renouvellement — c'est de
+    l'exploitation, pas du code, et cela appartient à la remédiation de C2 côté Copilot.
+  - Ne pas toucher au reste de src/tls.ts. Le contrôle d'expiration par X509Certificate ajouté par
+    T8 reste tel quel.
+  - Aucun changement du serveur, d'une route ou du schéma.
