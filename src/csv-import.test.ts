@@ -36,7 +36,7 @@ test("parses the real La Banque Postale and Revolut CSV corpus", corpusTest, () 
   assert.equal(timestamped?.transactionDate, "2025-09-27");
 });
 
-test("imports LBP and Revolut CSV atomically without cross-channel duplicates", async (t) => {
+test("imports known CSV and rejects unrecognized formats atomically", async (t) => {
   const dir = mkdtempSync(join(tmpdir(), "gestio-csv-"));
   const database = openDatabase({ path: join(dir, "gestio.db"), key: "test-db-key-32-random-characters" });
   const app = buildApp({ database, logger: false });
@@ -62,10 +62,11 @@ test("imports LBP and Revolut CSV atomically without cross-channel duplicates", 
     '01/08/2026;"Nouvelle opération";5,00',
     '02/08/2026;"Montant cassé";invalide'
   ]);
+  const beforeInvalidLbp = transactionCount(database, accountId);
   const invalidResponse = await importCsv(app, cookie, accountId, "LA_BANQUE_POSTALE", invalidLbp);
   assert.equal(invalidResponse.statusCode, 400);
   assert.match((invalidResponse.json() as { message: string }).message, /séparateur décimal/);
-  assert.equal(transactionCount(database), 1);
+  assert.equal(transactionCount(database, accountId), beforeInvalidLbp);
 
   const lbp = lbpCsv([
     '01/08/2026;"VIREMENT DEFAULT RÉFÉRENCE ";3,99',
@@ -98,10 +99,18 @@ test("imports LBP and Revolut CSV atomically without cross-channel duplicates", 
   const balance = await app.inject({ method: "GET", url: "/balance", headers: { cookie } });
   assert.equal((balance.json() as { totalCents: number }).totalCents, 3_399);
 
-  const unknown = await importCsv(app, cookie, accountId, "BANQUE_INCONNUE", Buffer.from("x"));
-  assert.equal(unknown.statusCode, 400);
-  assert.match((unknown.json() as { message: string }).message, /Banque .* non prise en charge/);
-  assert.equal(transactionCount(database), 4);
+  for (const [bank, content] of [
+    ["BANQUE_INCONNUE", "x"],
+    ["LA_BANQUE_POSTALE", "pas un relevé"]
+  ]) {
+    const before = transactionCount(database, accountId);
+    const response = await importCsv(app, cookie, accountId, bank, Buffer.from(content));
+    const body = response.json() as { error: string; message: string };
+    assert.equal(response.statusCode, 400);
+    assert.equal(body.error, "csv_format_unrecognized");
+    assert.ok(body.message);
+    assert.equal(transactionCount(database, accountId), before);
+  }
 });
 
 test("migrates existing fingerprints to FIFO occurrences without losing data", () => {
@@ -131,7 +140,7 @@ test("migrates existing fingerprints to FIFO occurrences without losing data", (
         (account_id, transaction_date, label, amount_cents, source, fingerprint, occurrence)
       VALUES (1, '2026-08-01', 'Existant', 100, 'CSV_IMPORT', 'same-fingerprint', 1)
     `).run();
-    assert.equal(transactionCount(migrated), 2);
+    assert.equal(transactionCount(migrated, 1), 2);
   } finally {
     migrated.close();
     rmSync(dir, { recursive: true, force: true });
@@ -167,6 +176,6 @@ function importCsv(
   });
 }
 
-function transactionCount(database: ReturnType<typeof openDatabase>) {
-  return database.sqlite.prepare("SELECT COUNT(*) FROM transactions").pluck().get();
+function transactionCount(database: ReturnType<typeof openDatabase>, accountId: number) {
+  return database.sqlite.prepare("SELECT COUNT(*) FROM transactions WHERE account_id = ?").pluck().get(accountId);
 }
