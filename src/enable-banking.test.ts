@@ -18,6 +18,7 @@ class FakeEnableBanking implements EnableBankingApi {
   state = "";
   rateLimited = false;
   transactionDates = ["2026-05-04", "2026-05-05"];
+  transactionLabels = ["Salaire", "Courses"];
   failDuringPagination = false;
 
   async request<T>(method: "GET" | "POST", path: string, options: ApiOptions = {}): Promise<T> {
@@ -76,14 +77,14 @@ class FakeEnableBanking implements EnableBankingApi {
             booking_date: this.transactionDates[0],
             credit_debit_indicator: "CRDT",
             transaction_amount: { amount: "10", currency: "USD" },
-            remittance_information: ["Salaire"],
+            remittance_information: [this.transactionLabels[0]],
             entry_reference: "synthetic.0"
           },
           {
             booking_date: this.transactionDates[1],
             credit_debit_indicator: "DBIT",
             transaction_amount: { amount: "5.00", currency: "USD" },
-            remittance_information: ["Courses"],
+            remittance_information: [this.transactionLabels[1]],
             entry_reference: "synthetic.1"
           }
         ]
@@ -247,6 +248,48 @@ test("a shorter synchronization never moves known_since forward", async (t) => {
   assert.equal(response.statusCode, 200);
   assert.equal(database.sqlite.prepare("SELECT known_since FROM accounts WHERE external_hash = ?")
     .pluck().get("stable-account-hash"), "2026-05-04");
+});
+
+test("keeps a resolved ambiguous group resolved after resynchronization", async (t) => {
+  const { api, app, cookie, database } = await connectedFixture(t);
+  const accountId = database.sqlite.prepare("SELECT id FROM accounts WHERE external_hash = ?")
+    .pluck().get("stable-account-hash") as number;
+  api.transactionDates[0] = "2026-07-10";
+  database.sqlite.prepare(`
+    INSERT INTO transactions
+      (account_id, transaction_date, label, amount_cents, source, fingerprint)
+    VALUES (?, ?, 'Retrait espèces', 1000, 'CSV_IMPORT', 'ambiguous-cash'),
+           (?, ?, 'Remboursement ami', 1000, 'CSV_IMPORT', 'ambiguous-refund')
+  `).run(accountId, api.transactionDates[0], accountId, api.transactionDates[0]);
+
+  const sync = () => app.inject({
+    method: "POST",
+    url: "/enable-banking/sync/authorization-1",
+    headers: { cookie }
+  });
+  assert.equal((await sync()).statusCode, 200);
+
+  const group = database.sqlite.prepare(`
+    SELECT id FROM transactions WHERE transaction_date = ? AND amount_cents = 1000 ORDER BY id
+  `).all(api.transactionDates[0]) as Array<{ id: number }>;
+  assert.equal(group.length, 3);
+  assert.equal(database.sqlite.prepare(`
+    SELECT COUNT(*) FROM transactions
+    WHERE transaction_date = ? AND amount_cents = 1000 AND needs_review = 1
+  `).pluck().get(api.transactionDates[0]), group.length);
+
+  database.sqlite.transaction((ids: number[]) => {
+    const resolve = database.sqlite.prepare(
+      "UPDATE transactions SET needs_review = 0, resolved_at = CURRENT_TIMESTAMP WHERE id = ?"
+    );
+    for (const id of ids) resolve.run(id);
+  })(group.map(transaction => transaction.id));
+
+  api.transactionLabels[0] = "Prime exceptionnelle";
+  assert.equal((await sync()).statusCode, 200);
+  assert.equal(database.sqlite.prepare(`
+    SELECT COUNT(*) FROM transactions WHERE resolved_at IS NOT NULL AND needs_review = 1
+  `).pluck().get(), 0);
 });
 
 test("keeps pages written before a later pagination failure", async (t) => {
