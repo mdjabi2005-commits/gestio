@@ -12,12 +12,12 @@ GESTIO_BACKUP_DIR="${GESTIO_BACKUP_DIR:-backups}"
 SQLITE3_BIN="${SQLITE3_BIN:-sqlcipher}"
 
 if [ -z "${GESTIO_DB_KEY:-}" ]; then
-  echo "GESTIO_DB_KEY is not set; backup skipped."
-  exit 0
+  echo "GESTIO_DB_KEY is not set; backup failed." >&2
+  exit 1
 fi
 
 if ! command -v "$SQLITE3_BIN" >/dev/null; then
-  echo "$SQLITE3_BIN is required for encrypted sqlite3 .backup. Install SQLCipher CLI or set SQLITE3_BIN." >&2
+  echo "$SQLITE3_BIN is required for encrypted backups. Install SQLCipher CLI or set SQLITE3_BIN." >&2
   exit 127
 fi
 
@@ -26,7 +26,7 @@ backup="$GESTIO_BACKUP_DIR/gestio-$(date -u +%Y-%m-%dT%H-%M-%SZ).db"
 key_sql=${GESTIO_DB_KEY//\'/\'\'}
 backup_sql=${backup//\'/\'\'}
 
-"$SQLITE3_BIN" "$GESTIO_DB_PATH" <<SQL
+"$SQLITE3_BIN" -bail "$GESTIO_DB_PATH" <<SQL
 PRAGMA cipher='sqlcipher';
 PRAGMA legacy=4;
 PRAGMA key='$key_sql';

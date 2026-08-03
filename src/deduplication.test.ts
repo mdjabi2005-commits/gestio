@@ -65,6 +65,46 @@ test("keeps same-day same-amount transactions and marks an unlabeled cross-chann
   assert.deepEqual(result.toReview.map(transaction => transaction.id), ["second-a", "first-a", "first-b"]);
 });
 
+test("keeps a unique same-day same-amount candidate when labels share no word", () => {
+  const card: Transaction = {
+    id: "card",
+    transactionDate: "2026-07-02",
+    amountCents: -2_200,
+    label: "CARTE X0486 RESTAURANT"
+  };
+  const transfer: Transaction = {
+    id: "transfer",
+    transactionDate: "2026-07-02",
+    amountCents: -2_200,
+    label: "VIREMENT A MARIE"
+  };
+
+  const result = deduplicateTransactions([[card], [transfer]]);
+
+  assert.deepEqual(result.transactions.map(transaction => transaction.id), ["card", "transfer"]);
+  assert.deepEqual(result.matches, []);
+  assert.deepEqual(result.toReview.map(transaction => transaction.id), ["transfer", "card"]);
+});
+
+test("keeps multiple same-day same-amount candidates when no label shares a word", () => {
+  const cards: Transaction[] = [
+    { id: "card-a", transactionDate: "2026-07-02", amountCents: -2_200, label: "CARTE X0486 RESTAURANT" },
+    { id: "card-b", transactionDate: "2026-07-02", amountCents: -2_200, label: "CARTE Y0911 BOUCHERIE" }
+  ];
+  const transfer: Transaction = {
+    id: "transfer",
+    transactionDate: "2026-07-02",
+    amountCents: -2_200,
+    label: "VIREMENT A MARIE"
+  };
+
+  const result = deduplicateTransactions([cards, [transfer]]);
+
+  assert.deepEqual(result.transactions.map(transaction => transaction.id), ["card-a", "card-b", "transfer"]);
+  assert.deepEqual(result.matches, []);
+  assert.deepEqual(result.toReview.map(transaction => transaction.id), ["transfer", "card-a", "card-b"]);
+});
+
 test("is idempotent across repeated ingestions and signs API amounts from the indicator", () => {
   const transaction: Transaction = {
     id: "api",
