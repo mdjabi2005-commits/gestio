@@ -77,6 +77,7 @@ function migrate(sqlite: RawDatabase) {
       occurrence INTEGER NOT NULL DEFAULT 0,
       external_reference TEXT,
       needs_review INTEGER NOT NULL DEFAULT 0,
+      resolved_at TEXT,
 
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -139,6 +140,7 @@ function migrate(sqlite: RawDatabase) {
   addColumn(sqlite, "accounts", "known_since", "TEXT");
   addColumn(sqlite, "transactions", "external_reference", "TEXT");
   addColumn(sqlite, "transactions", "needs_review", "INTEGER NOT NULL DEFAULT 0");
+  addColumn(sqlite, "transactions", "resolved_at", "TEXT");
   sqlite.exec("CREATE UNIQUE INDEX IF NOT EXISTS accounts_external_hash_unique_idx ON accounts(external_hash)");
 
   if (sqlite.prepare("SELECT 1 FROM accounts WHERE institution_id IS NULL LIMIT 1").get()) {
