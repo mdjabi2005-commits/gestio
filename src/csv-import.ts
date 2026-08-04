@@ -13,8 +13,20 @@ type ParsedCsv = {
 export class CsvFormatError extends Error {}
 
 export const bankCsvFormats = {
-  LA_BANQUE_POSTALE: { encoding: "iso-8859-1", separator: ";", parse: parseLaBanquePostale },
-  REVOLUT: { encoding: "utf-8", separator: ",", parse: parseRevolut }
+  LA_BANQUE_POSTALE: {
+    encoding: "iso-8859-1",
+    separator: ";",
+    institutionName: "La Banque Postale",
+    multiAccount: false,
+    parse: parseLaBanquePostale
+  },
+  REVOLUT: {
+    encoding: "utf-8",
+    separator: ",",
+    institutionName: "Revolut",
+    multiAccount: true,
+    parse: parseRevolut
+  }
 } as const;
 
 export function parseBankCsv(bank: string, bytes: Buffer): ParsedCsv {
