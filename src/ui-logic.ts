@@ -4,7 +4,7 @@ export type UiAccount = {
   institutionName: string;
   institutionCountry: string;
   name: string;
-  balanceCents: number;
+  balanceCents: number | null;
   updatedAt: string | null;
   knownSince: string | null;
   currency?: string | null;
@@ -30,6 +30,7 @@ export function groupAccountsByInstitution(accounts: readonly UiAccount[]) {
     name: string;
     country: string;
     balanceCents: number;
+    unknownBalanceCount: number;
     accounts: UiAccount[];
   }>();
   for (const account of accounts) {
@@ -38,9 +39,11 @@ export function groupAccountsByInstitution(accounts: readonly UiAccount[]) {
       name: account.institutionName,
       country: account.institutionCountry,
       balanceCents: 0,
+      unknownBalanceCount: 0,
       accounts: []
     };
-    institution.balanceCents += account.balanceCents;
+    institution.balanceCents += account.balanceCents ?? 0;
+    if (account.balanceCents === null) institution.unknownBalanceCount += 1;
     institution.accounts.push(account);
     institutions.set(account.institutionId, institution);
   }
@@ -48,11 +51,12 @@ export function groupAccountsByInstitution(accounts: readonly UiAccount[]) {
 }
 
 export function oldestUpdatedAt(accounts: readonly UiAccount[]) {
-  return accounts.reduce<string | null>((oldest, account) => {
-    if (!account.updatedAt) return oldest;
-    if (!oldest || dateValue(account.updatedAt) < dateValue(oldest)) return account.updatedAt;
-    return oldest;
-  }, null);
+  let oldest: string | null = null;
+  for (const account of accounts) {
+    if (!account.updatedAt) return null;
+    if (!oldest || dateValue(account.updatedAt) < dateValue(oldest)) oldest = account.updatedAt;
+  }
+  return oldest;
 }
 
 export function knownSinceLabel(date: string | null) {

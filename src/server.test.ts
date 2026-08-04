@@ -161,27 +161,33 @@ test("creates an account, records transactions, and returns exact balances", asy
   assert.deepEqual(removeApi.json(), { error: "transaction_group_api" });
   assert.equal(database.sqlite.prepare("SELECT COUNT(*) FROM transactions WHERE transaction_date = '2026-08-05' AND source = 'ENABLE_BANKING'").pluck().get(), 2);
 
+  const syncedInstitutionId = Number(database.sqlite.prepare(
+    "INSERT INTO institutions (name, country) VALUES ('Banque synchronisée', 'FR')"
+  ).run().lastInsertRowid);
+  const unknownAccountId = Number(database.sqlite.prepare(`
+    INSERT INTO accounts (institution_id, name, type, external_hash)
+    VALUES (?, 'Compte jamais chargé', 'BANK', 'unknown-balance-hash')
+  `).run(syncedInstitutionId).lastInsertRowid);
+  database.sqlite.prepare(`
+    INSERT INTO transactions (account_id, transaction_date, label, amount_cents, source, fingerprint)
+    VALUES (?, '2026-08-05', 'Page partielle', 1234, 'ENABLE_BANKING', 'partial-sync')
+  `).run(unknownAccountId);
+
   const balanceResponse = await app.inject({ method: "GET", url: "/balance", headers: { cookie } });
   assert.equal(balanceResponse.statusCode, 200);
   const balance = balanceResponse.json() as {
     totalCents: number;
-    accounts: Array<{ id: number; name: string; type: string; balanceCents: number; updatedAt: string }>;
+    unknownBalanceCount: number;
+    accounts: Array<{ id: number; name: string; type: string; balanceCents: number | null; updatedAt: string | null }>;
   };
   assert.equal(balance.totalCents, 78_00);
-  assert.deepEqual(balance.accounts.map(({ updatedAt, ...accountBalance }) => accountBalance), [
-    {
-      id: account.id,
-      institutionId: account.institutionId,
-      institutionName: "Comptes manuels",
-      institutionCountry: "XX",
-      name: "Compte courant",
-      type: "BANK",
-      balanceCents: 78_00,
-      currency: null,
-      knownSince: null
-    }
-  ]);
-  assert.match(balance.accounts[0].updatedAt, /^\d{4}-\d{2}-\d{2} /);
+  assert.equal(balance.unknownBalanceCount, 1);
+  const manualBalance = balance.accounts.find(candidate => candidate.id === account.id)!;
+  assert.equal(manualBalance.balanceCents, 78_00);
+  assert.match(manualBalance.updatedAt!, /^\d{4}-\d{2}-\d{2} /);
+  const unknownBalance = balance.accounts.find(candidate => candidate.id === unknownAccountId)!;
+  assert.equal(unknownBalance.balanceCents, null);
+  assert.equal(unknownBalance.updatedAt, null);
 
   const applicationSecret = "authorized-enable-banking-session-id";
   database.sqlite.prepare("INSERT INTO application_secrets (name, value) VALUES (?, ?)")

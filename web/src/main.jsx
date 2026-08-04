@@ -111,6 +111,7 @@ function Balance({ balance, freshness, offline, onChanged }) {
     <section aria-labelledby="balance-title">
       <h2 id="balance-title">Combien j’ai</h2>
       <p className="total">{money(balance.totalCents)}</p>
+      {balance.unknownBalanceCount > 0 && <p className="warning">Total incomplet : {balance.unknownBalanceCount} compte{balance.unknownBalanceCount > 1 ? "s" : ""} sans solde connu.</p>}
       <p className="muted">{freshness ? `À jour au ${formatDateTime(freshness)}` : "Fraîcheur inconnue"}</p>
       {!offline && <div className="actions"><SyncButton onChanged={onChanged} /><details><summary>Connecter ou reconnecter une banque</summary><BankConnect onConnected={() => onChanged("Banque connectée.")} /></details></div>}
     </section>
@@ -123,9 +124,9 @@ function Accounts({ accounts }) {
       <h2 id="accounts-title">Où est mon argent</h2>
       {groupAccountsByInstitution(accounts).map(institution => (
         <article className="card" key={institution.id}>
-          <div className="row"><h3>{institution.name}</h3><strong>{money(institution.balanceCents)}</strong></div>
+          <div className="row"><h3>{institution.name}</h3><strong>{money(institution.balanceCents)}{institution.unknownBalanceCount > 0 && " (incomplet)"}</strong></div>
           {institution.accounts.map(account => <div className="transaction" key={account.id}>
-            <div className="row"><span>{account.name}</span><strong>{money(account.balanceCents)}</strong></div>
+            <div className="row"><span>{account.name}</span><strong>{account.balanceCents === null ? "Solde inconnu" : money(account.balanceCents)}</strong></div>
             <small className="muted">{knownSinceLabel(account.knownSince) ?? "Horizon connu indisponible"} · {account.updatedAt ? `mis à jour le ${formatDateTime(account.updatedAt)}` : "fraîcheur inconnue"}</small>
           </div>)}
         </article>
