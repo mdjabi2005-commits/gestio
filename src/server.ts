@@ -8,7 +8,7 @@ import { eq } from "drizzle-orm";
 import { accounts, accountTypes, institutions, transactions, transactionSources, type AccountType } from "./schema.js";
 import { openDatabase, type AppDatabase } from "./db.js";
 import { deduplicateTransactions, normalizeTransactionLabel } from "./deduplication.js";
-import { CsvFormatError, parseBankCsv } from "./csv-import.js";
+import { bankCsvFormats, CsvFormatError, parseBankCsv } from "./csv-import.js";
 import { parsePdfStatement, PdfStatementError } from "./pdf-import.js";
 import { reviewGroups, type UiTransaction } from "./ui-logic.js";
 import {
@@ -285,8 +285,27 @@ export function buildApp(options: BuildAppOptions = {}) {
     const accountId = requiredInteger(data.accountId, "accountId");
     const bank = requiredString(data.bank, "bank");
     const bytes = requiredBase64(data.contentBase64, "contentBase64");
-    if (!database.orm.select({ id: accounts.id }).from(accounts).where(eq(accounts.id, accountId)).get()) {
+    const account = database.sqlite.prepare(`
+      SELECT i.name AS institutionName
+      FROM accounts a JOIN institutions i ON i.id = a.institution_id
+      WHERE a.id = ?
+    `).get(accountId) as { institutionName: string } | undefined;
+    if (!account) {
       return reply.code(404).send({ error: "account_not_found" });
+    }
+
+    const format = bankCsvFormats[bank as keyof typeof bankCsvFormats];
+    if (format && format.institutionName !== account.institutionName) {
+      return reply.code(400).send({
+        error: "csv_institution_mismatch",
+        message: `Le fichier CSV ${bank} ne correspond pas à l’établissement « ${account.institutionName} » du compte cible.`
+      });
+    }
+    if (format?.multiAccount) {
+      return reply.code(400).send({
+        error: "csv_accounts_not_separable",
+        message: `Le fichier CSV ${bank} mélange plusieurs comptes et rien ne permet de les séparer. Utilisez la synchronisation API.`
+      });
     }
 
     let parsed;
