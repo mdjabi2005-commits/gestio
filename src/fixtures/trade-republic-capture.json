@@ -1,0 +1,52 @@
+{
+  "transactions": [
+    { "booking_date": "2026-08-01", "transaction_amount": { "currency": "EUR", "amount": "0.430000" }, "credit_debit_indicator": "CRDT", "remittance_information": null },
+    { "booking_date": "2026-07-23", "transaction_amount": { "currency": "EUR", "amount": "-70.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-23", "transaction_amount": { "currency": "EUR", "amount": "-50.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-22", "transaction_amount": { "currency": "EUR", "amount": "-15.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-22", "transaction_amount": { "currency": "EUR", "amount": "113.420000" }, "credit_debit_indicator": "CRDT", "remittance_information": null },
+    { "booking_date": "2026-07-22", "transaction_amount": { "currency": "EUR", "amount": "-134.400000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-20", "transaction_amount": { "currency": "EUR", "amount": "-11.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-20", "transaction_amount": { "currency": "EUR", "amount": "-4.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-19", "transaction_amount": { "currency": "EUR", "amount": "-16.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-19", "transaction_amount": { "currency": "EUR", "amount": "-25.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-17", "transaction_amount": { "currency": "EUR", "amount": "-20.100000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-16", "transaction_amount": { "currency": "EUR", "amount": "-13.600000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-16", "transaction_amount": { "currency": "EUR", "amount": "-43.970000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-16", "transaction_amount": { "currency": "EUR", "amount": "-6.990000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-16", "transaction_amount": { "currency": "EUR", "amount": "-91.880000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-16", "transaction_amount": { "currency": "EUR", "amount": "-64.970000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-15", "transaction_amount": { "currency": "EUR", "amount": "-5.010000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-15", "transaction_amount": { "currency": "EUR", "amount": "-23.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-14", "transaction_amount": { "currency": "EUR", "amount": "-110.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-10", "transaction_amount": { "currency": "EUR", "amount": "-3.180000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-10", "transaction_amount": { "currency": "EUR", "amount": "-21.670000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-08", "transaction_amount": { "currency": "EUR", "amount": "-12.740000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-03", "transaction_amount": { "currency": "EUR", "amount": "-15.300000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-02", "transaction_amount": { "currency": "EUR", "amount": "-10.200000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-07-01", "transaction_amount": { "currency": "EUR", "amount": "1.110000" }, "credit_debit_indicator": "CRDT", "remittance_information": null },
+    { "booking_date": "2026-06-14", "transaction_amount": { "currency": "EUR", "amount": "-300.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-06-14", "transaction_amount": { "currency": "EUR", "amount": "-3.750000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-06-13", "transaction_amount": { "currency": "EUR", "amount": "-3.600000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-06-12", "transaction_amount": { "currency": "EUR", "amount": "-12.500000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-06-11", "transaction_amount": { "currency": "EUR", "amount": "-13.050000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-06-09", "transaction_amount": { "currency": "EUR", "amount": "-3.800000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-06-07", "transaction_amount": { "currency": "EUR", "amount": "-750.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-06-05", "transaction_amount": { "currency": "EUR", "amount": "-17.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-06-05", "transaction_amount": { "currency": "EUR", "amount": "-28.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-06-05", "transaction_amount": { "currency": "EUR", "amount": "-13.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-06-05", "transaction_amount": { "currency": "EUR", "amount": "-3.940000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-06-01", "transaction_amount": { "currency": "EUR", "amount": "-748.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-06-01", "transaction_amount": { "currency": "EUR", "amount": "-2.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-06-01", "transaction_amount": { "currency": "EUR", "amount": "3.040000" }, "credit_debit_indicator": "CRDT", "remittance_information": null },
+    { "booking_date": "2026-05-31", "transaction_amount": { "currency": "EUR", "amount": "-24.900000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-05-25", "transaction_amount": { "currency": "EUR", "amount": "-6.790000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-05-20", "transaction_amount": { "currency": "EUR", "amount": "-20.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null },
+    { "booking_date": "2026-05-20", "transaction_amount": { "currency": "EUR", "amount": "-20.000000" }, "credit_debit_indicator": "DBIT", "remittance_information": null }
+  ],
+  "balances": {
+    "balances": [
+      { "balance_amount": { "currency": "EUR", "amount": "0.47" }, "balance_type": "OTHR" }
+    ]
+  }
+}
