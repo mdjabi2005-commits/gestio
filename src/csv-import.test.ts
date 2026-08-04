@@ -36,7 +36,7 @@ test("parses the real La Banque Postale and Revolut CSV corpus", corpusTest, () 
   assert.equal(timestamped?.transactionDate, "2025-09-27");
 });
 
-test("imports known CSV and rejects unrecognized formats atomically", async (t) => {
+test("imports attributable CSV and rejects unsafe formats atomically", async (t) => {
   const dir = mkdtempSync(join(tmpdir(), "gestio-csv-"));
   const database = openDatabase({ path: join(dir, "gestio.db"), key: "test-db-key-32-random-characters" });
   const app = buildApp({ database, logger: false });
@@ -47,8 +47,12 @@ test("imports known CSV and rejects unrecognized formats atomically", async (t) 
 
   const setup = await app.inject({ method: "POST", url: "/auth/setup", payload: { password: "correct horse battery staple" } });
   const cookie = (setup.headers["set-cookie"] as string).split(";", 1)[0];
+  const institutionResponse = await app.inject({
+    method: "POST", url: "/institutions", headers: { cookie }, payload: { name: "La Banque Postale", country: "FR" }
+  });
+  const institutionId = (institutionResponse.json() as { id: number }).id;
   const accountResponse = await app.inject({
-    method: "POST", url: "/accounts", headers: { cookie }, payload: { name: "Compte test", type: "BANK" }
+    method: "POST", url: "/accounts", headers: { cookie }, payload: { name: "Compte test", type: "BANK", institutionId }
   });
   const accountId = (accountResponse.json() as { id: number }).id;
   await app.inject({
@@ -84,20 +88,42 @@ test("imports known CSV and rejects unrecognized formats atomically", async (t) 
     "Paiement par carte,Épargne,2026-08-04 10:00:00,,Opération renvoyée,-2.00,0.00,EUR,RENVOYÉ,\n",
     "utf8"
   );
+  const beforeMismatch = transactionCount(database, accountId);
   const revolutResponse = await importCsv(app, cookie, accountId, "REVOLUT", revolut);
-  assert.deepEqual(revolutResponse.json(), { read: 2, imported: 2, duplicates: 0, ignored: 1 });
+  assert.equal(revolutResponse.statusCode, 400);
+  assert.deepEqual(revolutResponse.json(), {
+    error: "csv_institution_mismatch",
+    message: "Le fichier CSV REVOLUT ne correspond pas à l’établissement « La Banque Postale » du compte cible."
+  });
+  assert.equal(transactionCount(database, accountId), beforeMismatch);
+
+  const revolutInstitutionResponse = await app.inject({
+    method: "POST", url: "/institutions", headers: { cookie }, payload: { name: "Revolut", country: "LT" }
+  });
+  const revolutInstitutionId = (revolutInstitutionResponse.json() as { id: number }).id;
+  const revolutAccountResponse = await app.inject({
+    method: "POST", url: "/accounts", headers: { cookie },
+    payload: { name: "Compte Revolut", type: "BANK", institutionId: revolutInstitutionId }
+  });
+  const revolutAccountId = (revolutAccountResponse.json() as { id: number }).id;
+  const beforeMultiAccount = transactionCount(database, revolutAccountId);
+  const multiAccountResponse = await importCsv(app, cookie, revolutAccountId, "REVOLUT", revolut);
+  assert.equal(multiAccountResponse.statusCode, 400);
+  assert.deepEqual(multiAccountResponse.json(), {
+    error: "csv_accounts_not_separable",
+    message: "Le fichier CSV REVOLUT mélange plusieurs comptes et rien ne permet de les séparer. Utilisez la synchronisation API."
+  });
+  assert.equal(transactionCount(database, revolutAccountId), beforeMultiAccount);
 
   const rows = database.sqlite.prepare(`
     SELECT transaction_at AS transactionAt, label FROM transactions ORDER BY transaction_date
   `).all() as Array<{ transactionAt: string | null; label: string }>;
   assert.deepEqual(rows, [
     { transactionAt: null, label: "Virement référence" },
-    { transactionAt: null, label: "Café été" },
-    { transactionAt: "2026-08-03T12:34:56", label: "Crédit hôtel" },
-    { transactionAt: "2026-08-03T13:34:56", label: "Crédit hôtel" }
+    { transactionAt: null, label: "Café été" }
   ]);
   const balance = await app.inject({ method: "GET", url: "/balance", headers: { cookie } });
-  assert.equal((balance.json() as { totalCents: number }).totalCents, 3_399);
+  assert.equal((balance.json() as { totalCents: number }).totalCents, -601);
 
   for (const [bank, content] of [
     ["BANQUE_INCONNUE", "x"],
