@@ -2,7 +2,7 @@
   "version": 1,
   "projectId": "gestio",
   "cycleId": "b771f89a-2283-4c62-a885-13328d4ae404",
-  "note": "P4 (confiance OCR) et P6 (modèle OCR mobile ~12 Mo) ont été supprimés le 2026-07-30 : traces de l'ancien projet, hors du contexte Gestio. Le parsing PDF se fait sur la couche texte, sans OCR. Numérotation conservée pour ne pas casser les renvois du brief. | 2026-07-31 : carnet revérifié par appels live sur l'API Enable Banking avant passage à Copilot (P2, P11, P19). | VOCABULAIRE DU CARNET, posé par Lamoms le 2026-08-01 — le mot « problème » déclenche inconsciemment une recherche de solution, alors que beaucoup d'entrées n'en appellent aucune. Chaque entrée porte donc un champ nature, parmi quatre. PROBLÈME — quelque chose ne va pas, on attend une solution ou une décision ; c'est là qu'on met son énergie. CONTRAINTE — le monde est ainsi et ne changera pas ; on ne cherche pas de solution, on conçoit avec. La fenêtre de 90 jours de La Banque Postale, l'absence du Livret A dans l'API, l'absence de libellé chez Trade Republic en sont. RÈGLE — une manière de travailler qu'on se donne après s'être trompé ; ni problème ni contrainte, elle s'applique. ACQUIS — un fait établi qui SERT, découvert en chemin ; le nommer problème serait absurde. Le nom du fichier reste problems.json, l'outillage Lamoms le lit sous ce nom.",
+  "note": "P4 (confiance OCR) et P6 (modèle OCR mobile ~12 Mo) ont été supprimés le 2026-07-30 : traces de l'ancien projet, hors du contexte Gestio. Le parsing PDF se fait sur la couche texte, sans OCR. Numérotation conservée pour ne pas casser les renvois du brief. | 2026-07-31 : carnet revérifié par appels live sur l'API Enable Banking avant passage à Copilot (P2, P11, P19). | VOCABULAIRE DU CARNET, posé par Lamoms le 2026-08-01 — le mot « problème » déclenche inconsciemment une recherche de solution, alors que beaucoup d'entrées n'en appellent aucune. Chaque entrée porte donc un champ nature, parmi quatre. PROBLÈME — quelque chose ne va pas, on attend une solution ou une décision ; c'est là qu'on met son énergie. CONTRAINTE — le monde est ainsi et ne changera pas ; on ne cherche pas de solution, on conçoit avec. La fenêtre de 90 jours de La Banque Postale, l'absence du Livret A dans l'API, l'absence de libellé chez Trade Republic en sont. RÈGLE — une manière de travailler qu'on se donne après s'être trompé ; ni problème ni contrainte, elle s'applique. ACQUIS — un fait établi qui SERT, découvert en chemin ; le nommer problème serait absurde. Le nom du fichier reste problems.json, l'outillage Lamoms le lit sous ce nom. | 2026-08-04, revue de T13/T14/T15 par le Planificateur AVANT le verdict : P47 à P51 ajoutés. P46 est délibérément sauté — un commit portant ce numéro a été créé puis annulé (82bf1d7, 68a1b1d), le réemployer prêterait à confusion.",
   "problems": [
     {
       "id": "P1",
@@ -526,6 +526,71 @@
       "etat": "résolu",
       "title": "tasks.yaml est retiré volontairement — GitHub (milestones, issues, commentaires) est la source de vérité du suivi des tâches",
       "status": "DÉCIDÉ PAR LAMOMS, constaté le 2026-08-04. Le fichier .lamoms/tasks.yaml (81 344 octets, T1..T12) a été supprimé DÉLIBÉRÉMENT parce qu'il faisait doublon : tout y était déjà sur GitHub — milestone précédent, issues, commentaires de clôture. Le suivi des tâches ne vit plus dans le dépôt, il vit sur GitHub, conformément au socle lamoms (« GitHub = mémoire neutre »). NE PAS LE RESTAURER. Le fichier reste récupérable dans l'historique git (commit 400c125) si un besoin d'archive se présentait. ERREUR DU PLANIFICATEUR À CONSIGNER, parce qu'elle a failli écraser une décision de Lamoms — j'ai vu « D .lamoms/tasks.yaml » dans git status juste après un run AGY, j'ai ATTRIBUÉ la suppression à ce run, et j'ai restauré le fichier par git checkout sans rien demander. Deux fautes distinctes : (1) j'ai pris une corrélation temporelle pour une causalité ; (2) j'ai agi sur le dépôt à partir de cette supposition au lieu de poser la question. RÈGLE À TENIR — un changement inattendu dans le dépôt peut être une DÉCISION de Lamoms ; on demande avant de défaire. Le contrôle git status après un run d'agent reste utile, mais il produit une QUESTION, jamais une restauration automatique. Même famille que P21 : une observation promue en conclusion sans être confrontée."
+    },
+    {
+      "id": "P47",
+      "title": "« npm test » rend un vert VIDE quand NODE_TEST_CONTEXT fuit dans l'environnement de l'agent",
+      "category": "outillage",
+      "severity": "moyenne",
+      "decisionNeeded": false,
+      "consequence": "Le jour où un agent lance la vérification depuis un shell portant la variable, il obtient un feu vert sans qu'aucun test ne s'exécute, et rien dans la sortie ne le signale. Piège armé, pas encore déclenché.",
+      "status": "MESURÉ le 2026-08-04 par le Planificateur. Le shell des agents porte NODE_TEST_CONTEXT=child-v8. node:test croit alors être déjà dans un fichier de test enfant, avertit « run() is being called recursively within a test file. skipping running files » et n'exécute AUCUN fichier — sortie vide, code de retour 0. Confirmé par un test volontairement faux (assert.equal(1,2)) qui ne s'exécute pas et sort 0, et reproduit sur un .mjs nu sans tsx : ce n'est ni tsx, ni le glob, ni le projet. Avec env -u NODE_TEST_CONTEXT : 30 tests, 30 pass, 0 fail, et npm run build passe — le code de T13/T14/T15 est bien vert, mais par CONSTAT du Planificateur, pas par la preuve produite. RÈGLE QUI EN DÉCOULE : un vert n'est une preuve que si le nombre de tests exécutés est non nul et visible. Même famille que « un verdict VERT ne prouve pas la fusion ». Il n'existe aucune CI dans ce dépôt : la seule barrière est la commande locale. | CORRECTION DU 2026-08-04, APRÈS LECTURE DES REVIEWS COPILOT : la première rédaction disait que la preuve de T13, T14 et T15 « ne prouve rien ». C'EST FAUX ET C'EST CORRIGÉ. Les reviews Copilot des issues #22 et #23 rapportent un décompte réel — « 30 pass / 0 fail » et un test chronométré à 11,66 ms — donc la suite s'est bien exécutée dans le worktree de Copilot, avec npm ci propre. La fuite de NODE_TEST_CONTEXT est réelle et mesurée dans le shell du Planificateur, mais elle n'a pas produit de faux vert sur ces trois tâches. Sévérité ramenée de haute à moyenne : le risque est qu'un agent lance un jour la vérification depuis un shell contaminé et ne s'aperçoive de rien. LEÇON DU PLANIFICATEUR : j'ai généralisé une mesure faite dans MON environnement à toute la chaîne, sans lire ce que les autres agents avaient réellement rapporté. Même famille que P21 et P45 — une observation promue en conclusion sans être confrontée.",
+      "pourCodex": "Le script test doit retirer NODE_TEST_CONTEXT de son environnement avant d'appeler node --test.",
+      "taches": "T20",
+      "nature": "problème",
+      "etat": "actif"
+    },
+    {
+      "id": "P48",
+      "title": "Une erreur PASSAGÈRE éjecte définitivement une banque de la synchronisation de fond — régression introduite par T14",
+      "category": "synchronisation",
+      "severity": "haute",
+      "decisionNeeded": false,
+      "consequence": "Après un simple 429, une banque cesse silencieusement d'être synchronisée. Son solde se fige, puis devient inconnu. L'objectif du projet — savoir sa situation à tout moment — tombe sans alerte, pour la banque concernée.",
+      "status": "MESURÉ le 2026-08-04 sur le code fusionné (ff2783e). Chaîne complète : (1) recordBankError (src/server.ts:990) fait passer TOUT état sauf EXPIRED à FAILED, alors qu'avant T14 seul PENDING basculait et qu'une connexion AUTHORIZED restait intacte ; (2) la boucle de fond ne sélectionne que WHERE status = 'AUTHORIZED' (src/server.ts:56) — une connexion FAILED en sort et n'y revient jamais seule ; (3) seul un succès de synchronisation repose AUTHORIZED (src/server.ts:908), ce qui exige un POST /enable-banking/sync/{id} manuel ; (4) le bouton Synchroniser ne connaît QU'UN identifiant, localStorage (web/src/main.jsx:224), écrasé à chaque nouvelle connexion (main.jsx:208) — avec trois banques, deux n'ont AUCUN chemin de reprise dans l'interface. Le test livré par T14 le démontre lui-même : c'est un 429, transitoire par nature, qui pose FAILED. PART DU PLANIFICATEUR À CONSIGNER : le plan de T14 disait « faire porter l'échec par la connexion » sans écrire « sans l'exclure de la boucle de fond », et sans distinguer passager de terminal. Codex a suivi le plan ; le trou est dans le plan.",
+      "pourCodex": "La boucle de fond doit reprendre les connexions FAILED. EXPIRED reste le seul état terminal.",
+      "taches": "T21",
+      "nature": "problème",
+      "etat": "actif"
+    },
+    {
+      "id": "P49",
+      "title": "Le corpus Trade Republic est lu par chemin ABSOLU hors du dépôt — la suite de tests n'est pas portable",
+      "category": "outillage",
+      "severity": "moyenne",
+      "decisionNeeded": false,
+      "consequence": "Sur le Raspberry Pi ou tout autre poste, le test échoue au lieu de sauter (readFileSync lève), ce qui contredit la contrainte de portabilité PC→RPi sans réécriture. Et le critère 1 de T13 — les 43 transactions passent toutes — n'est démontrable que sur le PC de Lamoms.",
+      "status": "CONSTATÉ le 2026-08-04. L'étape de T13 disait « copier le strict nécessaire en fixture anonymisée dans le dépôt ». Livré à la place, dans src/enable-banking.test.ts : const lab = process.env.GESTIO_LAB_CORPUS ?? \"/mnt/c/Users/djabi/gestio/.lamoms/lab/agy\" — chemin absolu de la machine, vers un dossier gitignoré (.gitignore:22). Aucune fixture n'est suivie par git. Le saut dépend d'une variable GESTIO_SKIP_CORPUS qu'il faut penser à poser. Accessoire : l'assertion transactions.map(parseBankTransaction).length === 43 ne vérifie AUCUNE valeur, seulement l'absence d'exception.",
+      "pourCodex": "Verser une fixture anonymisée dans src/, lue par chemin relatif au fichier de test.",
+      "taches": "T20",
+      "nature": "problème",
+      "etat": "actif"
+    },
+    {
+      "id": "P50",
+      "title": "La fraîcheur globale s'efface entièrement dès qu'UN compte n'a pas de date",
+      "category": "produit",
+      "severity": "moyenne",
+      "decisionNeeded": false,
+      "consequence": "Un seul compte manuel sans transaction, ou un compte synchronisé jamais chargé, et l'en-tête affiche « Fraîcheur inconnue » en permanence — y compris hors connexion, là où la date de fraîcheur est la promesse principale (P16, T7).",
+      "status": "CONSTATÉ le 2026-08-04 sur src/ui-logic.ts:56 — oldestUpdatedAt rend null au premier compte sans updatedAt. Conforme au critère 3 de T14 et honnête, mais INCOHÉRENT avec le traitement retenu juste à côté pour les soldes, où l'on affiche le total ET « incomplet : n comptes » au lieu de tout effacer. ARBITRÉ PAR LAMOMS le 2026-08-04 : afficher la plus ancienne date CONNUE, suivie de « n compte(s) sans date ». Ne jamais afficher la mention quand elle vaut zéro.",
+      "pourCodex": "oldestUpdatedAt rend la plus ancienne date connue ; un compteur séparé porte les comptes sans date.",
+      "taches": "T21",
+      "nature": "problème",
+      "etat": "actif"
+    },
+    {
+      "id": "P51",
+      "title": "Le refus d'import CSV repose sur un nom d'établissement en TEXTE LIBRE",
+      "category": "import",
+      "severity": "basse",
+      "decisionNeeded": false,
+      "consequence": "« Banque Postale », une majuscule ou un espace de trop dans le nom saisi, et un import La Banque Postale légitime est refusé avec un message qui accuse l'établissement. Le critère 4 de T15 — aucune régression sur T5 et T12 — n'est vrai que si le nom a été tapé au caractère près.",
+      "status": "CONSTATÉ le 2026-08-04 sur src/server.ts:296 — format.institutionName !== account.institutionName compare une constante du code à institutions.name, qui est SAISI À LA MAIN dans un champ de formulaire (web/src/main.jsx:220, defaultValue=\"La Banque Postale\"). PARKÉ VOLONTAIREMENT : le sens de la panne est le bon — refus, jamais d'écriture fausse — et il ne se déclenche que si Lamoms renomme un établissement. Aucune tâche ouverte tant que le cas ne se produit pas. À rouvrir au premier import légitime refusé.",
+      "pourCodex": "Rien à faire pour l'instant.",
+      "taches": "—",
+      "nature": "problème",
+      "etat": "actif"
     }
   ]
 }

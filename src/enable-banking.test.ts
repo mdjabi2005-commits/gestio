@@ -141,19 +141,19 @@ test("refuses to guess between multiple unknown balance types", () => {
   ] }), /OTHR, INFO/);
 });
 
-test("replays the local Trade Republic capture", {
-  skip: process.env.GESTIO_SKIP_CORPUS === "1"
-}, () => {
-  const lab = process.env.GESTIO_LAB_CORPUS ?? "/mnt/c/Users/djabi/gestio/.lamoms/lab/agy";
-  const transactions = JSON.parse(readFileSync(join(lab, "tr_transactions_raw.json"), "utf8")) as {
+test("replays the local Trade Republic capture", () => {
+  const capture = JSON.parse(readFileSync(new URL("./fixtures/trade-republic-capture.json", import.meta.url), "utf8")) as {
     transactions: unknown[];
+    balances: unknown;
   };
+  const transactions = capture.transactions.map(parseBankTransaction);
+  const dates = transactions.map(transaction => transaction.transactionDate).sort();
 
-  assert.equal(transactions.transactions.map(parseBankTransaction).length, 43);
-  assert.deepEqual(
-    parseBalance(JSON.parse(readFileSync(join(lab, "tr_balances_raw.json"), "utf8"))),
-    { balanceCents: 47, currency: "EUR" }
-  );
+  assert.equal(transactions.length, 43);
+  assert.equal(transactions.reduce((sum, transaction) => sum + transaction.amountCents, 0), -262_034);
+  assert.equal(dates[0], "2026-05-20");
+  assert.equal(dates.at(-1), "2026-08-01");
+  assert.deepEqual(parseBalance(capture.balances), { balanceCents: 47, currency: "EUR" });
 });
 
 test("connects out-of-band, exhausts empty pages, stores API balance freshness, and resyncs idempotently", async (t) => {
