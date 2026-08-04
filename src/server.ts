@@ -456,9 +456,11 @@ export function buildApp(options: BuildAppOptions = {}) {
         i.country AS institutionCountry,
         a.name,
         a.type,
-        CASE WHEN a.balance_cents IS NULL THEN COALESCE(SUM(t.amount_cents), 0) ELSE a.balance_cents END AS balanceCents,
+        CASE WHEN a.external_hash IS NOT NULL THEN a.balance_cents
+             ELSE COALESCE(a.balance_cents, SUM(t.amount_cents), 0) END AS balanceCents,
         a.currency,
-        COALESCE(a.last_synced_at, MAX(t.created_at)) AS updatedAt,
+        CASE WHEN a.external_hash IS NOT NULL THEN a.last_synced_at
+             ELSE COALESCE(a.last_synced_at, MAX(t.created_at)) END AS updatedAt,
         a.known_since AS knownSince
       FROM accounts a
       JOIN institutions i ON i.id = a.institution_id
@@ -472,7 +474,7 @@ export function buildApp(options: BuildAppOptions = {}) {
       institutionCountry: string;
       name: string;
       type: AccountType;
-      balanceCents: number;
+      balanceCents: number | null;
       updatedAt: string | null;
       currency: string | null;
       knownSince: string | null;
@@ -493,13 +495,14 @@ export function buildApp(options: BuildAppOptions = {}) {
         balanceCents: 0,
         accounts: []
       };
-      institution.balanceCents += row.balanceCents;
+      institution.balanceCents += row.balanceCents ?? 0;
       institution.accounts.push(row);
       institutionBalances.set(row.institutionId, institution);
     }
 
     return {
-      totalCents: rows.reduce((sum, row) => sum + row.balanceCents, 0),
+      totalCents: rows.reduce((sum, row) => sum + (row.balanceCents ?? 0), 0),
+      unknownBalanceCount: rows.filter(row => row.balanceCents === null).length,
       accounts: rows,
       institutions: [...institutionBalances.values()]
     };
@@ -965,7 +968,7 @@ function recordBankError(database: AppDatabase, authorizationId: string, error: 
   const code = error instanceof EnableBankingError ? error.code : "SYNC_FAILED";
   database.sqlite.prepare(`
     UPDATE bank_connections
-    SET status = CASE WHEN status = 'PENDING' THEN 'FAILED' ELSE status END,
+    SET status = CASE WHEN status = 'EXPIRED' THEN status ELSE 'FAILED' END,
         last_sync_error = ?, updated_at = CURRENT_TIMESTAMP
     WHERE authorization_id = ?
   `).run(code, authorizationId);
@@ -991,7 +994,8 @@ function bankErrorLog(error: unknown, authorizationId: string) {
   return {
     authorizationId,
     status: error instanceof EnableBankingError ? error.status : undefined,
-    code: error instanceof EnableBankingError ? error.code : "SYNC_FAILED"
+    code: error instanceof EnableBankingError ? error.code : "SYNC_FAILED",
+    message: error instanceof Error ? error.message : String(error)
   };
 }
 
