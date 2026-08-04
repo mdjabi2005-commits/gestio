@@ -13,14 +13,16 @@ test("derives the visible balance rules without DOM state", () => {
   const accounts: UiAccount[] = [
     { id: 1, institutionId: 1, institutionName: "La Banque Postale", institutionCountry: "FR", name: "CCP", balanceCents: 120_00, updatedAt: "2026-08-04T10:00:00Z", knownSince: "2026-05-04" },
     { id: 2, institutionId: 1, institutionName: "La Banque Postale", institutionCountry: "FR", name: "Livret A", balanceCents: 80_00, updatedAt: "2026-08-01T09:00:00Z", knownSince: "2025-07-08" },
-    { id: 3, institutionId: 2, institutionName: "Revolut", institutionCountry: "LT", name: "Principal", balanceCents: 50_00, updatedAt: "2026-08-03T12:00:00Z", knownSince: null }
+    { id: 3, institutionId: 2, institutionName: "Revolut", institutionCountry: "LT", name: "Principal", balanceCents: 50_00, updatedAt: "2026-08-03T12:00:00Z", knownSince: null },
+    { id: 4, institutionId: 2, institutionName: "Revolut", institutionCountry: "LT", name: "Jamais chargé", balanceCents: null, updatedAt: null, knownSince: null }
   ];
 
-  assert.deepEqual(groupAccountsByInstitution(accounts).map(({ name, balanceCents, accounts }) => ({ name, balanceCents, accounts: accounts.length })), [
-    { name: "La Banque Postale", balanceCents: 200_00, accounts: 2 },
-    { name: "Revolut", balanceCents: 50_00, accounts: 1 }
+  assert.deepEqual(groupAccountsByInstitution(accounts).map(({ name, balanceCents, unknownBalanceCount, accounts }) => ({ name, balanceCents, unknownBalanceCount, accounts: accounts.length })), [
+    { name: "La Banque Postale", balanceCents: 200_00, unknownBalanceCount: 0, accounts: 2 },
+    { name: "Revolut", balanceCents: 50_00, unknownBalanceCount: 1, accounts: 2 }
   ]);
-  assert.equal(oldestUpdatedAt(accounts), "2026-08-01T09:00:00Z");
+  assert.equal(oldestUpdatedAt(accounts.slice(0, 3)), "2026-08-01T09:00:00Z");
+  assert.equal(oldestUpdatedAt(accounts), null);
   assert.equal(knownSinceLabel("2025-07-08"), "Connu depuis le 08/07/2025");
 });
 

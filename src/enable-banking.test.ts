@@ -258,6 +258,14 @@ test("connects out-of-band, exhausts empty pages, stores API balance freshness, 
   assert.equal(rateLimited.statusCode, 429);
   assert.equal(rateLimited.json().error, "aspsp_rate_limited");
   assert.match(rateLimited.json().lastSuccessfulSync, /^\d{4}-\d{2}-\d{2}T/);
+  const failedStatus = (await app.inject({
+    method: "GET",
+    url: "/enable-banking/status/authorization-1",
+    headers: { cookie }
+  })).json();
+  assert.equal(failedStatus.status, "FAILED");
+  assert.equal(failedStatus.lastSyncedAt, rateLimited.json().lastSuccessfulSync);
+  assert.match(logs, /"message":"rate limited"/);
   api.rateLimited = false;
 
   const institutionId = database.sqlite.prepare("SELECT institution_id FROM accounts WHERE external_hash = ?")
