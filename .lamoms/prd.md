@@ -1,202 +1,194 @@
-# PRD — Gestio
+# PRD (2) — Gestio, cycle de remise en état
 
-**Cycle :** b771f89a-2283-4c62-a885-13328d4ae404
-**Statut :** complet — toutes les décisions sont tranchées, architecture comprise. En attente de validation humaine du PRD et du graphe de tâches.
+**Émis le** 2026-08-04 par le Planificateur.
+**Base** : la mise en service réelle du 2026-08-04 (`.lamoms/mise-en-service.md`) et les 26 problèmes actifs du carnet.
+**Ne remplace pas** `.lamoms/prd-cycle1.archive.md` (cycle MVP, T1–T12, livré) — il en prolonge les exigences sans les rouvrir.
 
-## 1. Problème réel
+---
 
-L'utilisateur n'a pas de vue fiable de sa trésorerie disponible. Il ne sait pas, à l'instant où il en a besoin, combien il a réellement — par compte et au total — ni ce qu'il lui reste après une dépense. Conséquence : décisions financières prises à l'aveugle, exactement au moment d'un imprévu.
+## 1. Problème réel de ce cycle
 
-## 2. Utilisateurs concernés
+Les douze tâches du MVP ont toutes été livrées en VERT. **L'application a ensuite été lancée pour de vrai, avec les vraies banques de Lamoms, et sept défauts sont apparus qu'aucun verdict n'avait attrapés.**
 
-Un utilisateur unique, sur ses propres comptes. Pas de multi-utilisateur, pas d'authentification cloud. Usage mobile en situation (savoir vite, dehors) et desktop pour le travail de fond (état des lieux, vérification).
+Ils ont un trait commun, et c'est lui le problème de ce cycle : **ils produisent un chiffre ou un écran qui a l'air juste et ne l'est pas.** Un compte qui n'a jamais chargé s'affiche à 0,00 € dans un total présenté comme certain. Un CSV entre dans le mauvais compte sans objection. Un import crée 898 € de mouvements qui n'existent pas. Quatre comptes portent le même nom. Le mode hors connexion annonce une promesse qu'il ne tient pas.
+
+C'est exactement le mode de panne que le PRD (1) nommait comme intolérable, et que la Core Feature — « savoir sa situation financière à tout moment » — ne supporte pas.
+
+## 2. Ce que la mise en service a prouvé — à ne pas re-tester
+
+Ce cycle **ne rouvre pas** ces acquis. Ils bornent le périmètre.
+
+- **Huit soldes sur neuf sont justes**, vérifiés par Lamoms contre ses applications bancaires.
+- **Preuve croisée sur Revolut** : le solde rendu par `GET /accounts/{uid}/balances` tombe **au centime** sur la somme des 314 transactions ingérées. Deux sources indépendantes, aucune perte, aucun doublon.
+- **La déduplication inter-canaux tient** : 16 doublons PDF/API reconnus sur données réelles à La Banque Postale.
+- **Le modèle à deux niveaux tient** : les pockets Revolut sont entrés comme des comptes sans rien changer (P28).
+- **P33 confirmé en direct** : quatre pages vides avec `continued:true`, le code ne s'y est pas arrêté.
+- **La sauvegarde est chiffrée et se relit** avec la clé — 609 transactions relues (critère de T8 tenu sur données réelles).
+- **L'UI unique tient sur un vrai mobile** — écran identique via Tailscale, certificat Let's Encrypt réel.
 
 ## 3. Objectif et résultats attendus
 
-Afficher à tout moment un solde de trésorerie disponible fiable, agrégé et par compte, tenu à jour automatiquement.
+**Objectif** : qu'aucun écran de Gestio n'affirme ce qu'il ignore.
 
-Résultats attendus :
-- Ouvrir l'app et connaître son solde sans aucune action préalable.
-- Savoir si ce chiffre est frais, et de quand il date.
-- Ne jamais avoir à recalculer ni à corriger à la main un solde faux.
+À la fin de ce cycle :
+1. Un compte dont la donnée n'a pas chargé **le dit**, et le total le dit aussi. Aucun zéro affirmé à la place d'un inconnu.
+2. Trade Republic **synchronise** — ses 43+ transactions et son solde entrent en base.
+3. Chaque compte porte **un nom qui le distingue**, sans que Lamoms ait rien à saisir.
+4. Un import **refuse** ce qu'il ne peut pas placer avec certitude, et ne crée jamais de mouvement fantôme.
+5. Les trois routes sans porte deviennent atteignables — une première installation ne dépend plus de `curl`.
+6. Le mode hors connexion **fonctionne dès la première visite**, ou dit clairement qu'il n'est pas encore prêt.
 
-## 4. Périmètre
+## 4. Périmètre — couverture des 26 problèmes actifs
 
-### Inclus
+### 4.1 Inclus — les huit qui demandent du code
 
-- Modèle `Compte` (bancaire, Livret A, évolutif) et `Transaction` (date, montant en centimes, libellé, source, empreinte).
-- **Synchro Enable Banking en production** — canal principal. Session OAuth, rafraîchissement des transactions, gestion de l'expiration du consentement.
-- **Import CSV/PDF** — état des lieux au-delà de la fenêtre API, et secours si une banque n'est pas synchronisable.
-- **Saisie manuelle** — pour tout compte ou mouvement qu'aucun des deux canaux ne couvre.
-- **Déduplication croisée** entre les trois canaux, algorithme validé sur données réelles (§6).
-- Calcul et affichage du solde disponible agrégé et par compte, recalculé à chaque ingestion.
-- **Indicateur de fraîcheur** du solde (date de dernière synchro réussie), imposé par la nature du canal.
-- Authentification locale par mot de passe ; secrets Enable Banking chiffrés au repos.
-- Frontend unique React Vite, logique métier partagée et tenue hors du DOM. **Une seule interface, identique sur mobile et sur desktop** *(requalifié par Lamoms le 2026-08-03 — la ligne exigeait des layouts différenciés par breakpoints)*. Le besoin du MVP est de vérifier que le backend et le frontend fonctionnent ensemble, sur les deux appareils, avec le MÊME parcours ; la différenciation desktop est une amélioration ultérieure. La logique vivant hors du DOM, elle se fera sans réécriture.
-- **Hors connexion : service worker, sans `manifest.json` au MVP** *(précisé le 2026-08-03)*. L'installation sur l'écran d'accueil n'est requise ni par le mode hors connexion, qui tient au service worker, ni par la vérification du parcours, qui se fait à l'URL. Le mot « PWA » employé ailleurs dans ce document désigne cette cible-là, atteinte par étapes.
-
-### Limite explicite du MVP — à ne pas masquer
-
-Le MVP tourne sur le PC hôte. **Quand le PC est éteint, l'application mobile n'est pas servie.** En phase 1, la promesse « savoir sa situation à tout moment » n'est donc pas tenue sur mobile hors du domicile ; elle le sera à la migration vers le Raspberry Pi, sans réécriture.
-
-Cette limite est **assumée et arbitrée** (voir P16), pas subie : le desktop est pleinement utilisable, le mobile fonctionne à domicile, et le mode hors connexion déjà spécifié couvre le reste — le téléphone affiche le dernier solde connu avec sa date (« solde au 30/07 à 18 h 12 »), qui est un état conçu et lisible, pas une panne.
-
-**Le Verdict devra juger le MVP sur ce périmètre annoncé**, pas sur la promesse complète.
-
-### Hors périmètre
-
-- Simulateur « et si je dépense X ». *(écarté par l'utilisateur — l'impact immédiat, c'est le solde recalculé après ingestion de la transaction réelle)*
-- Catégorisation, budgets, prévisions, graphiques. *(ne servent pas la Core Feature : savoir combien j'ai maintenant)*
-- Multi-utilisateur, auth cloud, partage.
-- OCR / PDF scannés. Les relevés bancaires FR ont une couche texte dans plus de 95 % des cas ; les autres sont refusés explicitement, avec bascule sur CSV ou saisie manuelle.
-
-## 5. Parcours utilisateur (méthode Micro-UX)
-
-**Core Feature** (fixée par Hermès, non redéfinie ici) : l'affichage de la trésorerie disponible à l'instant T, agrégée et par compte.
-
-### 5.0 Principe directeur — l'arbre
-
-*Posé par l'utilisateur le 2026-07-31, et il gouverne tout ce qui suivra.*
-
-La racine, c'est la Core Feature : **savoir son solde disponible à tout moment**. Tout ce qu'on ajoute doit pousser à partir d'elle et la servir. On n'ajoute jamais pour ajouter : si un ajout n'apporte pas de valeur réelle à la racine, il n'entre pas — et ce qui manque se rajoutera quand le besoin sera démontré, jamais par anticipation.
-
-Ce principe n'est pas une intention générale : il est **le critère d'admission** de toute évolution future. Une fonctionnalité qui ne se rattache pas à la racine doit être refusée, même si elle est courante dans les applications de finances.
-
-### 5.1 Hiérarchie des features
-
-Tout gravite autour de la Core Feature :
-- **Synchro Enable Banking** — garde le solde juste sans effort de l'utilisateur. C'est ce qui rend le mot « à tout moment » vrai.
-- **Import CSV/PDF** — étend l'historique au-delà de la fenêtre API et couvre les banques non synchronisables.
-- **Saisie manuelle** — comble les trous restants.
-- **Déduplication** — garantit que le chiffre affiché est juste quand plusieurs canaux décrivent le même mouvement.
-
-Ce qui ne sert pas la Core Feature sort du périmètre prioritaire, y compris des fonctions attendues d'une app de finances (catégories, budgets, courbes). Elles ne répondent pas à « combien j'ai maintenant ».
-
-### 5.2 User flow principal, réaliste
-
-**« Est-ce que je peux dépenser ça ? »** — le cas d'usage dominant, souvent debout, sur mobile.
-
-| Étape | Ce qu'il voit | Ce qu'il fait | Où ça peut bloquer |
-|---|---|---|---|
-| 1 | Le solde agrégé, immédiatement à l'ouverture | Rien | La session bancaire a expiré → il doit savoir que le chiffre date, pas le découvrir plus tard |
-| 2 | La fraîcheur du chiffre (« à jour il y a 2 h ») | Lit | Sans cet indicateur, il ne peut pas juger s'il peut s'y fier |
-| 3 | Le détail par compte | Un geste, sans navigation | Le Livret A n'est pas synchronisable → il doit comprendre pourquoi ce compte affiche autre chose |
-| 4 | Les dernières transactions | Fait défiler | Un achat d'hier n'apparaît pas (délai bancaire) → il croit à un bug s'il n'est pas prévenu |
-
-### 5.3 Navigation principale
-
-Orientée sur la question de l'utilisateur, jamais sur l'architecture :
-- **Combien j'ai** — l'écran d'accueil, le solde agrégé.
-- **Où** — la répartition par compte.
-- **Quoi** — les transactions.
-
-Les actions techniques (synchroniser, importer un fichier, connecter une banque) ne sont pas des rubriques de navigation. Elles apparaissent là où l'utilisateur en a besoin : le bouton « reconnecter » sur le compte concerné, l'import à l'endroit où un trou d'historique est visible.
-
-### 5.4 Chemins secondaires et cas limites
-
-Chacun mène à une destination claire, jamais à une page blanche :
-
-| Situation | Destination |
+| # | Ce qui entre au périmètre |
 |---|---|
-| Aucun compte connecté (premier lancement) | L'écran d'accueil **est** le couloir d'onboarding, pas un écran vide |
-| Consentement expiré (date lue dans `access.valid_until`) | Solde affiché avec sa date + bandeau « reconnecter », en un geste |
-| Banque indisponible | Dernier solde connu + sa fraîcheur, jamais un écran d'erreur nu |
-| Fichier CSV au format non reconnu | Refus explicite nommant ce qui n'est pas compris + proposition de saisie manuelle |
-| PDF sans couche texte | Refus explicite + proposition de passer par le CSV |
-| Trou d'historique (au-delà de 90 j) | Le manque est visible et propose l'import qui le comble |
+| **P38** | La chaîne qui rend un échec invisible **et** la cause Trade Republic qui la déclenche |
+| **P44** | Le `balance_type` hors liste, sélectionné en silence |
+| **P41** | L'import CSV qui n'exige aucune cohérence entre la banque du fichier et le compte cible |
+| **P42** | Les 121 doublons non détectés et les 898 € de mouvements fantômes — trois causes |
+| **P39** | Les comptes nommés d'après le titulaire |
+| **P25** | Les 43 lignes sans libellé, conséquence à l'écran (la contrainte, elle, reste) |
+| **P40** | Les trois routes sans porte dans l'interface |
+| **P43** | Le mode hors connexion qui échoue au premier usage |
 
-### 5.5 Actions clés et micro-victoires
+### 4.2 Contraintes à respecter — **pas** des tâches
 
-| Action | Retour immédiat |
+Ces onze entrées ne se « corrigent » pas. Elles encadrent ce qui sera écrit, et tout plan qui les viole est faux.
+
+| # | Ce qu'elle impose |
 |---|---|
-| Connexion d'une banque réussie | « 2 comptes connectés » et le solde s'affiche dans la foulée |
-| Synchro | Le solde se met à jour, l'horodatage de fraîcheur repart à zéro |
-| Import d'un fichier | « 27 transactions ajoutées, 3 doublons ignorés » — la déduplication devient visible, donc digne de confiance |
-| Saisie manuelle | Le solde bouge sous ses yeux |
+| **P2** | Enable Banking est le canal principal, en production, depuis le départ |
+| **P5** | Deux mouvements distincts de même montant le même jour restent **deux** mouvements |
+| **P11** | Une preuve du lab n'est pas une validation sur données réelles — le dire |
+| **P12** / **P18** | L'authentification forte se termine **sur la machine serveur** ; `https://localhost:3443/` est la seule URL de redirection du MVP. Jamais de SCA depuis le mobile |
+| **P13** | Le backend fait foi, le mobile est un client |
+| **P16** | PC éteint, le mobile doit encore afficher le dernier solde connu **avec sa date** — c'est P43 qui la met en défaut |
+| **P21** | Un rapport de recherche se lit comme une donnée, jamais comme une conclusion |
+| **P22** | La fenêtre d'historique est une propriété **de chaque banque**, jamais une constante codée en dur |
+| **P25** | Sans libellé, l'arbitrage par Jaccard est structurellement inapplicable |
+| **P33** | Quatre récupérations par jour hors présence du PSU ; une page vide avec clé de continuation **ne signifie pas la fin** |
 
-### 5.6 Notifications
+### 4.3 Acquis mobilisés
 
-**Aucune au MVP.** L'utilisateur ouvre l'app quand il a besoin de savoir ; le déclencheur est son besoin, pas une alerte. Une notification ne se justifierait que pour le ramener au bon moment pour la bonne raison — par exemple un consentement sur le point d'expirer, qui casserait la synchro. Ce cas ne survient qu'une fois tous les six mois : il se traite dans l'app, pas par notification.
+- **P31** — signature de libellé des virements Livret A → CCP. Connu, non exploité dans ce cycle.
+- **P32** — le relevé PDF de La Banque Postale porte le Livret A **et** le Livret Jeune. Un relevé manquant coûte trois comptes.
 
-### 5.7 Onboarding — un couloir vers la première valeur
+### 4.4 Hors périmètre — et pourquoi, explicitement
 
-**Première valeur concrète : voir son vrai solde agrégé, pour la première fois.**
+| # | Raison |
+|---|---|
+| **P1** | C'est le problème racine du projet, pas une tâche. Huit soldes justes sur neuf l'adressent déjà en partie ; ce cycle le sert entièrement |
+| **P28** | Se referme **tout seul** dès que Trade Republic synchronise — donc avec P38. Aucune tâche propre |
+| **P29** | Requalifié par Lamoms le 2026-08-04 : la moitié « où » est **livrée** (solde par compte à l'écran). La moitié « référence et écart » n'est pas demandée. En veille |
+| **P30** | Mis en veille par Lamoms : « les virements internes on ne les importe pas encore ». Non observable aujourd'hui, donc rien à corriger. Ne fausse pas le solde |
+| **P35** | Remédiation **manuelle**, tranchée le 2026-08-04. Rendez-vous du **2026-08-08** pour les quatre relevés manquants (2 BP, 2 Nickel). Aucune ligne de code, aucun mécanisme de rappel — risque de récidive assumé |
+| **P37** | Sauvegarde sur support secondaire : post-MVP, déjà tranché |
+| **P22** *(mesure)* | La profondeur d'historique de Trade Republic tombera **gratuitement** à la première synchro réussie. Ne pas commander de spike |
 
-Le couloir, et rien d'autre : mot de passe local → connexion bancaire (SCA) → **le solde s'affiche**.
+## 5. Ce que Lamoms doit pouvoir faire à la fin
 
-Ce qui est délibérément écarté du couloir : l'import de l'historique. Puisque la synchro fournit le solde courant, l'état des lieux n'est pas nécessaire pour atteindre la première valeur. Le demander d'emblée ferait passer l'utilisateur par un import de fichiers avant de voir le moindre chiffre.
-
-### 5.8 Découverte progressive
-
-Une fois le premier solde affiché :
-- Le trou d'historique devient visible dans la liste des transactions et propose l'import qui le comble.
-- L'ajout d'un compte non synchronisable (Livret A) est suggéré au moment où l'utilisateur constate que son total ne couvre pas tout.
-- La saisie manuelle se révèle quand un mouvement manque.
+1. **Ouvrir l'app et croire le total.** S'il manque une donnée, l'écran le dit avant qu'il ait à le deviner.
+2. **Voir quel compte est lequel** — « Assurance » et « Abonnement feu vert », pas quatre fois son propre nom.
+3. **Installer sur une machine neuve sans terminal** : créer un établissement, créer un compte, importer un relevé, tout depuis l'interface.
+4. **Importer un fichier sans risque** : s'il se trompe de compte, l'app refuse ; si le fichier contient plusieurs comptes, elle demande où va quoi.
+5. **Consulter son solde dans le métro**, PC éteint, avec la date de fraîcheur — ou lire une phrase honnête si ce n'est pas encore possible.
 
 ## 6. Exigences fonctionnelles observables
 
-- **Solde** : le solde agrégé est égal à la somme des soldes par compte, eux-mêmes égaux à la somme de leurs transactions. Recalculé à chaque ingestion, jamais à la main.
-- **Fraîcheur** : chaque solde porte la date de sa dernière synchro réussie.
-- **Synchro Enable Banking — trois durées distinctes** *(précisé le 2026-08-01)* :
-  - **Historique : 90 jours en arrière sur La Banque Postale**, qui refuse au-delà (`HTTP 422 / WRONG_TRANSACTIONS_PERIOD`, vérifié en direct le 2026-07-31). Ce n'est **pas** une constante Enable Banking — leur documentation indique que la plupart des ASPSP donnent au moins un an. Toute autre banque exige de re-constater sa fenêtre.
-  - **Consentement** : durée demandée dans `valid_until` du `POST /auth`, **plafonnée par `maximum_consent_validity`** (en secondes) que `GET /aspsps` renvoie pour la banque — 180 jours pour la majorité des ASPSP, plafond issu de l'amendement EBA RTS de 2022. La valeur accordée se lit dans `access.valid_until` ; c'est elle qui fait foi, jamais une durée codée en dur.
-  - **Jeton d'accès ASPSP** : rafraîchi **automatiquement** par Enable Banking, rien à gérer côté client.
-- **Format réel de l'API** (constaté) : le libellé est dans `remittance_information`, **liste de chaînes** à joindre — pas `remittance_information_unstructured` ; le montant de `transaction_amount` est **non signé**, le sens vient de `credit_debit_indicator` (`CRDT`/`DBIT`).
-- **Déduplication** — algorithme validé sur données réelles (27/27 CSV ↔ API), à porter en TypeScript :
-  - clé primaire `(date_ISO, montant_en_centimes)` ;
-  - **file FIFO par clé** — deux mouvements distincts de même montant le même jour restent deux mouvements ;
-  - score de Jaccard sur les mots du libellé **uniquement comme départage**, quand plusieurs candidats partagent la clé ;
-  - signe pris sur `credit_debit_indicator`, **jamais déduit du libellé**.
-- **Traçabilité** : chaque transaction conserve ses sources (`ENABLE_BANKING`, `CSV_IMPORT`, `PDF_RELEVE`, `MANUEL`) et son identifiant externe s'il existe.
-- **Échec explicite** : un fichier au format non reconnu, ou un PDF sans couche texte, est refusé avec un message clair — jamais ingéré partiellement.
-- **Idempotence** : ré-importer un fichier déjà traité, ou resynchroniser, ne change pas le solde.
-- **Sécurité** : mot de passe local ; secrets Enable Banking chiffrés au repos ; aucun secret en clair.
+### 6.1 Un inconnu ne devient jamais un zéro *(P38, P44)*
+
+- Un compte dont `balance_cents` est `NULL` **et** qui porte un identifiant externe (compte synchronisé) n'affiche pas `0,00 €`. La règle « solde = somme des transactions » reste **juste pour un compte manuel** et fausse pour un compte API jamais chargé ; les deux cas doivent être distingués.
+- Le **total agrégé** signale qu'il est incomplet dès qu'un compte de son périmètre n'a pas de solde connu.
+- La **fraîcheur agrégée** compte les comptes jamais synchronisés. Un compte sans date n'est pas « à jour », il est « jamais chargé ».
+- Une connexion bancaire dont la synchronisation a **totalement** échoué ne reste pas affichée comme autorisée.
+- Toute erreur de synchronisation journalise **son message** — aujourd'hui aucun des quatre sites ne le fait, et c'est ce trou qui a coûté une demi-journée d'archéologie pour un message que le code connaissait dès la première seconde.
+- Un `balance_type` **hors de la liste de priorités** n'est pas sélectionné en silence quand plusieurs soldes sont candidats.
+
+### 6.2 Trade Republic entre en base *(P38, cause)*
+
+Deux gardes rejettent, empilés, et la banque n'a **rien** refusé :
+
+- `remittance_information: null` est traité comme **absent**, pas comme malformé. C'est un **bug franc** : le code teste `!== undefined` alors que JSON rend `null`. Aucune décision à prendre.
+- Un montant à plus de deux décimales est accepté **à condition que tout ce qui dépasse le centième soit zéro**, et refusé sinon. C'est une **strictesse délibérée** qu'on assouplit sans jamais perdre la garantie « pas de chiffre faux silencieusement ». Mesuré : 0 montant sur 43 porte un chiffre non nul sous le centime.
+- Un montant **signé** est accepté ; `signedAmountCents` applique déjà `Math.abs()` avant l'indicateur, donc aucune double négation n'est possible.
+- **Contrôle exigé** : après ces assouplissements, les 43 transactions réelles capturées passent — toutes.
+
+### 6.3 Un import ne place rien qu'il ne puisse justifier *(P41, P42)*
+
+- Un fichier CSV dont la banque ne correspond pas à l'établissement du compte cible est **refusé**, comme un format inconnu l'est déjà (`csv_format_unrecognized`).
+- Un fichier dont les lignes **ne peuvent pas être attribuées avec certitude** au compte cible ne les y verse pas en silence. *(Corrigé le 2026-08-04, après mesure sur le fichier réel : le CSV Revolut mélange quatre comptes et n'expose aucun identifiant de pocket — sa seule colonne candidate, `Produit`, ne prend que trois valeurs et la colonne `Solde` ne se referme sur aucune. La correspondance compte par compte du chemin PDF (`accountIds`) **n'est donc pas transposable** au CSV, contrairement à ce que cette ligne supposait. Le comportement retenu fait l'objet d'un arbitrage de Lamoms — voir `.lamoms/tasks.md`, T15.)*
+- La déduplication reste valable quand les deux sources emploient des **vocabulaires différents** (anglais côté API Revolut, français côté CSV) : l'arbitrage par mots ne peut pas être le seul recours.
+- Un rapprochement **incertain** pose `needs_review`. Mesuré le 2026-08-04 : 43 paires bi-sources, **zéro** drapeau posé — ce qui contredit la conception de P25.
+- **Idempotence, inchangée** : réimporter le même fichier deux fois ne change ni le solde ni le nombre de transactions.
+
+### 6.4 Chaque compte porte un nom qui le distingue *(P39)*
+
+- Le nom vient de la donnée de la banque quand elle en fournit une **utile** — `details` porte le nom du pocket chez Revolut (« Assurance », « Auto entreprise déclaration paiement », « Abonnement feu vert »).
+- Quand la banque ne rend que le **titulaire**, le nom se dérive du type de compte. Couverture mesurée : **9 comptes sur 9, zéro saisie**.
+- **Aucun nom saisi à la main n'entre au périmètre** : l'upsert de synchro réécrit `name` à chaque passage, donc une saisie serait effacée silencieusement. C'est la raison de ne pas construire cette fonctionnalité, pas un travail à faire.
+- ⚠️ **Ne pas inverser la priorité `name` → `product`** : `product` vaut `null` chez La Banque Postale et sur les quatre comptes Revolut. L'inversion casserait deux banques pour en réparer une.
+
+### 6.5 Une transaction sans libellé reste lisible *(P25)*
+
+- Les 43 transactions Trade Republic arriveront **toutes** sans libellé et sans référence externe (mesuré, plus seulement inféré). L'écran ne doit pas rendre 43 lignes vides.
+- Deux transactions de même date, même montant et même sens restent **deux lignes distinctes** (P5). Le cas est déjà présent : deux débits de 20,00 € le 2026-05-20.
+
+### 6.6 Une première installation ne dépend pas du terminal *(P40)*
+
+- Créer un **établissement**, créer un **compte**, importer un **relevé PDF** : les trois routes existent et doivent avoir une porte dans l'interface.
+- Conséquence directe mesurée : sur une installation neuve, le seul chemin vers un premier compte est une banque API. Un utilisateur qui n'a que Nickel et un Livret A **ne peut pas franchir l'accueil**.
+
+### 6.7 Le hors connexion tient sa promesse, ou se tait *(P43, P16)*
+
+- Réseau coupé, l'application affiche le **dernier solde connu avec sa date de fraîcheur** — c'est la contrainte fondatrice P16 et la promesse de T7.
+- Cela doit valoir **dès la première visite en ligne**, sans exiger de l'utilisateur trois passages qu'aucun écran ne lui annonce.
+- Si la coque n'est pas encore prête, l'écran le **dit** plutôt que d'échouer en « site inaccessible ».
+- Contrainte d'implémentation à respecter : Vite hache le nom des fichiers produits, donc la liste des ressources à mettre en cache n'existe qu'au moment de la construction.
 
 ## 7. Critères d'acceptation
 
-1. À l'ouverture, le solde agrégé s'affiche sans action de l'utilisateur, avec sa date de fraîcheur.
-2. Le solde agrégé est exactement la somme des soldes par compte. Le solde d'un compte est la somme de ses transactions **tant que la banque n'en publie pas un qui fasse foi** ; quand elle le publie, c'est le sien qui gagne. *(Précisé le 2026-08-04 — la ligne disait « eux-mêmes sommes de leurs transactions », ce qui est faux pour un compte synchronisé : l'API ne rend que 90 jours d'historique, donc sommer ses transactions donnerait un chiffre inférieur au solde réel. `src/server.ts:388` tranche déjà dans ce sens — `CASE WHEN a.balance_cents IS NULL THEN SUM(t.amount_cents) ELSE a.balance_cents END`.)* **Conséquence pour l'interface** : sur un compte synchronisé, ajouter, supprimer ou arbitrer une transaction ne fait PAS bouger le solde affiché. C'est correct, et cela doit être assumé à l'écran plutôt que masqué.
-3. Une synchro Enable Banking rejouée deux fois de suite ne modifie pas le solde ni le nombre de transactions.
-4. Un import croisé CSV + API sur la même période ne produit aucun doublon et ne perd aucune transaction — vérifiable sur les données réelles du lab (27 mouvements, 0 orphelin des deux côtés).
-5. Deux transactions distinctes de même montant le même jour restent deux transactions.
-6. Un fichier au format non reconnu est refusé avec un message explicite, sans ingestion partielle.
-7. Consentement expiré : le solde reste affiché avec sa date, accompagné d'un chemin de reconnexion en un geste.
-8. Authentification locale fonctionnelle ; aucun secret lisible en clair au repos.
+Tous démontrables par commande, diff ou test — aucun ne repose sur une impression d'écran.
 
-## 8. Contraintes, risques et questions ouvertes
+1. Un compte synchronisé sans solde connu **n'affiche pas** `0,00 €`, et le total agrégé indique qu'il est incomplet.
+2. La fraîcheur agrégée d'un ensemble contenant un compte jamais synchronisé **ne renvoie pas** une date « à jour ».
+3. Une synchronisation en échec total **ne laisse pas** la connexion affichée comme autorisée.
+4. Le message d'erreur (`error.message`) apparaît dans le journal des quatre sites de synchronisation.
+5. Les **43 transactions réelles** de `.lamoms/lab/agy/tr_transactions_raw.json` sont ingérées sans exception, et le solde de `tr_balances_raw.json` donne 47 centimes en EUR.
+6. Un montant portant un chiffre **non nul** au-delà du centième est toujours **refusé**.
+7. Un CSV Revolut visant un compte La Banque Postale est **refusé** — reproduction exacte de l'incident du 2026-08-04.
+8. Un import multi-comptes sans correspondance explicite est **refusé**.
+9. Le CSV Revolut réel (254 lignes) réimporté sur le compte #5 déjà peuplé par l'API **n'ajoute aucune transaction** et ne modifie pas le solde de 2,25 €.
+10. Les quatre comptes Revolut portent **quatre noms distincts** à l'écran, sans aucune saisie.
+11. Sur une base vide, un établissement, un compte et un relevé PDF s'ajoutent **entièrement depuis l'interface**.
+12. Première visite en ligne, puis réseau coupé : la page se charge et affiche le dernier solde connu **avec sa date**.
+13. Aucune régression sur l'acquis du §2 — en particulier : la somme des 314 transactions Revolut tombe toujours au centime sur le solde de l'API.
 
-- **Contraintes mesurées** : fenêtre d'historique de 90 jours, refusée par l'API elle-même au-delà (`422 / WRONG_TRANSACTIONS_PERIOD`) ; durée du consentement variable, à lire dans `access.valid_until`. L'état des lieux complet passe donc nécessairement par l'import.
-- **Le Livret A n'est pas dans le périmètre de l'API** : la session autorisée ne contient qu'un seul compte (`cash_account_type: CACC`, usage `PRIV`) — vérifié en direct le 2026-07-31. La saisie manuelle prévue en T1 n'est pas un repli, c'est le seul chemin. (P19 refermé.)
-- **Hétérogénéité des CSV bancaires FR** (encodage, séparateur, formats de date et de montant) : traitée par un registre de formats par banque et un refus explicite si le format n'est pas reconnu.
-- **Limite connue du jeu de test de déduplication** : entre le CSV et l'API de La Banque Postale, les libellés se révèlent quasi identiques. Le cas « même transaction, libellé franchement différent selon le canal » n'a pas été éprouvé, et le PDF n'a jamais été confronté à l'API. Non bloquant — la clé primaire ne dépend pas du libellé — mais le jeu de test devra couvrir ces deux cas.
-- **Aucune question ouverte bloquante.** Les quatre décisions du brief sont tranchées.
+## 8. Ordre imposé par les faits
 
-## 9. Décisions structurantes
+Cet ordre n'est pas une préférence — chaque étape rend la suivante observable ou moins risquée.
 
-Reprises du rapport de faisabilité AGY via le brief Hermès, et des arbitrages de l'utilisateur — non choisies par Claude.
+1. **P38 + P44** — d'abord, pour deux raisons. (a) **C'est une horloge de perte de données** : Trade Republic a une fenêtre glissante de 90 jours, sa synchro est cassée, et la capture du 2026-08-04 porte un `continuation_key` non nul — de l'historique est disponible et personne ne le descend ; chaque jour d'attente en efface une journée, définitivement. (b) Journaliser `error.message` est ce qui rend toutes les pannes suivantes lisibles en une seconde.
+2. **P41 + P42** — ensemble. Même chemin de code, même relecture ; l'import cesse de corrompre avant qu'on lui ajoute une porte.
+3. **P39 + P25** — ensemble. Les deux portent sur ce que l'écran rend d'une donnée pauvre.
+4. **P40** — les portes, une fois que ce qu'elles ouvrent ne corrompt plus rien.
+5. **P43** — le hors connexion, qui ne dépend d'aucun des précédents.
 
-- **Stack** : Fullstack TypeScript — Node.js/Fastify, React Vite PWA, Drizzle ORM, SQLite. 100 % TypeScript, aucune dépendance Python.
-  *Raisons* : un seul langage de bout en bout avec contrats partagés, PWA installable mobile et desktop depuis une base unique, SQLite embarqué sans infrastructure lourde.
-  *Alternative écartée* : Python/FastAPI + React (duplication des types).
-- **Emplacement des données : une instance hébergée fait foi**, mobile et desktop sont des clients. *(tranché le 2026-07-31)*
-  *Conséquence qui referme le débat PWA* : le téléphone ne détenant pas les données de référence, l'éviction du stockage navigateur ne fait perdre qu'un cache reconstructible. La PWA reste viable.
-- **Le MVP tourne sur le PC hôte — limite assumée en phase 1.** Voir §4, « Limite explicite du MVP ». Le Raspberry Pi la lèvera ensuite, sans réécriture : même code, même fichier de base, même réseau privé.
-- **Accès du mobile à l'instance : Tailscale** (réseau privé chiffré, aucun port ouvert sur la box, gratuit). Cloudflare Tunnel est écarté pour des données bancaires : un tiers y termine le TLS et pourrait lire soldes, transactions et jetons.
-- **Connexion bancaire (SCA) : c'est le serveur qui reçoit le retour de la banque** — le PC hôte d'abord, le Raspberry Pi ensuite. *(précisé par l'utilisateur le 2026-07-31)* Le mobile consomme une session déjà autorisée — quelques reconnexions par an, selon la date renvoyée dans `access.valid_until`.
-  *Pourquoi cette formulation plutôt que « SCA depuis le desktop »* : le rôle appartient au **serveur**, pas à un type de machine. Quand le serveur deviendra le RPi — sans écran ni navigateur — rien ne se déplace, et c'est précisément ce qui rend la migration transparente.
-  *Conséquence à respecter, MVP* : l'authentification forte doit se **terminer sur la machine serveur**, non par choix d'ergonomie mais parce que `https://localhost:3443/` ne résout que sur cette machine. Lancée depuis le téléphone, la banque renverrait le mobile vers lui-même.
-  *Conséquence, phase RPi* : avec `https://gestio.software/auth/callback`, URL publique, le callback atteint le serveur quel que soit l'appareil — l'authentification peut alors partir du mobile. **C'est l'URL de redirection qui lève la contrainte, pas une réécriture du code.**
-  Aucune exposition publique n'est nécessaire en MVP — ni Tailscale Funnel, ni nom `.ts.net`.
-  **URL de redirection faisant autorité**, enregistrées par l'utilisateur chez Enable Banking — trois au 2026-08-01 :
-  - `https://localhost:3443/` — **celle du MVP**. Ajoutée par l'utilisateur parce que le port 3000 est occupé en permanence sur la machine hôte par le serveur Lamoms, ce qui empêchait aussi de lancer les tests.
-  - `https://localhost:3000/` — enregistrée, mais **inutilisable sur cette machine** pour la raison ci-dessus.
-  - `https://gestio.software/auth/callback` — phase Raspberry Pi ou instance distante.
+## 9. Décisions structurantes de ce cycle
 
-  ⚠️ **Ne pas reprendre la `redirect_url` du script du lab** (`http://localhost:3000/callback`) : elle n'est pas enregistrée et l'autorisation échouerait au retour de la banque, après l'authentification forte. Voir P18.
-  *Contrainte d'implémentation* : `https://localhost:3443/` impose un certificat TLS local — le backend doit servir en HTTPS, sur le port 3443, dès le développement. Un certificat auto-signé suffit : la redirection est faite par le navigateur de l'utilisateur, aucune autorité de certification n'intervient.
-- **Authentification forte : pattern Out-of-Band + polling.** La PWA ouvre l'URL bancaire à l'extérieur et interroge le backend jusqu'à ce que la session soit établie ; c'est le backend qui reçoit le retour de la banque. L'instance PWA n'est jamais fermée, ce qui supprime — au lieu de contourner — le problème iOS de retour dans l'application.
-- **Chiffrement au repos** : base chiffrée via SQLCipher (`better-sqlite3-multiple-ciphers`), clé en variable d'environnement hors dépôt ; mot de passe utilisateur en Argon2id ; jetons Enable Banking stockés dans la base chiffrée.
-- **Sauvegarde** : `sqlcipher_export()` en tâche planifiée quotidienne, rotation sur 30 jours, copie sur un support secondaire. La sauvegarde reste chiffrée et doit se rouvrir avec la même clé.
-  ⚠️ **Ce n'est pas `sqlite3 .backup`**, contrairement à ce que ce PRD indiquait jusqu'au 2026-08-01. Erreur signalée par Codex, preuve à l'appui : le shell refuse la copie page à page entre bases chiffrées (`backup is not supported with encrypted databases`). Voir P20. *(exigence absente du cadrage initial, apportée par la recherche AGY — sans elle, la perte du fichier fait perdre l'intégralité des données)*
-- **Canal principal : Enable Banking en production.** L'accès était configuré et validé par l'utilisateur depuis le départ ; la contrainte réglementaire qui l'avait fait écarter n'existait pas. CSV/PDF pour l'état des lieux et le secours.
-- **`gestio-releves`** (projet Python antérieur) reste à sa place, intact. Il sert de référence de logique de parsing et son corpus de relevés réels sert de jeu de test. Le parsing est réécrit en TypeScript.
+Prises par Lamoms, ou déduites de mesures — jamais choisies seul par le Planificateur.
+
+- **Tester avant de corriger.** Décidé par Lamoms le 2026-08-04 : « le mieux c'est de tester l'app pour voir si elle fonctionne avant de régler les problèmes un par un ». Les sept défauts de ce PRD viennent de là et d'aucune supposition.
+- **Aucun nommage manuel des comptes.** La dérivation couvre 9 comptes sur 9 ; l'upsert de synchro effacerait toute saisie. On ne construit pas ce qui n'a pas lieu d'être.
+- **P35 en remédiation manuelle**, sans mécanisme de rappel, risque de récidive assumé. Rendez-vous du **2026-08-08** — première date où les quatre relevés manquants existent simultanément.
+- **`tasks.yaml` est retiré**, GitHub (milestones, issues, commentaires) est la source de vérité du suivi. Ne pas le restaurer.
+- **Assouplir une validation ne se fait que sans perte.** Les six décimales de Trade Republic sont du remplissage — mesuré, 0 sur 43. Un chiffre réellement sous le centime reste refusé.
+
+## 10. Contraintes, risques et questions ouvertes
+
+- **Aucune question ouverte bloquante.** Les huit problèmes du §4.1 ont leur cause mesurée et leur correctif tranché.
+- **Risque assumé, P35** : les relevés manquants sont une action manuelle datée. S'ils ne sont pas récupérés, un trou d'historique s'ouvrira sans que rien ne le signale — pour Nickel il est **déjà ouvert** depuis fin mai, faute d'API.
+- **Non mesuré, sans blocage** : les `balance_type` rendus par La Banque Postale et Revolut n'ont jamais été capturés. Ils tomberont en observant les synchros — ne pas commander de recherche.
+- **Non mesuré, sans blocage** : la profondeur d'historique réelle de Trade Republic. Tombera avec P38.
+- **Limite de l'environnement** : `/mnt/c` a corrompu `node_modules` de façon asynchrone le 2026-08-04 (82 paquets sur 134 vidés). Ce n'est pas un défaut du projet. Si cela récidive, sortir le projet vers le système de fichiers natif WSL — décision de Lamoms.

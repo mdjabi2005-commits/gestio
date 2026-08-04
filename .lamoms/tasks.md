@@ -1,6 +1,6 @@
 # Tâches du cycle 2 — remise en état
 
-**Émis le** 2026-08-04 par le Planificateur, à partir de `.lamoms/prd-2.md`.
+**Émis le** 2026-08-04 par le Planificateur, à partir de `.lamoms/prd.md`.
 **Suivi** : GitHub (une issue par tâche, milestone du cycle 2). Ce fichier est le plan, pas le suivi.
 **Numérotation** : reprend à **T13**, après les T1–T12 du MVP.
 
