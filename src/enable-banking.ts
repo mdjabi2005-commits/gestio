@@ -90,14 +90,14 @@ export function parseBankTransaction(value: unknown): ParsedBankTransaction {
 
   const rawAmount = requiredString(amount.amount, "transaction_amount.amount");
   const remittance = transaction.remittance_information;
-  if (remittance !== undefined && (!Array.isArray(remittance) || remittance.some(item => typeof item !== "string"))) {
+  if (remittance != null && (!Array.isArray(remittance) || remittance.some(item => typeof item !== "string"))) {
     throw new Error("remittance_information must be an array of strings");
   }
 
   return {
     transactionDate: isoDate(transaction.booking_date, "booking_date"),
-    amountCents: signedAmountCents(decimalCents(rawAmount), indicator),
-    label: (remittance as string[] | undefined)?.join(" ").trim() ?? "",
+    amountCents: signedAmountCents(decimalCents(rawAmount, true), indicator),
+    label: (remittance as string[] | null | undefined)?.join(" ").trim() ?? "",
     externalReference: stringValue(transaction.entry_reference) ?? null
   };
 }
@@ -113,6 +113,9 @@ export function parseBalance(value: unknown) {
     const index = priority.indexOf(String(balance.balance_type));
     return index === -1 ? priority.length : index;
   };
+  if (balances.length > 1 && balances.every(balance => rank(balance) === priority.length)) {
+    throw new Error(`balances contain no supported balance_type: ${balances.map(balance => String(balance.balance_type)).join(", ")}`);
+  }
   const selected = balances.sort((left, right) => rank(left) - rank(right))[0];
   const amount = objectValue(selected.balance_amount, "balance_amount");
   return {
@@ -122,7 +125,7 @@ export function parseBalance(value: unknown) {
 }
 
 export function decimalCents(value: string, signed = false) {
-  const pattern = signed ? /^(-?)(\d+)(?:\.(\d{1,2}))?$/ : /^(\d+)(?:\.(\d{1,2}))?$/;
+  const pattern = signed ? /^(-?)(\d+)(?:\.(\d{1,2})0*)?$/ : /^(\d+)(?:\.(\d{1,2})0*)?$/;
   const match = value.match(pattern);
   if (!match) throw new Error("amount must be a decimal with at most two fraction digits");
   const negative = signed && match[1] === "-";

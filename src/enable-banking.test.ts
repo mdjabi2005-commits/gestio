@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test, { type TestContext } from "node:test";
 import { openDatabase } from "./db.js";
-import { decimalCents, EnableBankingError, parseBankTransaction, type EnableBankingApi } from "./enable-banking.js";
+import { decimalCents, EnableBankingError, parseBalance, parseBankTransaction, type EnableBankingApi } from "./enable-banking.js";
 import { buildApp } from "./server.js";
 
 type ApiOptions = {
@@ -106,6 +106,54 @@ test("parses bank money without floating point and signs it from the indicator",
     label: "",
     externalReference: null
   });
+});
+
+test("accepts lossless Trade Republic amounts and rejects real sub-cent values", () => {
+  const transaction = {
+    booking_date: "2026-08-04",
+    credit_debit_indicator: "CRDT",
+    transaction_amount: { amount: "-12.340000", currency: "EUR" },
+    remittance_information: null
+  };
+  assert.deepEqual(parseBankTransaction(transaction), {
+    transactionDate: "2026-08-04",
+    amountCents: 1_234,
+    label: "",
+    externalReference: null
+  });
+  assert.throws(
+    () => parseBankTransaction({ ...transaction, remittance_information: [null] }),
+    { message: "remittance_information must be an array of strings" }
+  );
+  assert.deepEqual(parseBalance({
+    balances: [{ balance_type: "OTHR", balance_amount: { amount: "0.470000", currency: "EUR" } }]
+  }), { balanceCents: 47, currency: "EUR" });
+  assert.throws(
+    () => decimalCents("0.435", true),
+    { message: "amount must be a decimal with at most two fraction digits" }
+  );
+});
+
+test("refuses to guess between multiple unknown balance types", () => {
+  assert.throws(() => parseBalance({ balances: [
+    { balance_type: "OTHR", balance_amount: { amount: "1.00", currency: "EUR" } },
+    { balance_type: "INFO", balance_amount: { amount: "2.00", currency: "EUR" } }
+  ] }), /OTHR, INFO/);
+});
+
+test("replays the local Trade Republic capture", {
+  skip: process.env.GESTIO_SKIP_CORPUS === "1"
+}, () => {
+  const lab = process.env.GESTIO_LAB_CORPUS ?? "/mnt/c/Users/djabi/gestio/.lamoms/lab/agy";
+  const transactions = JSON.parse(readFileSync(join(lab, "tr_transactions_raw.json"), "utf8")) as {
+    transactions: unknown[];
+  };
+
+  assert.equal(transactions.transactions.map(parseBankTransaction).length, 43);
+  assert.deepEqual(
+    parseBalance(JSON.parse(readFileSync(join(lab, "tr_balances_raw.json"), "utf8"))),
+    { balanceCents: 47, currency: "EUR" }
+  );
 });
 
 test("connects out-of-band, exhausts empty pages, stores API balance freshness, and resyncs idempotently", async (t) => {
