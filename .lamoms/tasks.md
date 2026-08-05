@@ -37,6 +37,19 @@ T13, T14 et T15 sont fusionnées. Leur revue par le Planificateur, faite sur le 
 
 **Ordre imposé** : T20 → T21 → T16. T20 d'abord et **seule**, parce qu'elle conditionne la crédibilité de toute vérification ultérieure : tant qu'elle n'est pas passée, aucun « `npm test` passe » n'est une preuve. T21 ensuite, sous un harnais désormais prouvé.
 
+### Intercalaire — revue de T20 (2026-08-05, sur `main` 120ee92)
+
+T20 est fusionnée et fait ce qu'elle annonce : le vert vide est neutralisé, la capture Trade Republic est versionnée et fidèle, aucune ligne de production n'a bougé. La revue lève **deux** constats, dont aucun n'est imputable à T20 — les deux préexistaient et T20 les a rendus visibles.
+
+| Constat | Carnet | Ce que c'est | Traité par |
+|---|---|---|---|
+| **F** | P52 | `GESTIO_SKIP_CORPUS=1` désactive **quatre** preuves sur données réelles et rend un `exit 0` — même famille que P47, par une autre porte. Elle a **déjà servi** à démontrer le critère 3 de l'issue #29 | **T22** |
+| **G** | P49 (reste) | T20 n'a versé que le corpus **Trade Republic**. Trois autres fichiers de test lisent encore des corpus par chemin absolu hors dépôt | **T23** (CSV) / **jamais** (PDF) |
+
+**Le corpus PDF ne sera pas versé — décision, pas oubli.** Le dépôt `mdjabi2005-commits/gestio` est **PUBLIC** ; le corpus pèse **246 Mo** et porte IBAN, adresse et titulaire sur 21 relevés réels. Le verser, ce serait publier définitivement des relevés bancaires réels — ce que `.gitignore:17-22` refuse déjà, pour la même raison, au lab AGY. `src/pdf-import.test.ts` garde donc `GESTIO_PDF_CORPUS` en **dépendance locale assumée et documentée**. Conséquence acceptée : hors du poste de Lamoms, deux tests PDF sont **rouges** — rouge et visible, jamais vert et muet.
+
+**Ordre imposé** : **T22 → T21 → T23 → T16.** T22 passe devant parce qu'elle coûte trois lignes et referme la dernière porte du faux vert ; sur le poste de Lamoms elle ne casse rien, les corpus y sont. T21 garde son rang : c'est la seule des trois qui corrige un comportement subi par l'utilisateur. T23 est lourde (anonymisation d'un corpus croisé) et ne bloque personne — elle attend son tour.
+
 **P51 est parké** — mode de panne sûr (refus, jamais d'écriture fausse), déclenché seulement par un renommage d'établissement. Aucune tâche ouverte ; à rouvrir au premier import légitime refusé.
 
 **Ce qui répond bien au besoin et n'est pas remis en cause** : Trade Republic entre effectivement en base (T13) ; `message` journalisé aux quatre sites, `0,00 €` remplacé par « Solde inconnu », total marqué incomplet, `last_sync_at` préservé (T14) ; les deux refus de l'incident du 2026-08-04 sont couverts et la règle multi-comptes est portée par le registre `bankCsvFormats`, pas par un `if` dans la route (T15).
@@ -354,3 +367,101 @@ La requête de sélection de la boucle de fond (l. 56) est le **seul** endroit q
 5. Quand tous les comptes portent une date, l'affichage est **identique** à celui d'aujourd'hui — aucune mention parasite.
 6. `unknownBalanceCount`, « Solde inconnu » et le total marqué incomplet, livrés par T14, sont inchangés : les assertions correspondantes de `src/server.test.ts` passent **sans être modifiées**.
 7. `recordBankError` continue de poser `FAILED` et de préserver `last_sync_at` — l'échec reste visible.
+
+---
+
+## T22 — Aucune variable d'environnement ne peut plus vider la suite
+
+**Problème** : P52.
+**Pourquoi maintenant** : T20 a fermé la porte `NODE_TEST_CONTEXT`. Celle-ci est restée ouverte, et elle a **déjà servi** : la démonstration du critère 3 de l'issue #29 ne tient qu'avec `GESTIO_SKIP_CORPUS=1` posé, c'est-à-dire avec quatre preuves sur données réelles désactivées. Tant qu'un vert peut être obtenu sans exécuter, le harnais rendu crédible par T20 ne l'est qu'à moitié. Trois lignes à retirer.
+
+### Périmètre
+- `src/csv-import.test.ts` — l. 14 (`corpusTest`) et son usage l. 16.
+- `src/lab-replay.test.ts` — l. 25-27, l'objet d'options du test « replays the real T2 corpus in both channel orders ».
+- `src/pdf-import.test.ts` — l. 13 (`corpusTest`) et ses deux usages, l. 25 et l. 49.
+
+Rien d'autre. Aucune fixture, aucun fichier nouveau.
+
+### Rayon d'impact vérifié
+`grep -rn "GESTIO_SKIP_CORPUS"` sur tout le dépôt hors `node_modules` rend **cinq** occurrences : les trois ci-dessus, plus deux **documentaires** (`.lamoms/tasks.md:295`, `.lamoms/problems.json`) qui ne sont pas du code. Aucun script de `package.json`, aucun fichier de `scripts/`, aucun workflow — il n'y a pas de `.github/`. **Aucun appelant à casser.**
+Sur le poste de Lamoms les deux corpus existent (`.lamoms/lab/agy`, `/mnt/c/Users/djabi/Documents/relevé pdf`) : après suppression, `npm test` reste vert avec le même décompte. La tâche ne change donc rien à ce qui est observé ici — elle supprime seulement la possibilité d'observer autre chose ailleurs.
+
+### Ne pas toucher
+- ⚠️ **Les `assert.ok(existsSync(...))` qui nomment le corpus absent** (`csv-import.test.ts:19` et `:27`, `lab-replay.test.ts:31`, `pdf-import.test.ts:26` et `:50`). Ils deviennent le **seul** mécanisme de signalement, et c'est ce qui rend l'échec lisible. Les retirer transformerait un message clair en `ENOENT` brut.
+- ⚠️ **Ne pas remplacer le `skip` par un autre saut conditionnel** — ni `existsSync`, ni variable renommée, ni `t.skip()`. Ce serait rouvrir P52 sous un autre nom. Un corpus absent doit rendre la suite **rouge**.
+- `GESTIO_LAB_CORPUS`, `GESTIO_PDF_CORPUS`, `GESTIO_REVOLUT_CSV` : **hors périmètre**, T23 les traite. Un chemin surchargeable par variable ne produit pas de faux vert ; c'est la seule chose qui compte ici.
+- **Aucune valeur d'assertion** : 19, 8, 250, 3, 77, 27, 299, 45, 6, 54 restent telles quelles.
+- Aucun fichier de `src/` hors les trois tests nommés. Aucun fichier de production.
+
+### Étapes
+- [ ] `src/csv-import.test.ts` : supprimer `const corpusTest = { skip: ... }` (l. 14) et retirer l'argument `corpusTest` du test « parses the real La Banque Postale and Revolut CSV corpus » (l. 16).
+- [ ] `src/lab-replay.test.ts` : retirer l'objet d'options `{ skip: ... }` (l. 25-27) du test « replays the real T2 corpus in both channel orders ». Le test ne prend plus que son nom et sa fonction.
+- [ ] `src/pdf-import.test.ts` : supprimer `const corpusTest` (l. 13) et retirer son argument des deux tests (l. 25, l. 49).
+- [ ] `grep -rn "GESTIO_SKIP_CORPUS" src/` ne doit plus rien rendre.
+- [ ] **Vérification**, dans cet ordre :
+  1. `npm test` → décompte **non nul**, `pass 30`, **`skipped 0`** ;
+  2. `GESTIO_SKIP_CORPUS=1 npm test` → **exactement le même résultat** que sans la variable ;
+  3. renommer temporairement `.lamoms/lab/agy`, relancer `npm test` : sortie en code **non nul**, et le message nomme le fichier absent ; remettre le nom ;
+  4. `npm run lint && npm run typecheck && npm run build`.
+
+**Hors plan, à faire porter par Copilot** : le critère 3 de l'issue #29 (« la suite passe intégralement avec `.lamoms/lab/` absent ou renommé ») est faux tel qu'écrit et ne le deviendra qu'après T23, et seulement pour les corpus CSV. Le reformuler sur ce que T20 a réellement démontré : « la suite ne dépend plus de `.lamoms/lab/` pour le corpus Trade Republic ». Ce n'est pas du code, Codex n'y touche pas.
+
+### Critères d'acceptation
+1. `GESTIO_SKIP_CORPUS=1 npm test` rend **le même décompte** que `npm test` : même nombre de `pass`, et `skipped 0` dans les deux cas. **Aucune variable d'environnement ne peut plus réduire le nombre de tests exécutés.**
+2. `grep -rn "GESTIO_SKIP_CORPUS" src/` ne rend rien.
+3. Corpus renommé → `npm test` sort en code **non nul** et le message d'échec **nomme le chemin absent** — l'échec est diagnostiquable sans lire le code.
+4. **Ce qui est préservé** : sur le poste de Lamoms, corpus en place, `npm test` reste vert avec le décompte **inchangé** (`pass 30`). Aucune preuve perdue, aucune ajoutée, aucune valeur figée modifiée.
+5. `git diff --name-only` ne montre que `src/csv-import.test.ts`, `src/lab-replay.test.ts`, `src/pdf-import.test.ts`.
+
+---
+
+## T23 — Les corpus CSV entrent dans le dépôt, anonymisés
+
+**Problème** : P49 (ce que T20 n'a pas couvert).
+**Pourquoi ensuite** : après T22, un corpus absent rend la suite rouge. Trois fichiers de test lisent encore des corpus hors dépôt, donc la suite n'est intégralement verte que sur le poste de Lamoms. Les corpus CSV sont petits (2,6 Ko + 32 Ko) et anonymisables ; on les verse. Le corpus PDF ne le sera **jamais** — voir la contrainte ci-dessous.
+
+### ⚠️ Contrainte dure : le dépôt est PUBLIC
+`github.com/mdjabi2005-commits/gestio`, visibilité **PUBLIC**. Tout ce que cette tâche verse est **publié définitivement** — un retrait ultérieur impose de réécrire l'historique et n'annule pas la divulgation. L'anonymisation n'est donc pas une précaution de confort : c'est la condition d'existence de la tâche. Les corpus portent des IBAN, un numéro de compte, le nom du titulaire et **des noms de tiers** dans les libellés de virement. **En cas de doute sur un libellé, on le remplace ; on ne le garde pas.**
+
+### Périmètre
+- **Nouveaux**, sous `src/fixtures/` : `lbp-ccp-a.csv`, `lbp-ccp-b.csv`, `revolut-statement.csv`, `t2-enable-banking.json`.
+- `src/csv-import.test.ts` — l. 10-13 (`lab`, `statementCorpus`, `revolutCsv`) et le test « parses the real La Banque Postale and Revolut CSV corpus » (l. 16-37).
+- `src/lab-replay.test.ts` — l. 23 (`lab`) et les chemins l. 28-30.
+- `src/pdf-import.test.ts` — **un commentaire d'en-tête seulement**, aucun code.
+
+### Rayon d'impact vérifié
+Les deux CSV La Banque Postale sont lus par **deux** tests, pas un : `csv-import.test.ts:17` (comptes 19 et 8) **et** `lab-replay.test.ts:26-28` (appariement des deux canaux). Une seule paire de fixtures sert les deux — toute modification d'un montant ou d'une date casse le second.
+`deduplicateTransactions` apparie par `matchKey` = `date\0montant` (`src/deduplication.ts:68`) puis départage par **jaccard sur les tokens de libellés** (l. 29-34), après `normalizeTransactionLabel` (l. 57-66 : NFD, diacritiques retirés, minuscules, non-alphanumériques en séparateurs). **Le libellé n'est donc pas décoratif : il est le critère d'appariement.**
+`parseLaBanquePostale` décode en **ISO-8859-1 en dur** (`src/csv-import.ts:42`) et vérifie un préambule littéral accentué (l. 44-47) ; `parseRevolut` décode en **UTF-8 `fatal`** (l. 71) et vérifie un en-tête de 10 colonnes (l. 76-79). Une fixture mal encodée fait lever `CsvFormatError` — le test le dira, mais autant le savoir avant.
+`GESTIO_PDF_CORPUS` est lu à **deux** endroits : `csv-import.test.ts:11` (seulement pour construire le chemin Revolut) et `pdf-import.test.ts:10`. Après cette tâche il ne reste **qu'un** chemin absolu dans tout le dépôt, celui du PDF.
+
+### Ne pas toucher
+- ⚠️ **Le corpus PDF ne se verse pas.** 246 Mo, 21 relevés réels avec IBAN, adresse et titulaire, dépôt public. `src/pdf-import.test.ts` garde `GESTIO_PDF_CORPUS` et ses deux tests restent rouges hors du poste de Lamoms — c'est l'état honnête et il est assumé. **Ne pas** fabriquer de PDF synthétiques dans cette tâche : ce serait une tâche à part entière (extraction de la couche texte, réécriture, dépendance d'écriture PDF), et elle n'est pas ouverte.
+- ⚠️ **Dates et montants : intacts, partout.** Ce sont eux qui portent les valeurs figées et l'appariement des deux canaux. On n'anonymise que ce qui **nomme** : numéro de compte, libellés, soldes.
+- ⚠️ **Ne pas déplacer ni copier `.lamoms/lab/`**, et ne pas modifier `.gitignore`. Le lab reste gitignoré ; on en tire une projection anonymisée, comme T20.
+- **Ne pas affaiblir ni supprimer une assertion existante** pour faire passer la fixture. Si une valeur ne tombe plus juste, c'est l'anonymisation qui est fautive, pas l'assertion.
+- Aucun fichier de production. `src/csv-import.ts` et `src/deduplication.ts` ne bougent pas d'une ligne : cette tâche ne change aucun comportement.
+
+### Étapes
+- [ ] **Construire une table d'anonymisation unique, token à token.** Recenser les tokens nominatifs des libellés (noms, prénoms, raisons sociales, numéros de compte, IBAN), sur leur forme **normalisée** au sens de `normalizeTransactionLabel` — sans accents, en minuscules. Associer à chaque token réel distinct **un** token de substitution distinct et stable. Relation **un pour un** : ne jamais fusionner deux tokens réels en un seul (l'intersection du jaccard grandirait et créerait de faux appariements), ne jamais scinder un token en deux (elle se réduirait). La table est **la même** pour les CSV La Banque Postale et pour le corpus T2 — c'est la condition pour que les 27 appariements survivent.
+- [ ] `src/fixtures/lbp-ccp-a.csv` et `lbp-ccp-b.csv`, depuis `0984209Z0241785448406468.csv` (19 lignes) et `0984209Z0241785448417573.csv` (8 lignes). **Écrire en ISO-8859-1**, pas en UTF-8 : `parseLaBanquePostale` décode en dur et compare le préambule à `["Numéro Compte", "Type", "Compte tenu en", "Date", "Solde (EUROS)"]`. **Anonymiser** : la valeur de « Numéro Compte » (`0984209Z024`), les libellés selon la table, la valeur de « Solde (EUROS) » du préambule. **Conserver** : toutes les dates et tous les montants, le nombre de lignes (19 et 8), la structure exacte du préambule et l'en-tête `Date;Libellé;Montant(EUROS)`, et **au moins un libellé portant un accent** — sans quoi l'assertion « aucun `�` » ne prouve plus rien. Le nom d'origine des fichiers **est** un numéro de compte : ne pas le reprendre.
+- [ ] `src/fixtures/revolut-statement.csv`, depuis `account-statement_2025-09-01_2026-06-14_fr-fr_646623.csv` (254 lignes). **UTF-8** (`parseRevolut` décode en `fatal`). Anonymiser la colonne **Description** (col. 5) selon la table et la colonne **Solde** (col. 10) — jamais assertée, mais c'est le solde réel du compte ; toute valeur numériquement valide convient. **Conserver** : les 254 lignes, l'en-tête à 10 colonnes au caractère près, les 3 lignes `RENVOYÉ`, `EUR`, les frais nuls, tous les montants, toutes les dates dont l'horodatage `2025-09-27T13:05:08`.
+- [ ] **Les 77 libellés non-ASCII de Revolut** : soit chaque substitution conserve un caractère non-ASCII là où l'original en portait un et la valeur reste 77, soit le compte est **relevé sur la fixture** et figé à sa nouvelle valeur. Relevé, jamais deviné.
+- [ ] `src/fixtures/t2-enable-banking.json`, depuis `enable_banking_transactions_reelles.json` : projeter `{ "transactions": [ { "booking_date", "credit_debit_indicator", "transaction_amount": { "amount" }, "remittance_information" } ] }` — les seuls champs lus (`lab-replay.test.ts:34-39`). Anonymiser `remittance_information` avec la **même** table. **Ne pas** restreindre le fichier à la fenêtre `>= 2026-06-01` : le filtre du test fait partie de ce qu'il démontre.
+- [ ] `src/csv-import.test.ts` : lire les trois fixtures par `new URL("./fixtures/…", import.meta.url)`, comme T20. Supprimer `lab` (l. 10), `statementCorpus` (l. 11), `revolutCsv` et `GESTIO_REVOLUT_CSV` (l. 12-13).
+- [ ] `src/lab-replay.test.ts` : même chemin relatif pour les trois fichiers ; supprimer `lab` et `GESTIO_LAB_CORPUS` (l. 23).
+- [ ] `src/pdf-import.test.ts` : ajouter en tête un commentaire disant ce que `GESTIO_PDF_CORPUS` attend (arborescence `bp/` et `nickel/`) et **pourquoi** ce corpus n'est pas versé — 246 Mo, IBAN, adresse et titulaire, dépôt public. Aucune ligne de code modifiée.
+- [ ] **Vérification** :
+  1. `npm test` → vert, décompte non nul, `skipped 0` ;
+  2. renommer `.lamoms/lab/agy` **et** `/mnt/c/Users/djabi/Documents/relevé pdf`, relancer : **seuls** les deux tests PDF échouent ; les tests CSV et T2 passent ; remettre les noms ;
+  3. relire **intégralement** les quatre fixtures, à l'œil, avant de committer ;
+  4. `npm run lint && npm run typecheck && npm run build`.
+
+### Critères d'acceptation
+1. **Les 27 appariements et `toReview` vide tiennent, dans les deux ordres de canaux, sur les fixtures** — c'est la preuve que la table d'anonymisation a préservé le jaccard entre les deux canaux, et la seule qui vaille.
+2. **Ce qui est préservé** : les valeurs figées 19, 8, 250, 3, 27 et 0 sont **inchangées** ; aucune assertion existante n'est retirée, affaiblie ou réécrite. Seul le compte de libellés non-ASCII Revolut peut changer, et seulement s'il a été relevé sur la fixture.
+3. `.lamoms/lab/agy` et `/mnt/c/Users/djabi/Documents/relevé pdf` renommés : `src/csv-import.test.ts` et `src/lab-replay.test.ts` passent **intégralement**. Les deux tests de `src/pdf-import.test.ts` échouent en nommant le chemin absent — attendu et documenté.
+4. Les fixtures La Banque Postale sont bien en ISO-8859-1 : le préambule accentué est reconnu (le test lève `CsvFormatError` sinon) et l'octet `0xE9` est présent dans le fichier.
+5. **Aucune donnée nominative dans `src/fixtures/`** : `grep -rinE "iban|FR[0-9]{2}|djabi|0984209"` ne rend rien, et les quatre fixtures ont été relues intégralement — pas seulement grepées.
+6. Il ne reste **qu'un seul** chemin absolu dans tout `src/` : `GESTIO_PDF_CORPUS` dans `src/pdf-import.test.ts`, accompagné du commentaire qui l'assume.
+7. `git diff --name-only` ne montre que les quatre fixtures, `src/csv-import.test.ts`, `src/lab-replay.test.ts` et `src/pdf-import.test.ts`. **Aucun fichier de production** — cette tâche ne peut, par construction, causer aucune régression applicative.

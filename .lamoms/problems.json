@@ -560,9 +560,9 @@
       "severity": "moyenne",
       "decisionNeeded": false,
       "consequence": "Sur le Raspberry Pi ou tout autre poste, le test échoue au lieu de sauter (readFileSync lève), ce qui contredit la contrainte de portabilité PC→RPi sans réécriture. Et le critère 1 de T13 — les 43 transactions passent toutes — n'est démontrable que sur le PC de Lamoms.",
-      "status": "CONSTATÉ le 2026-08-04. L'étape de T13 disait « copier le strict nécessaire en fixture anonymisée dans le dépôt ». Livré à la place, dans src/enable-banking.test.ts : const lab = process.env.GESTIO_LAB_CORPUS ?? \"/mnt/c/Users/djabi/gestio/.lamoms/lab/agy\" — chemin absolu de la machine, vers un dossier gitignoré (.gitignore:22). Aucune fixture n'est suivie par git. Le saut dépend d'une variable GESTIO_SKIP_CORPUS qu'il faut penser à poser. Accessoire : l'assertion transactions.map(parseBankTransaction).length === 43 ne vérifie AUCUNE valeur, seulement l'absence d'exception.",
+      "status": "CONSTATÉ le 2026-08-04. L'étape de T13 disait « copier le strict nécessaire en fixture anonymisée dans le dépôt ». Livré à la place, dans src/enable-banking.test.ts : const lab = process.env.GESTIO_LAB_CORPUS ?? \"/mnt/c/Users/djabi/gestio/.lamoms/lab/agy\" — chemin absolu de la machine, vers un dossier gitignoré (.gitignore:22). Aucune fixture n'est suivie par git. Le saut dépend d'une variable GESTIO_SKIP_CORPUS qu'il faut penser à poser. Accessoire : l'assertion transactions.map(parseBankTransaction).length === 43 ne vérifie AUCUNE valeur, seulement l'absence d'exception. — PARTIELLEMENT TRAITÉ par T20 (2026-08-05, merge 120ee92) : SEUL le cas Trade Republic est versé en fixture. La revue de T20 montre l'anti-pattern intact dans TROIS autres fichiers : src/csv-import.test.ts:10-11 (lab AGY + /mnt/c/Users/djabi/Documents/relevé pdf), src/lab-replay.test.ts:23 (lab AGY), src/pdf-import.test.ts:10 (relevé pdf). Le problème reste donc ACTIF ; il ne pourra être clos qu'après T23, et seulement pour les corpus CSV — le corpus PDF (246 Mo, 21 relevés portant IBAN, adresse et titulaire, dépôt GitHub PUBLIC) reste hors dépôt par décision, en dépendance locale documentée.",
       "pourCodex": "Verser une fixture anonymisée dans src/, lue par chemin relatif au fichier de test.",
-      "taches": "T20",
+      "taches": "T20 (Trade Republic, fait), T23 (corpus CSV LBP, Revolut, T2)",
       "nature": "problème",
       "etat": "actif"
     },
@@ -589,6 +589,19 @@
       "status": "CONSTATÉ le 2026-08-04 sur src/server.ts:296 — format.institutionName !== account.institutionName compare une constante du code à institutions.name, qui est SAISI À LA MAIN dans un champ de formulaire (web/src/main.jsx:220, defaultValue=\"La Banque Postale\"). PARKÉ VOLONTAIREMENT : le sens de la panne est le bon — refus, jamais d'écriture fausse — et il ne se déclenche que si Lamoms renomme un établissement. Aucune tâche ouverte tant que le cas ne se produit pas. À rouvrir au premier import légitime refusé.",
       "pourCodex": "Rien à faire pour l'instant.",
       "taches": "—",
+      "nature": "problème",
+      "etat": "actif"
+    },
+    {
+      "id": "P52",
+      "title": "GESTIO_SKIP_CORPUS produit un vert qui ne vérifie rien — la même famille que P47, par une autre porte",
+      "category": "outillage",
+      "severity": "moyenne",
+      "decisionNeeded": false,
+      "consequence": "Posée, la variable désactive QUATRE preuves sur données réelles (src/csv-import.test.ts:16, src/lab-replay.test.ts:28, src/pdf-import.test.ts:25 et :49) et rend un exit 0 avec 26 pass / 4 skipped. Un « npm test passe » obtenu ainsi ne prouve pas ce qu'il a l'air de prouver — exactement le mode de panne que T20 est venue fermer pour NODE_TEST_CONTEXT.",
+      "status": "CONSTATÉ le 2026-08-05 par la revue de T20 (reviewT), sur main 120ee92. La variable vient de 178c5c3 (issue-18) et fut un PROGRÈS : elle a remplacé un skip automatique et silencieux (skip: !existsSync(...)) par un skip explicite doublé d'un assert.ok qui nomme le fichier absent. Ce n'est donc pas une régression, c'est une porte laissée ouverte. Elle a DÉJÀ SERVI : la démonstration du critère 3 de l'issue #29 (« la suite passe avec .lamoms/lab/ absent ou renommé ») ne tient que si l'on pose GESTIO_SKIP_CORPUS=1 — sans elle, deux tests hors périmètre de T20 échouent. Le fait n'est donc pas hypothétique : la variable a servi à faire passer un critère d'acceptation. Aucun autre consommateur dans le dépôt (aucun script, aucun document, pas de CI) — vérifié par grep.",
+      "pourCodex": "Supprimer GESTIO_SKIP_CORPUS et les trois options skip. Un corpus absent doit rendre la suite ROUGE et visible, jamais verte et muette.",
+      "taches": "T22",
       "nature": "problème",
       "etat": "actif"
     }
