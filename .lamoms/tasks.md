@@ -50,6 +50,28 @@ T20 est fusionnée et fait ce qu'elle annonce : le vert vide est neutralisé, la
 
 **Ordre imposé** : **T22 → T21 → T23 → T16.** T22 passe devant parce qu'elle coûte trois lignes et referme la dernière porte du faux vert ; sur le poste de Lamoms elle ne casse rien, les corpus y sont. T21 garde son rang : c'est la seule des trois qui corrige un comportement subi par l'utilisateur. T23 est lourde (anonymisation d'un corpus croisé) et ne bloque personne — elle attend son tour.
 
+> **Périmé le 2026-08-05, quelques heures plus tard.** L'ordre ci-dessus vaut jusqu'à l'intercalaire suivant : T23 et T16 y disparaissent toutes les deux. Le plan de T23 reste écrit plus bas — il n'est pas exécutable, il est conservé comme trace.
+
+### Intercalaire — l'import CSV sort du produit (2026-08-05)
+
+Parti d'une question de Lamoms — *« qu'est-ce qu'on gagnerait à maintenir le parseur CSV ? »* — et vérifié dans le code.
+
+**Trois faits.** Le parseur Revolut est **inatteignable en production** depuis T15 : `multiAccount: true` (`src/csv-import.ts:27`) fait refuser le fichier par la route avant tout parsing. Il ne reste donc **qu'un** usage réel, La Banque Postale. Et LBP a déjà deux chemins plus riches : l'API sur 90 jours, et 12 relevés PDF mensuels avec contrôle d'équilibre — quand le CSV LBP porte 27 lignes sur une fenêtre courte, sans solde vérifié.
+
+**L'architecture d'ingestion, clarifiée par Lamoms** : API Enable Banking sur 90 jours glissants ; au-delà, relevés PDF mensuels pour chaque banque **sauf Revolut**, importés à la fin de chaque mois — bilan de vérification et prolongation de l'historique long terme ; Revolut en **API seule**, sa couverture dépassant 90 jours. Le PDF n'est pas un repli mais un **accès exclusif** : le Livret A et le Livret Jeune n'apparaissent que dans les relevés. Le CSV n'a aucune place dans ce modèle.
+
+| Tâche | Devient | Pourquoi |
+|---|---|---|
+| **T16** — Le rapprochement signale l'incertain | **fermée** (#25, `NOT_PLANNED`) | Ses deux causes sont des défauts **exclusifs de la route CSV**. `needs_review` est posé par le PDF (`server.ts:416`) et par la synchro (`:847`, `:865`) ; seul l'`INSERT` CSV l'omet. Et son test central était **déjà impossible** depuis T15 |
+| **T23** — Les corpus CSV entrent dans le dépôt | **abandonnée** | Plus de parseur, plus de corpus à anonymiser. Le plan reste écrit comme trace |
+| **T24** — L'import CSV sort du produit | **nouvelle** | P53 |
+
+**⚠️ P42 ne se ferme pas avec T16 — et son enjeu monte.** Le signalement des rapprochements incertains n'a jamais été **mesuré** sur le chemin qui survit : ce que le plan de T16 affirmait de la route PDF venait d'une lecture de code, pas d'un rejeu. Surtout, la protection qui rendait la panne CSV supportable disparaît — sur le CCP le solde vient de l'API et restait juste, mais **le Livret A, le Livret Jeune et Nickel n'ont aucune API**. Leur solde **est** la somme de leurs mouvements, et un doublon non détecté y fausse directement le chiffre principal. La mesure part donc avec T24, en tant que mesure et non de correction.
+
+**P51 devient caduc** : le code qu'il visait disparaît avec la route. Il ne se résout pas, il cesse d'exister.
+
+**Ordre imposé** : **T22 → T21 → T24.**
+
 **P51 est parké** — mode de panne sûr (refus, jamais d'écriture fausse), déclenché seulement par un renommage d'établissement. Aucune tâche ouverte ; à rouvrir au premier import légitime refusé.
 
 **Ce qui répond bien au besoin et n'est pas remis en cause** : Trade Republic entre effectivement en base (T13) ; `message` journalisé aux quatre sites, `0,00 €` remplacé par « Solde inconnu », total marqué incomplet, `last_sync_at` préservé (T14) ; les deux refus de l'incident du 2026-08-04 sont couverts et la règle multi-comptes est portée par le registre `bankCsvFormats`, pas par un `if` dans la route (T15).
@@ -154,7 +176,9 @@ La **logique d'analyse** de `src/csv-import.ts` : les gabarits par banque sont j
 
 ---
 
-## T16 — Le rapprochement signale l'incertain
+## ~~T16 — Le rapprochement signale l'incertain~~
+
+> **FERMÉE le 2026-08-05** — issue #25, `NOT_PLANNED`. Ses deux causes sont des défauts **exclusifs de la route CSV**, qui sort du produit (T24). Le plan reste ci-dessous comme trace : c'est lui qui a localisé la cause, et c'est cette localisation qui permet aujourd'hui de fermer la tâche sans la faire. **P42 reste actif** et part avec T24, en mesure — voir l'intercalaire.
 
 **Problèmes** : P42 (causes b et c).
 
@@ -415,7 +439,9 @@ Sur le poste de Lamoms les deux corpus existent (`.lamoms/lab/agy`, `/mnt/c/User
 
 ---
 
-## T23 — Les corpus CSV entrent dans le dépôt, anonymisés
+## ~~T23 — Les corpus CSV entrent dans le dépôt, anonymisés~~
+
+> **ABANDONNÉE le 2026-08-05, jamais ouverte.** Plus de parseur CSV, plus de corpus à anonymiser. Le plan reste ci-dessous comme trace — la contrainte du dépôt public et l'analyse du jaccard inter-canaux resserviront le jour où l'on versera un corpus.
 
 **Problème** : P49 (ce que T20 n'a pas couvert).
 **Pourquoi ensuite** : après T22, un corpus absent rend la suite rouge. Trois fichiers de test lisent encore des corpus hors dépôt, donc la suite n'est intégralement verte que sur le poste de Lamoms. Les corpus CSV sont petits (2,6 Ko + 32 Ko) et anonymisables ; on les verse. Le corpus PDF ne le sera **jamais** — voir la contrainte ci-dessous.
@@ -465,3 +491,48 @@ Les deux CSV La Banque Postale sont lus par **deux** tests, pas un : `csv-import
 5. **Aucune donnée nominative dans `src/fixtures/`** : `grep -rinE "iban|FR[0-9]{2}|djabi|0984209"` ne rend rien, et les quatre fixtures ont été relues intégralement — pas seulement grepées.
 6. Il ne reste **qu'un seul** chemin absolu dans tout `src/` : `GESTIO_PDF_CORPUS` dans `src/pdf-import.test.ts`, accompagné du commentaire qui l'assume.
 7. `git diff --name-only` ne montre que les quatre fixtures, `src/csv-import.test.ts`, `src/lab-replay.test.ts` et `src/pdf-import.test.ts`. **Aucun fichier de production** — cette tâche ne peut, par construction, causer aucune régression applicative.
+
+---
+
+## T24 — L'import CSV sort du produit
+
+**Problème** : P53. **Emporte** P51 (devient caduc) et referme P49 pour les corpus CSV.
+**Pourquoi** : le parseur Revolut est inatteignable depuis T15, La Banque Postale a deux chemins plus riches, et l'architecture d'ingestion clarifiée par Lamoms ne laisse aucune place au CSV. Environ 400 lignes qu'il faut faire vivre, qui ont produit l'incident du 2026-08-04, et qui ont fait planifier deux tâches. La plus petite modification qui règle le problème est une **suppression**.
+
+### Périmètre
+- **Supprimés** : `src/csv-import.ts` (221 l.), `src/csv-import.test.ts`, `src/lab-replay.test.ts`.
+- `src/server.ts` — l'import l. 11, la route `POST /imports/csv` (l. 283 jusqu'à la fin de son handler, ~l. 341).
+- `web/src/main.jsx` — le gestionnaire `csv` (l. 180-187) et le formulaire « Importer un CSV » (l. 189).
+- `src/pdf-import.ts` — le message d'erreur « couche texte » qui oriente vers le CSV, et l'assertion qui le vérifie (`src/pdf-import.test.ts:20`).
+- **Ajouté** : un rejeu du rapprochement sur le chemin PDF, plus la mesure de P42.
+
+### Rayon d'impact vérifié
+`parseBankCsv` et `bankCsvFormats` n'ont que **deux** points d'usage hors de leur module : `server.ts:11` (import) et `server.ts:297`/`:313`. Rien d'autre dans le dépôt.
+`deduplicateTransactions` a **trois** appelants : `server.ts:335` (CSV, supprimé), `:409` (PDF), `:836` (synchro). **Les deux survivants ne changent pas d'une ligne.**
+`/imports/csv` n'est appelé qu'à `web/src/main.jsx:185`. Rien dans `web/public/sw.js`, rien dans `scripts/`. Les erreurs `csv_institution_mismatch`, `csv_accounts_not_separable` et `csv_format_unrecognized` ne sont produites que par cette route, et l'UI affiche leur `message` sans les nommer.
+⚠️ **Le message d'erreur du chemin PDF oriente vers le CSV** : quand la couche texte manque, `src/pdf-import.ts` propose « CSV ou saisie manuelle », et `src/pdf-import.test.ts:20` l'asserte par `/couche texte.*CSV.*saisie manuelle/i`. Message et assertion doivent être réécrits **ensemble** — c'est le seul endroit du produit où la suppression laisse une phrase fausse à l'utilisateur.
+
+### Ne pas toucher
+- ⚠️ **`CSV_IMPORT` reste dans `src/schema.ts:5` et dans le `CHECK` de `src/db.ts:75`.** Des transactions réelles portent cette valeur. La retirer de l'énumération ou de la contrainte rendrait des lignes existantes non réinsérables et casserait le typage à la lecture. **On supprime le chemin d'écriture, pas la trace de ce qui a été écrit.** Aucune migration, aucun `UPDATE` sur `transactions`, aucune suppression de données.
+- ⚠️ **`src/deduplication.ts` : pas une ligne.** Deux de ses trois appelants survivent, et le moteur n'a jamais été en cause — P42 l'a établi.
+- **Le chemin PDF entier** : route, `accountIds`, contrôle d'équilibre, pose de `needs_review`. T24 le **mesure**, elle ne le corrige pas. Si la mesure échoue, la correction est une autre tâche.
+- La saisie manuelle, la synchronisation API, l'interface hors du formulaire CSV.
+
+### Étapes
+- [ ] Supprimer `src/csv-import.ts` et `src/csv-import.test.ts`.
+- [ ] `src/server.ts` : supprimer l'import l. 11 et la route `POST /imports/csv` en entier. Vérifier qu'aucun symbole importé ne reste inutilisé (`npm run lint` le dira).
+- [ ] `web/src/main.jsx` : supprimer le gestionnaire `csv` et le bloc `<form>` « Importer un CSV ». Le `<details>` « Ajouter ou importer » conserve la saisie manuelle ; le `<hr />` qui séparait les deux formulaires part avec.
+- [ ] `src/pdf-import.ts` : le message d'erreur ne propose plus le CSV — **la saisie manuelle devient le seul repli**, et c'est assumé. Mettre à jour l'assertion de `src/pdf-import.test.ts:20` dans le même commit.
+- [ ] **Remplacer `src/lab-replay.test.ts`, ne pas le supprimer sèchement.** C'est aujourd'hui la seule preuve que le rapprochement fonctionne entre deux canaux **réels**, et elle doit changer de support, pas disparaître. Le corpus le permet : les relevés BP vont du 2025-07-08 au 2026-06-08 et le corpus API La Banque Postale couvre 2026-05-04 → 2026-07-27 — le recouvrement est franc sur mai-juin 2026. Le nouveau test rejoue `parsePdfStatement("releve_CCP…_20260608")` contre le corpus API sur la fenêtre commune et vérifie qu'aucune transaction déjà connue n'est réintroduite.
+- [ ] **Mesure de P42** — c'est elle qui justifie que T16 ait été fermée sans être faite. Sur le chemin PDF, **réimporter un relevé déjà importé** sur un compte **manuel** (Livret A ou Livret Jeune : aucune API, le solde **est** la somme des mouvements, donc un doublon y fausse directement le chiffre principal). Vérifier trois choses : aucune transaction ajoutée, solde inchangé, et `needs_review` posé dès que `toReview` n'est pas vide. **Si la mesure échoue, T24 s'arrête au constat** — le résultat est rapporté tel quel et la correction fait l'objet d'une tâche distincte. Ne pas corriger le chemin PDF dans cette tâche.
+- [ ] Écrire en tête de `src/pdf-import.test.ts` et du nouveau test de rejeu ce que leur corpus attend et **pourquoi il n'est pas versé** (relevés réels, dépôt public). C'est ce qui transforme P49 d'un problème en une contrainte assumée.
+- [ ] **Vérification** : `npm test` (décompte **non nul** — il baissera, c'est attendu : les tests du chemin supprimé partent avec lui), puis `npm run lint && npm run typecheck && npm run build`.
+
+### Critères d'acceptation
+1. `POST /imports/csv` n'existe plus et rend 404. Aucune occurrence de `parseBankCsv`, `bankCsvFormats` ou `CsvFormatError` dans `src/` ni dans `web/`.
+2. **Ce qui est préservé — les données.** `SELECT COUNT(*) FROM transactions WHERE source = 'CSV_IMPORT'` rend **la même valeur avant et après** la tâche. `CSV_IMPORT` figure toujours dans `src/schema.ts:5` et dans le `CHECK` de `src/db.ts:75`. Aucune migration n'a été écrite.
+3. **Ce qui est préservé — les deux chemins qui restent.** Les tests de la synchronisation API et de l'import PDF passent **sans qu'une seule de leurs assertions soit modifiée**, à la seule exception du message « couche texte ». `src/deduplication.ts` est inchangé.
+4. **La preuve du rapprochement sur données réelles existe toujours**, portée par le chemin PDF↔API. Elle a changé de support, elle n'a pas disparu — un diff qui supprime `lab-replay.test.ts` sans le remplacer ne satisfait pas ce critère.
+5. La mesure de P42 sur un compte manuel a été **exécutée et son résultat rapporté**, bon ou mauvais. Un rapport qui ne la mentionne pas ne vaut pas livraison.
+6. Le message d'erreur du PDF sans couche texte ne propose plus le CSV, et son assertion a suivi dans le même commit.
+7. `git diff --stat` montre une **suppression nette** — au moins 400 lignes de moins qu'ajoutées.
