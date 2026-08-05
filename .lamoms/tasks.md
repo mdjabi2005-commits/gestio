@@ -515,6 +515,7 @@ Les deux CSV La Banque Postale sont lus par **deux** tests, pas un : `csv-import
 ### Ne pas toucher
 - ⚠️ **`CSV_IMPORT` reste dans `src/schema.ts:5` et dans le `CHECK` de `src/db.ts:75`.** Des transactions réelles portent cette valeur. La retirer de l'énumération ou de la contrainte rendrait des lignes existantes non réinsérables et casserait le typage à la lecture. **On supprime le chemin d'écriture, pas la trace de ce qui a été écrit.** Aucune migration, aucun `UPDATE` sur `transactions`, aucune suppression de données.
 - ⚠️ **`src/deduplication.ts` : pas une ligne.** Deux de ses trois appelants survivent, et le moteur n'a jamais été en cause — P42 l'a établi.
+- ⚠️ **Le nouveau test de rejeu ne réintroduit aucun saut conditionnel.** T22 vient de supprimer `GESTIO_SKIP_CORPUS` (P52) ; écrire `skip: !existsSync(…)`, une variable d'environnement équivalente ou un `t.skip()` dans le test qui **remplace** `lab-replay.test.ts` rouvrirait le problème sous un autre nom, dans le fichier même qui en hérite. Corpus absent = suite **rouge**, avec un `assert.ok` qui nomme le chemin manquant. Même règle pour la mesure de P42.
 - **Le chemin PDF entier** : route, `accountIds`, contrôle d'équilibre, pose de `needs_review`. T24 le **mesure**, elle ne le corrige pas. Si la mesure échoue, la correction est une autre tâche.
 - La saisie manuelle, la synchronisation API, l'interface hors du formulaire CSV.
 
