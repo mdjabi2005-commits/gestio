@@ -35,7 +35,7 @@ T13, T14 et T15 sont fusionnées. Leur revue par le Planificateur, faite sur le 
 | **T20** | La preuve de test redevient une preuve | P47, P49 | `package.json`, `src/enable-banking.test.ts`, fixture versionnée |
 | **T21** | Une panne passagère ne condamne plus une banque | P48, P50 | `src/server.ts`, `src/ui-logic.ts`, `web/src/main.jsx` |
 
-**Ordre imposé** : T20 → T21 → T16. T20 d'abord et **seule**, parce qu'elle conditionne la crédibilité de toute vérification ultérieure : tant qu'elle n'est pas passée, aucun « `npm test` passe » n'est une preuve. T21 ensuite, sous un harnais désormais prouvé.
+**Ordre imposé** : T20 → T21 → T16. **⚠️ PÉRIMÉ le 2026-08-06** — remplacé par « T22 → T21 → T24 → T18 », le dernier ordre imposé de cet en-tête. T16 est fermée (#25) et T23 abandonnée. T20 d'abord et **seule**, parce qu'elle conditionne la crédibilité de toute vérification ultérieure : tant qu'elle n'est pas passée, aucun « `npm test` passe » n'est une preuve. T21 ensuite, sous un harnais désormais prouvé.
 
 ### Intercalaire — revue de T20 (2026-08-05, sur `main` 120ee92)
 
@@ -48,7 +48,7 @@ T20 est fusionnée et fait ce qu'elle annonce : le vert vide est neutralisé, la
 
 **Le corpus PDF ne sera pas versé — décision, pas oubli.** Le dépôt `mdjabi2005-commits/gestio` est **PUBLIC** ; le corpus pèse **246 Mo** et porte IBAN, adresse et titulaire sur 21 relevés réels. Le verser, ce serait publier définitivement des relevés bancaires réels — ce que `.gitignore:17-22` refuse déjà, pour la même raison, au lab AGY. `src/pdf-import.test.ts` garde donc `GESTIO_PDF_CORPUS` en **dépendance locale assumée et documentée**. Conséquence acceptée : hors du poste de Lamoms, deux tests PDF sont **rouges** — rouge et visible, jamais vert et muet.
 
-**Ordre imposé** : **T22 → T21 → T23 → T16.** T22 passe devant parce qu'elle coûte trois lignes et referme la dernière porte du faux vert ; sur le poste de Lamoms elle ne casse rien, les corpus y sont. T21 garde son rang : c'est la seule des trois qui corrige un comportement subi par l'utilisateur. T23 est lourde (anonymisation d'un corpus croisé) et ne bloque personne — elle attend son tour.
+**Ordre imposé** : **T22 → T21 → T23 → T16.** **⚠️ PÉRIMÉ le 2026-08-06** — remplacé par « T22 → T21 → T24 → T18 », le dernier ordre imposé de cet en-tête. T16 est fermée (#25) et T23 abandonnée. T22 passe devant parce qu'elle coûte trois lignes et referme la dernière porte du faux vert ; sur le poste de Lamoms elle ne casse rien, les corpus y sont. T21 garde son rang : c'est la seule des trois qui corrige un comportement subi par l'utilisateur. T23 est lourde (anonymisation d'un corpus croisé) et ne bloque personne — elle attend son tour.
 
 > **Périmé le 2026-08-05, quelques heures plus tard.** L'ordre ci-dessus vaut jusqu'à l'intercalaire suivant : T23 et T16 y disparaissent toutes les deux. Le plan de T23 reste écrit plus bas — il n'est pas exécutable, il est conservé comme trace.
 
@@ -70,7 +70,9 @@ Parti d'une question de Lamoms — *« qu'est-ce qu'on gagnerait à maintenir le
 
 **P51 devient caduc** : le code qu'il visait disparaît avec la route. Il ne se résout pas, il cesse d'exister.
 
-**Ordre imposé** : **T22 → T21 → T24.**
+**Ordre imposé** : **T22 → T21 → T24 → T18.**
+
+**⚠️ T18 passe APRÈS T24 — collision certaine, pas probable.** `web/src/main.jsx:189` est **une seule ligne** qui porte le `<details>` « Ajouter ou importer », le formulaire de saisie manuelle, le `<hr />` et le formulaire CSV. T24 en retire deux morceaux (plus le gestionnaire `csv`, l. 180-187) ; T18 en ajoute trois. Les deux issues étant ouvertes en même temps, le conflit git est garanti sur cette ligne. T18 planifiée le 2026-08-04, T24 le 2026-08-05 : aucune des deux ne citait l'autre. T18 part donc d'un `main.jsx` déjà nettoyé, et son constat de départ a été corrigé en conséquence.
 
 **P51 est parké** — mode de panne sûr (refus, jamais d'écriture fausse), déclenché seulement par un renommage d'établissement. Aucune tâche ouverte ; à rouvrir au premier import légitime refusé.
 
@@ -225,14 +227,17 @@ La clé primaire `(date ISO, montant en centimes)` et la file FIFO par clé — 
 - [ ] `src/server.ts:782` : utiliser `details` quand la banque le renseigne — il porte le nom du pocket chez Revolut (« Assurance », « Auto entreprise déclaration paiement », « Abonnement feu vert »).
 - [ ] Quand la banque ne rend que le titulaire, dériver du type de compte. Couverture mesurée : **9 comptes sur 9, zéro saisie**. Le compte principal Revolut (#5) est le seul `CACC` de son établissement ; il en va de même pour #1 et #2.
 - [ ] Prévoir le repli lisible pour un pocket sans `details` — plafond nommé, à ne pas sur-construire.
-- [ ] `web/src/main.jsx` : une transaction sans libellé ne doit pas rendre une ligne vide. Les 43 transactions Trade Republic arriveront **toutes** ainsi (mesuré, plus seulement inféré).
+- [ ] **Deux comptes de même type dans un même établissement : lever la collision dans la boucle qui existe déjà.** Le postulat de l'étape précédente — « #5 est le seul `CACC` de son établissement » — est vrai aujourd'hui et rien ne le garantit demain. Or il n'existe **aucun** index unique sur `(institution_id, name)` (`src/schema.ts:19-33` : seul `accounts_external_hash_unique_idx`), donc la collision est silencieuse par construction, et l'upsert réécrivant `name` à chaque passage (l. 786-795), elle se **réinstalle seule** quatre fois par jour. La boucle `for (const value of accountValues)` voit **tous** les comptes de la session : la détection ne demande ni requête, ni colonne, ni index. Un nom dérivé apparaissant plus d'une fois dans la session reçoit son discriminant — les 4 derniers caractères d'`external_uid`, stable d'une synchro à l'autre. ⚠️ **Suffixer TOUS les homonymes, jamais le seul second** : sinon le résultat dépend de l'ordre dans lequel la banque renvoie ses comptes, et il changerait à chaque synchro.
+- [ ] ~~`web/src/main.jsx` : une transaction sans libellé ne doit pas rendre une ligne vide.~~ **ÉTAPE CADUQUE, vérifiée le 2026-08-06.** `web/src/main.jsx:163` porte déjà `{transaction.label || "Sans libellé"}`, livré par `a1ff9be` (issue-13, 2026-08-04 01:37) et présent dans `master`. T17 a été planifiée le même jour avec une étape déjà satisfaite. **Le critère 4 reste dû et devient plus dur** : avec « Sans libellé » des deux côtés, les deux débits de 20,00 € du 2026-05-20 rendent aujourd'hui une ligne **strictement identique** — même libellé, même montant, même date. C'est ce qui reste à traiter.
 - [ ] **Vérification** : `npm test && npm run build`, puis constater à l'écran quatre noms distincts sous Revolut.
 
 ### Critères d'acceptation
 1. Les quatre comptes Revolut portent **quatre noms distincts**, sans aucune saisie.
 2. Les comptes La Banque Postale, Trade Republic et Nickel gardent un nom compréhensible.
 3. Les comptes manuels (#7 Livret A, #8 Livret Jeune, #9 Nickel) ne changent pas de nom.
-4. Une transaction sans libellé reste lisible et distincte de sa voisine (deux débits de 20,00 € le 2026-05-20).
+4. Une transaction sans libellé reste lisible et **distincte de sa voisine** — les deux débits de 20,00 € du 2026-05-20 ne rendent pas deux lignes identiques. Le repli « Sans libellé » à lui seul ne satisfait pas ce critère : il est déjà en place et produit précisément deux lignes identiques.
+5. **Ce qui est préservé** : les **neuf** comptes réels portent **exactement** le nom qu'ils auraient sans la règle de collision. Elle ne s'active qu'en cas d'homonymie et ne touche aucun nom unique — démontré en comparant les neuf noms avant et après.
+6. Deux comptes de même type dans un même établissement portent deux noms distincts, et **les mêmes noms après une seconde synchronisation**. C'est la stabilité qui est en jeu, l'upsert repassant dessus quatre fois par jour.
 
 ---
 
@@ -241,7 +246,9 @@ La clé primaire `(date ISO, montant en centimes)` et la file FIFO par clé — 
 **Problème** : P40.
 
 ### Ce qui est mesuré
-`POST /accounts` (l. 183), `POST /institutions` (l. 193) et `POST /imports/pdf` (l. 344) existent et fonctionnent — ils ont servi pendant la mise en service, **par `curl`**. Aucun n'a de porte dans l'interface : `web/src/main.jsx:188` n'offre que la saisie manuelle d'une transaction et l'import CSV. Conséquence : sur une installation neuve, le seul chemin vers un premier compte est une banque API (`main.jsx:71-72`, l'accueil ne propose que « Connecter votre première banque »). Un utilisateur qui n'a que Nickel et un Livret A **ne peut pas franchir l'accueil**.
+`POST /accounts` (l. 183), `POST /institutions` (l. 193) et `POST /imports/pdf` (l. 344) existent et fonctionnent — ils ont servi pendant la mise en service, **par `curl`**. Aucun n'a de porte dans l'interface : `web/src/main.jsx:188` n'offre que la saisie manuelle d'une transaction. Conséquence : sur une installation neuve, le seul chemin vers un premier compte est une banque API (`main.jsx:71-72`, l'accueil ne propose que « Connecter votre première banque »). Un utilisateur qui n'a que Nickel et un Livret A **ne peut pas franchir l'accueil**.
+
+> **Constat corrigé le 2026-08-06.** La formulation d'origine disait « n'offre que la saisie manuelle **et l'import CSV** ». C'était vrai le 2026-08-04 ; T24 retire le formulaire CSV et T18 passe après elle. Codex partirait sinon d'un repère périmé pour se placer dans la ligne 189.
 
 ### Périmètre
 `web/src/main.jsx` uniquement — les trois routes serveur existent et ne changent pas.
@@ -249,16 +256,25 @@ La clé primaire `(date ISO, montant en centimes)` et la file FIFO par clé — 
 ### Ne pas toucher
 Les routes serveur. Le contrat d'entrée est déjà fixé : `readAccountInput` (`src/server.ts:569`) attend `{ name, type: BANK|LIVRET_A|OTHER, institutionId? }` ; `POST /imports/pdf` exige un `accountIds` couvrant **chaque** compte du relevé.
 
+### Deux moitiés, une seule issue — la porte PDF est conditionnelle
+**Posé le 2026-08-06.** Les trois portes n'ont pas le même risque. Deux **n'écrivent aucune transaction** ; la troisième ouvre au grand public le chemin d'écriture dont on ne sait pas encore s'il est sain.
+
+- **Inconditionnel** — création d'**établissement** et création de **compte**. Elles suffisent à lever le cas nommé par P40 : « un utilisateur qui n'a que Nickel et un Livret A ne peut pas franchir l'accueil ».
+- **Conditionnel** — l'import **PDF**, subordonné au **résultat de la mesure de P42** rapportée par T24. Mesure bonne → la porte entre dans la livraison. Mesure mauvaise → **elle attend la tâche de correction**, et T18 se livre sans elle, les deux autres portes acquises.
+
+Pourquoi : T24 **mesure** le chemin PDF, elle ne le corrige pas — si la mesure échoue, elle s'arrête au constat (c'est son plan). Ouvrir la porte grand public entre-temps exposerait le seul chemin d'alimentation du **Livret A, du Livret Jeune et de Nickel**, dont le solde **est** la somme des mouvements : un doublon non détecté y fausse directement le chiffre principal.
+
 ### Étapes
 - [ ] Ajouter au bloc « Ajouter ou importer » (`main.jsx:188`) la création d'un **établissement** et d'un **compte**.
-- [ ] Ajouter l'import d'un **relevé PDF**, avec la correspondance compte par compte que la route exige.
 - [ ] L'accueil vide (`main.jsx:71-72`) doit proposer un second chemin que « Connecter votre première banque ».
-- [ ] **Vérification** : sur une base vide, créer un établissement, un compte et importer un relevé PDF **entièrement depuis l'interface**, sans terminal.
+- [ ] **Lire le rapport de T24 avant d'écrire la porte PDF.** Mesure de P42 réussie → étape suivante. Échouée → l'étape suivante ne se fait pas, et le rapport de livraison le dit explicitement.
+- [ ] *(conditionnel)* Ajouter l'import d'un **relevé PDF**, avec la correspondance compte par compte que la route exige.
+- [ ] **Vérification** : sur une base vide, créer un établissement et un compte **entièrement depuis l'interface**, sans terminal ; puis le relevé PDF si la porte est entrée.
 
 ### Critères d'acceptation
-1. Sur une base vide, un établissement, un compte et un relevé PDF s'ajoutent depuis l'interface seule.
+1. Sur une base vide, un **établissement** et un **compte** s'ajoutent depuis l'interface seule, sans terminal.
 2. L'écran reste **identique sur mobile et sur desktop** — contrainte fondatrice du projet, vérifiée sur un vrai téléphone lors de la mise en service.
-3. Un relevé PDF sans correspondance complète est refusé, message visible à l'écran.
+3. *(conditionnel)* Si la porte PDF est entrée : un relevé PDF s'ajoute depuis l'interface, et un relevé **sans correspondance complète est refusé**, message visible à l'écran. Si elle n'est pas entrée, le rapport **nomme la mesure de P42 qui l'a bloquée** — une livraison muette sur ce point ne vaut pas livraison.
 
 ---
 
@@ -278,17 +294,32 @@ Le cache du dernier solde en `localStorage` (`main.jsx:30` et `259`) : il foncti
 ### Contrainte d'implémentation
 Vite **hache le nom des fichiers produits** (`index-BtT_-pPc.js`). La liste des ressources à précharger n'existe donc qu'au moment de la construction. `clients.claim()` et `skipWaiting()` seuls ne feraient que ramener trois visites à deux — ce n'est pas la correction.
 
+**`web/public/` est copié verbatim** — `vite.config.ts` n'a aucun plugin, donc rien n'est substitué dans `sw.js` à la construction. La liste préchargée **et** l'identifiant de version du cache doivent être injectés par le **même** point d'accroche : un `writeBundle` d'une dizaine de lignes dans `vite.config.ts`, qui écrit `dist/web/sw.js`. Un seul mécanisme pour les deux besoins. ⚠️ **Aucune dépendance nouvelle** — ni Workbox ni `vite-plugin-pwa` : ajouter un paquet pour ça serait exactement ce que ce cycle reproche à l'import CSV.
+
+### ⚠️ Le nom de cache est FIXE aujourd'hui — c'est le second défaut, non signalé par P43
+`web/public/sw.js:1` : `const cacheName = "gestio-shell"`, jamais versionné, et le cache est alimenté **à l'exécution** (`cache.put` sur chaque réponse `ok`), pas au préchargement. Comme les noms de fichiers sont hachés, chaque construction y **ajoute** ses fichiers sans jamais retirer les précédents. `index.html` étant lui aussi mis en cache (`destination: "document"`), il référence des fichiers hachés eux-mêmes encore présents : hors ligne, on sert une coque **cohérente mais périmée**, indéfiniment. Le défaut existe **déjà** — le préchargement de cette tâche le rendrait seulement plus visible.
+
 ### Étapes
 - [ ] Précharger la coque à l'installation du service worker, à partir de la liste réelle des fichiers produits par la construction.
+- [ ] **Versionner le nom du cache** avec l'identifiant de build injecté par le même hook, et **purger les autres à l'`activate`** :
+  ```js
+  self.addEventListener("activate", event => event.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
+      .then(() => clients.claim())
+  ));
+  ```
+  La purge se fait **après** `skipWaiting()`, donc aucune page n'est servie depuis un cache en cours de suppression.
 - [ ] `skipWaiting()` + `clients.claim()` pour que la première visite soit couverte.
 - [ ] Ne jamais répondre `undefined` à `respondWith` : hors ligne et sans cache, rendre une réponse qui **dit** que la coque n'est pas prête, plutôt qu'une erreur réseau.
-- [ ] **Vérification** : première visite en ligne sur un vrai téléphone via Tailscale, puis réseau coupé — la page se charge et affiche le dernier solde connu **avec sa date**.
+- [ ] **Vérification** : première visite en ligne sur un vrai téléphone via Tailscale, puis réseau coupé — la page se charge et affiche le dernier solde connu **avec sa date**. Puis **deux constructions successives** et `caches.keys()` relevé dans la console.
 
 ### Critères d'acceptation
 1. Une **seule** visite en ligne suffit pour que la visite hors ligne suivante fonctionne.
 2. Réseau coupé, l'écran affiche le dernier solde connu avec sa date de fraîcheur, jamais un chiffre présenté comme actuel.
 3. Coque absente du cache : un message honnête, jamais « site inaccessible ».
-4. En ligne, le comportement ne change pas — la page reste servie par le réseau.
+4. **Ce qui est préservé** : en ligne, le comportement ne change pas — la page reste servie par le réseau, la stratégie reste réseau d'abord. La purge ne doit pas transformer le service worker en cache d'abord.
+5. Après **deux constructions successives**, `caches.keys()` rend **exactement une** entrée, et la coque servie hors ligne est celle de la **dernière** construction — pas la précédente restée cohérente.
 
 ---
 
@@ -367,6 +398,7 @@ La requête de sélection de la boucle de fond (l. 56) est le **seul** endroit q
 - ⚠️ **`recordBankError` (l. 986-992).** L'état `FAILED` posé après un échec est **juste** — c'est ce que T14 est venue apporter et c'est ce qui rend la panne visible. C'est son **effet d'exclusion** qui ne l'est pas. **Ne pas** revenir au `CASE WHEN status = 'PENDING'` d'avant T14 : ce serait rouvrir P38.
 - ⚠️ **Le passage à `EXPIRED` (l. 786-787), posé par le contrôle de session, reste le seul état terminal.** Ne pas y toucher, et ne pas le contourner.
 - **Ne pas** construire une taxonomie d'erreurs passagères contre terminales. Elle n'est pas nécessaire : le terminal a déjà son état, `EXPIRED`.
+- ⚠️ **PLAFOND NOMMÉ ET ASSUMÉ, arbitré par Lamoms le 2026-08-06 — ce n'est PAS à T21 de le corriger.** Une connexion `FAILED` **jamais synchronisée** redemandera l'aspiration **profonde** à chaque passage, indéfiniment. La chaîne, lue dans le code : `src/server.ts:60` passe `connection.lastSyncAt === null` comme `firstSync`, et `src/server.ts:824` fait `strategy: firstSync ? "longest" : "default"`. C'est le profil **exact** de Trade Republic aujourd'hui (`last_sync_at=null`, `SYNC_FAILED`) — donc le cas se produira dès la première boucle après cette tâche. **Pourquoi on l'assume** : le quota tient — boucle à 6 h, soit 4 passages/jour, la limite exacte de P33 ; il n'y a aucun dépassement. Et le corriger imposerait précisément la taxonomie d'erreurs que la ligne du dessus interdit. **Ne rien coder pour ça.** L'observation est portée par la recette de mise en service, pas par un critère de T21 ; si le volume devient gênant, c'est une tâche à part, avec une mesure derrière.
 - **Le bouton Synchroniser et son identifiant unique en `localStorage`** (`main.jsx:208` et `224`) : **plafond connu, hors périmètre.** Une seule connexion sur trois y est joignable. La reprise automatique rétablie par cette tâche le rend non bloquant — au pire l'utilisateur attend un passage de la boucle. À traiter le jour où l'attente devient gênante, pas d'avance.
 - `unknownBalanceCount`, l'affichage « Solde inconnu » et la mention de total incomplet livrés par T14 : **justes, ne pas y toucher.**
 - Le moteur de déduplication, les imports, `parseBankTransaction`.
@@ -508,6 +540,7 @@ Les deux CSV La Banque Postale sont lus par **deux** tests, pas un : `csv-import
 
 ### Rayon d'impact vérifié
 `parseBankCsv` et `bankCsvFormats` n'ont que **deux** points d'usage hors de leur module : `server.ts:11` (import) et `server.ts:297`/`:313`. Rien d'autre dans le dépôt.
+⚠️ **Se repérer par symbole, pas par numéro de ligne.** T21 passe avant et **extrait le corps de la boucle de fond dans une fonction nommée** : toutes les lignes de `src/server.ts` sous la l. 70 se décalent. Les repères ci-dessus (`l. 11`, `l. 283`, `l. 297`, `l. 313`, `~l. 341`) datent d'avant T21 et **auront glissé**. Les régions restent disjointes — T21 ne touche ni la route `/imports/csv` ni l'import de tête — mais on cherche `app.post("/imports/csv"` et l'`import … from "./csv-import.js"`, pas une ligne.
 `deduplicateTransactions` a **trois** appelants : `server.ts:335` (CSV, supprimé), `:409` (PDF), `:836` (synchro). **Les deux survivants ne changent pas d'une ligne.**
 `/imports/csv` n'est appelé qu'à `web/src/main.jsx:185`. Rien dans `web/public/sw.js`, rien dans `scripts/`. Les erreurs `csv_institution_mismatch`, `csv_accounts_not_separable` et `csv_format_unrecognized` ne sont produites que par cette route, et l'UI affiche leur `message` sans les nommer.
 ⚠️ **Le message d'erreur du chemin PDF oriente vers le CSV** : quand la couche texte manque, `src/pdf-import.ts` propose « CSV ou saisie manuelle », et `src/pdf-import.test.ts:20` l'asserte par `/couche texte.*CSV.*saisie manuelle/i`. Message et assertion doivent être réécrits **ensemble** — c'est le seul endroit du produit où la suppression laisse une phrase fausse à l'utilisateur.
@@ -524,7 +557,7 @@ Les deux CSV La Banque Postale sont lus par **deux** tests, pas un : `csv-import
 - [ ] `src/server.ts` : supprimer l'import l. 11 et la route `POST /imports/csv` en entier. Vérifier qu'aucun symbole importé ne reste inutilisé (`npm run lint` le dira).
 - [ ] `web/src/main.jsx` : supprimer le gestionnaire `csv` et le bloc `<form>` « Importer un CSV ». Le `<details>` « Ajouter ou importer » conserve la saisie manuelle ; le `<hr />` qui séparait les deux formulaires part avec.
 - [ ] `src/pdf-import.ts` : le message d'erreur ne propose plus le CSV — **la saisie manuelle devient le seul repli**, et c'est assumé. Mettre à jour l'assertion de `src/pdf-import.test.ts:20` dans le même commit.
-- [ ] **Remplacer `src/lab-replay.test.ts`, ne pas le supprimer sèchement.** C'est aujourd'hui la seule preuve que le rapprochement fonctionne entre deux canaux **réels**, et elle doit changer de support, pas disparaître. Le corpus le permet : les relevés BP vont du 2025-07-08 au 2026-06-08 et le corpus API La Banque Postale couvre 2026-05-04 → 2026-07-27 — le recouvrement est franc sur mai-juin 2026. Le nouveau test rejoue `parsePdfStatement("releve_CCP…_20260608")` contre le corpus API sur la fenêtre commune et vérifie qu'aucune transaction déjà connue n'est réintroduite.
+- [ ] **Remplacer `src/lab-replay.test.ts`, ne pas le supprimer sèchement.** C'est aujourd'hui la seule preuve que le rapprochement fonctionne entre deux canaux **réels**, et elle doit changer de support, pas disparaître. Le corpus le permet : les relevés BP vont du 2025-07-08 au 2026-06-08 et le corpus API La Banque Postale couvre 2026-05-04 → 2026-07-27 — le recouvrement est franc sur mai-juin 2026. Le nouveau test rejoue `parsePdfStatement("releve_CCP…_20260608")` contre le corpus API sur la fenêtre commune. ⚠️ **Porter les assertions de l'ancien test, ne pas en inventer de plus faibles.** `lab-replay.test.ts` prouve aujourd'hui **27 appariements et `toReview` vide, dans les DEUX ordres de canaux**. Une remplaçante qui ne vérifierait que « aucune transaction déjà connue n'est réintroduite », dans un seul sens, serait une perte de preuve silencieuse — le critère 4 dirait qu'elle existe, et il aurait raison. Le test de remplacement porte donc les trois mêmes choses sur le couple PDF↔API : un **décompte d'appariements figé**, `toReview` **vide**, et **les deux ordres**. Le décompte est **relevé sur la fenêtre commune, jamais deviné** — même règle que pour les 77 libellés non-ASCII. Et si `toReview` n'est **pas** vide sur ce couple : **on ne touche pas au test pour le faire passer**, c'est un constat, il est rapporté tel quel et T24 s'arrête là.
 - [ ] **Mesure de P42** — c'est elle qui justifie que T16 ait été fermée sans être faite. Sur le chemin PDF, **réimporter un relevé déjà importé** sur un compte **manuel** (Livret A ou Livret Jeune : aucune API, le solde **est** la somme des mouvements, donc un doublon y fausse directement le chiffre principal). Vérifier trois choses : aucune transaction ajoutée, solde inchangé, et `needs_review` posé dès que `toReview` n'est pas vide. **Si la mesure échoue, T24 s'arrête au constat** — le résultat est rapporté tel quel et la correction fait l'objet d'une tâche distincte. Ne pas corriger le chemin PDF dans cette tâche.
 - [ ] Écrire en tête de `src/pdf-import.test.ts` et du nouveau test de rejeu ce que leur corpus attend et **pourquoi il n'est pas versé** (relevés réels, dépôt public). C'est ce qui transforme P49 d'un problème en une contrainte assumée.
 - [ ] **Vérification** : `npm test` (décompte **non nul** — il baissera, c'est attendu : les tests du chemin supprimé partent avec lui), puis `npm run lint && npm run typecheck && npm run build`.
@@ -533,7 +566,32 @@ Les deux CSV La Banque Postale sont lus par **deux** tests, pas un : `csv-import
 1. `POST /imports/csv` n'existe plus et rend 404. Aucune occurrence de `parseBankCsv`, `bankCsvFormats` ou `CsvFormatError` dans `src/` ni dans `web/`.
 2. **Ce qui est préservé — les données.** `SELECT COUNT(*) FROM transactions WHERE source = 'CSV_IMPORT'` rend **la même valeur avant et après** la tâche. `CSV_IMPORT` figure toujours dans `src/schema.ts:5` et dans le `CHECK` de `src/db.ts:75`. Aucune migration n'a été écrite.
 3. **Ce qui est préservé — les deux chemins qui restent.** Les tests de la synchronisation API et de l'import PDF passent **sans qu'une seule de leurs assertions soit modifiée**, à la seule exception du message « couche texte ». `src/deduplication.ts` est inchangé.
-4. **La preuve du rapprochement sur données réelles existe toujours**, portée par le chemin PDF↔API. Elle a changé de support, elle n'a pas disparu — un diff qui supprime `lab-replay.test.ts` sans le remplacer ne satisfait pas ce critère.
+4. **La preuve du rapprochement sur données réelles existe toujours ET reste aussi forte**, portée par le chemin PDF↔API. Elle a changé de support, elle n'a pas disparu — un diff qui supprime `lab-replay.test.ts` sans le remplacer ne satisfait pas ce critère. **Ni un remplaçant plus faible** : la preuve porte un **décompte d'appariements non nul et figé**, `toReview` **vide**, et **les deux ordres de canaux**. Un test qui n'asserte qu'une non-réintroduction unidirectionnelle ne satisfait pas ce critère.
 5. La mesure de P42 sur un compte manuel a été **exécutée et son résultat rapporté**, bon ou mauvais. Un rapport qui ne la mentionne pas ne vaut pas livraison.
 6. Le message d'erreur du PDF sans couche texte ne propose plus le CSV, et son assertion a suivi dans le même commit.
 7. `git diff --stat` montre une **suppression nette** — au moins 400 lignes de moins qu'ajoutées.
+
+---
+
+## Recette de mise en service — après clôture du PRD, pas avant
+
+**Posée par Lamoms le 2026-08-06.** Une seule recette sur l'état final, plutôt qu'une par tâche. Ce n'est **pas une tâche de code** : aucun fichier n'est modifié, Codex n'y intervient pas. C'est un rejeu de l'étape 4 de `.lamoms/mise-en-service.md` sur la base réelle, une fois **T22, T21, T24 et T18** fusionnées.
+
+**Pourquoi elle est indispensable et non facultative** : trois problèmes du carnet ont leur code livré et fusionné mais **ne peuvent pas être clos par un diff** — leur clôture demande une observation. Sans cette recette, ils resteront `actif` indéfiniment, non parce que le code manque mais parce que la mesure manque. Et un critère dont la preuve n'est pas citable n'est pas VERT (règle 6, verdict relisible).
+
+### Ce qu'elle doit observer, et ce que chaque observation clôt
+
+| # | Observation | Ce qu'elle referme |
+|---|---|---|
+| 1 | **Trade Republic synchronise** — `last_sync_at` non nul, `balance_cents` renseigné, transactions en base | **P38**, et **P28** avec lui |
+| 2 | Les **`balance_type`** renvoyés par La Banque Postale et Revolut, relevés en observant les synchros | **P44** — récolte gratuite, ne pas commander de spike |
+| 3 | Une connexion `FAILED` repasse `AUTHORIZED` **sans intervention**, sur la base réelle et pas seulement en test | confirme **P48** sur le terrain |
+| 4 | `SELECT COUNT(*) FROM transactions WHERE source='CSV_IMPORT'` **identique** avant et après le cycle | confirme le critère 2 de **T24** |
+| 5 | Un relevé PDF **réimporté** sur le Livret A : aucune transaction ajoutée, solde inchangé | **P42** — la seule chose qui dise si l'incident du 2026-08-04 est refermé |
+| 6 | Hors ligne sur le **vrai téléphone**, stockage vidé, une seule visite en ligne préalable | confirme **P43** et la contrainte fondatrice **P16** |
+| 7 | Le volume d'aspiration de la boucle de fond sur une connexion `FAILED` jamais synchronisée | le **plafond assumé de T21** — constat seul, aucune correction attendue |
+
+**Les points 1, 2 et 5 sont les seuls qui peuvent encore rouvrir une tâche.** Les autres sont des constats.
+
+### Ce qu'elle n'est pas
+Ni une tâche de code, ni un mécanisme de rappel. C'est une action datée de Lamoms — même nature que le rendez-vous du 2026-08-08 pour les quatre relevés manquants (P35, P38), avec lequel elle partage l'horloge.
