@@ -72,7 +72,13 @@ Parti d'une question de Lamoms — *« qu'est-ce qu'on gagnerait à maintenir le
 
 **Ordre imposé** : **T22 → T21 → T24 → T18.**
 
-**⚠️ T18 passe APRÈS T24 — collision certaine, pas probable.** `web/src/main.jsx:189` est **une seule ligne** qui porte le `<details>` « Ajouter ou importer », le formulaire de saisie manuelle, le `<hr />` et le formulaire CSV. T24 en retire deux morceaux (plus le gestionnaire `csv`, l. 180-187) ; T18 en ajoute trois. Les deux issues étant ouvertes en même temps, le conflit git est garanti sur cette ligne. T18 planifiée le 2026-08-04, T24 le 2026-08-05 : aucune des deux ne citait l'autre. T18 part donc d'un `main.jsx` déjà nettoyé, et son constat de départ a été corrigé en conséquence.
+**⚠️ T18 passe APRÈS T24 — collision certaine, pas probable.** `web/src/main.jsx:189` est **une seule ligne** qui porte le `<details>` « Ajouter ou importer », le formulaire de saisie manuelle, le `<hr />` et le formulaire CSV. T24 en retire deux morceaux (plus le gestionnaire `csv`, l. 180-188) ; T18 en ajoute trois. Les deux issues étant ouvertes en même temps, le conflit git est garanti sur cette ligne. T18 planifiée le 2026-08-04, T24 le 2026-08-05 : aucune des deux ne citait l'autre. T18 part donc d'un `main.jsx` déjà nettoyé, et son constat de départ a été corrigé en conséquence.
+
+**⚠️ CONVENTION DE REPÉRAGE, posée le 2026-08-06 après audit — on cite un SYMBOLE, pas un numéro de ligne.** Huit repères des tâches restantes pointaient à côté. La cause est mesurée : `31562d7` (T15) ajoute **+32/−9 lignes à `src/server.ts`**, net +23, dans la route `/imports/csv` — et il a été fusionné le 2026-08-04 à 20:39, alors que T17 et T18 avaient été planifiées **le même jour à 16:36**. Tout ce qu'elles citaient sous cette route s'est décalé d'une vingtaine de lignes.
+
+Le cas le plus dangereux, corrigé : T17 disait « ne pas toucher l'upsert de synchro, `l. 786-790` ». À cette adresse se trouve aujourd'hui le passage à `EXPIRED` — que **T21 déclare de son côté intouchable comme seul état terminal**. Un Codex obéissant à la lettre serait allé modifier exactement la ligne que l'autre tâche protège.
+
+Les repères de ligne qui subsistent portent leur date de relevé (« l. 363 au 2026-08-06 ») et ne sont qu'une **indication de proximité** : c'est toujours le symbole qui fait foi. Toute tâche écrite ensuite suit cette convention.
 
 **P51 est parké** — mode de panne sûr (refus, jamais d'écriture fausse), déclenché seulement par un renommage d'établissement. Aucune tâche ouverte ; à rouvrir au premier import légitime refusé.
 
@@ -217,17 +223,17 @@ La clé primaire `(date ISO, montant en centimes)` et la file FIFO par clé — 
 **Problèmes** : P39, P25 (conséquence à l'écran).
 
 ### Périmètre
-`src/server.ts:782` (dérivation du nom pendant la synchro) et `web/src/main.jsx` (rendu d'une transaction sans libellé).
+la dérivation du nom pendant la synchro — ancre `const name = optionalApiString(account.name)` dans `src/server.ts` (l. 804 au 2026-08-06) et `web/src/main.jsx` (rendu d'une transaction sans libellé).
 
 ### Ne pas toucher
 ⚠️ **Ne pas inverser la priorité `name` → `product`.** Mesuré : `product` vaut `null` chez La Banque Postale **et** sur les quatre comptes Revolut, et `"CHECKING_ACCOUNT"` chez Trade Republic. L'inversion casserait deux banques pour en réparer une.
-⚠️ **Aucun nommage manuel n'entre au périmètre.** L'upsert de synchro (`src/server.ts:786-790`) réécrit `name` à chaque passage : une saisie serait effacée silencieusement. C'est une **décision**, pas un oubli — ne pas ajouter de colonne ni de formulaire.
+⚠️ **Aucun nommage manuel n'entre au périmètre.** L'upsert de synchro — ancre `INSERT INTO accounts (institution_id, name, type` (l. 807 au 2026-08-06) — réécrit `name` à chaque passage : une saisie serait effacée silencieusement. C'est une **décision**, pas un oubli — ne pas ajouter de colonne ni de formulaire.
 
 ### Étapes
-- [ ] `src/server.ts:782` : utiliser `details` quand la banque le renseigne — il porte le nom du pocket chez Revolut (« Assurance », « Auto entreprise déclaration paiement », « Abonnement feu vert »).
+- [ ] Ancre `const name = optionalApiString(account.name)` : utiliser `details` quand la banque le renseigne — il porte le nom du pocket chez Revolut (« Assurance », « Auto entreprise déclaration paiement », « Abonnement feu vert »).
 - [ ] Quand la banque ne rend que le titulaire, dériver du type de compte. Couverture mesurée : **9 comptes sur 9, zéro saisie**. Le compte principal Revolut (#5) est le seul `CACC` de son établissement ; il en va de même pour #1 et #2.
 - [ ] Prévoir le repli lisible pour un pocket sans `details` — plafond nommé, à ne pas sur-construire.
-- [ ] **Deux comptes de même type dans un même établissement : lever la collision dans la boucle qui existe déjà.** Le postulat de l'étape précédente — « #5 est le seul `CACC` de son établissement » — est vrai aujourd'hui et rien ne le garantit demain. Or il n'existe **aucun** index unique sur `(institution_id, name)` (`src/schema.ts:19-33` : seul `accounts_external_hash_unique_idx`), donc la collision est silencieuse par construction, et l'upsert réécrivant `name` à chaque passage (l. 786-795), elle se **réinstalle seule** quatre fois par jour. La boucle `for (const value of accountValues)` voit **tous** les comptes de la session : la détection ne demande ni requête, ni colonne, ni index. Un nom dérivé apparaissant plus d'une fois dans la session reçoit son discriminant — les 4 derniers caractères d'`external_uid`, stable d'une synchro à l'autre. ⚠️ **Suffixer TOUS les homonymes, jamais le seul second** : sinon le résultat dépend de l'ordre dans lequel la banque renvoie ses comptes, et il changerait à chaque synchro.
+- [ ] **Deux comptes de même type dans un même établissement : lever la collision dans la boucle qui existe déjà.** Le postulat de l'étape précédente — « #5 est le seul `CACC` de son établissement » — est vrai aujourd'hui et rien ne le garantit demain. Or il n'existe **aucun** index unique sur `(institution_id, name)` (`src/schema.ts:19-33` : seul `accounts_external_hash_unique_idx`), donc la collision est silencieuse par construction, et l'upsert réécrivant `name` à chaque passage (ancre `ON CONFLICT(external_hash) DO UPDATE`), elle se **réinstalle seule** quatre fois par jour. La boucle `for (const value of accountValues)` voit **tous** les comptes de la session : la détection ne demande ni requête, ni colonne, ni index. Un nom dérivé apparaissant plus d'une fois dans la session reçoit son discriminant — les 4 derniers caractères d'`external_uid`, stable d'une synchro à l'autre. ⚠️ **Suffixer TOUS les homonymes, jamais le seul second** : sinon le résultat dépend de l'ordre dans lequel la banque renvoie ses comptes, et il changerait à chaque synchro.
 - [ ] ~~`web/src/main.jsx` : une transaction sans libellé ne doit pas rendre une ligne vide.~~ **ÉTAPE CADUQUE, vérifiée le 2026-08-06.** `web/src/main.jsx:163` porte déjà `{transaction.label || "Sans libellé"}`, livré par `a1ff9be` (issue-13, 2026-08-04 01:37) et présent dans `master`. T17 a été planifiée le même jour avec une étape déjà satisfaite. **Le critère 4 reste dû et devient plus dur** : avec « Sans libellé » des deux côtés, les deux débits de 20,00 € du 2026-05-20 rendent aujourd'hui une ligne **strictement identique** — même libellé, même montant, même date. C'est ce qui reste à traiter.
 - [ ] **Vérification** : `npm test && npm run build`, puis constater à l'écran quatre noms distincts sous Revolut.
 
@@ -246,7 +252,7 @@ La clé primaire `(date ISO, montant en centimes)` et la file FIFO par clé — 
 **Problème** : P40.
 
 ### Ce qui est mesuré
-`POST /accounts` (l. 183), `POST /institutions` (l. 193) et `POST /imports/pdf` (l. 344) existent et fonctionnent — ils ont servi pendant la mise en service, **par `curl`**. Aucun n'a de porte dans l'interface : `web/src/main.jsx:188` n'offre que la saisie manuelle d'une transaction. Conséquence : sur une installation neuve, le seul chemin vers un premier compte est une banque API (`main.jsx:71-72`, l'accueil ne propose que « Connecter votre première banque »). Un utilisateur qui n'a que Nickel et un Livret A **ne peut pas franchir l'accueil**.
+`POST /accounts` (l. 183), `POST /institutions` (l. 193) et `POST /imports/pdf` (ancre `app.post("/imports/pdf"`, l. 363 au 2026-08-06) existent et fonctionnent — ils ont servi pendant la mise en service, **par `curl`**. Aucun n'a de porte dans l'interface : le bloc `<details className="card"><summary>Ajouter ou importer</summary>` (l. 189 au 2026-08-06) n'offre que la saisie manuelle d'une transaction. Conséquence : sur une installation neuve, le seul chemin vers un premier compte est une banque API (`main.jsx:71-72`, l'accueil ne propose que « Connecter votre première banque »). Un utilisateur qui n'a que Nickel et un Livret A **ne peut pas franchir l'accueil**.
 
 > **Constat corrigé le 2026-08-06.** La formulation d'origine disait « n'offre que la saisie manuelle **et l'import CSV** ». C'était vrai le 2026-08-04 ; T24 retire le formulaire CSV et T18 passe après elle. Codex partirait sinon d'un repère périmé pour se placer dans la ligne 189.
 
@@ -254,27 +260,31 @@ La clé primaire `(date ISO, montant en centimes)` et la file FIFO par clé — 
 `web/src/main.jsx` uniquement — les trois routes serveur existent et ne changent pas.
 
 ### Ne pas toucher
-Les routes serveur. Le contrat d'entrée est déjà fixé : `readAccountInput` (`src/server.ts:569`) attend `{ name, type: BANK|LIVRET_A|OTHER, institutionId? }` ; `POST /imports/pdf` exige un `accountIds` couvrant **chaque** compte du relevé.
+Les routes serveur. Le contrat d'entrée est déjà fixé : `readAccountInput` (ancre `function readAccountInput(body: unknown)`, l. 591 au 2026-08-06) attend `{ name, type: BANK|LIVRET_A|OTHER, institutionId? }` ; `POST /imports/pdf` exige un `accountIds` couvrant **chaque** compte du relevé.
 
-### Deux moitiés, une seule issue — la porte PDF est conditionnelle
-**Posé le 2026-08-06.** Les trois portes n'ont pas le même risque. Deux **n'écrivent aucune transaction** ; la troisième ouvre au grand public le chemin d'écriture dont on ne sait pas encore s'il est sain.
+### ⚠️ ARBITRAGE À RENDRE AVANT DE LANCER L'ISSUE — destinataire : Copilot, PAS Codex
+**Posé le 2026-08-06, corrigé le même jour.** Les trois portes n'ont pas le même risque. Deux **n'écrivent aucune transaction** ; la troisième ouvre au grand public le chemin d'écriture dont on ne sait pas encore s'il est sain.
 
 - **Inconditionnel** — création d'**établissement** et création de **compte**. Elles suffisent à lever le cas nommé par P40 : « un utilisateur qui n'a que Nickel et un Livret A ne peut pas franchir l'accueil ».
-- **Conditionnel** — l'import **PDF**, subordonné au **résultat de la mesure de P42** rapportée par T24. Mesure bonne → la porte entre dans la livraison. Mesure mauvaise → **elle attend la tâche de correction**, et T18 se livre sans elle, les deux autres portes acquises.
+- **Conditionnel** — l'import **PDF**, subordonné au **résultat de la mesure de P42** rapportée par T24. Mesure bonne → la porte entre. Mesure mauvaise → **elle attend la tâche de correction**, et T18 se livre sans elle, les deux autres portes acquises.
 
 Pourquoi : T24 **mesure** le chemin PDF, elle ne le corrige pas — si la mesure échoue, elle s'arrête au constat (c'est son plan). Ouvrir la porte grand public entre-temps exposerait le seul chemin d'alimentation du **Livret A, du Livret Jeune et de Nickel**, dont le solde **est** la somme des mouvements : un doublon non détecté y fausse directement le chiffre principal.
 
+**Comment l'arbitrage se rend, et par qui.** T24 est fusionnée **avant** que cette issue parte : son rapport dit si la mesure de P42 est bonne ou mauvaise. **Copilot tranche à ce moment-là** et raye du plan ci-dessous soit rien, soit l'étape et le critère marqués *(conditionnel)*. Codex reçoit alors **une liste fermée** — deux portes ou trois — et n'a aucun arbitrage à rendre.
+
+> **Ce que Codex ne doit PAS faire** : lire le rapport d'une autre tâche, ni décider lui-même si la porte PDF entre. Il travaille dans un worktree isolé, sur une issue ; il n'a pas ce rapport et ce n'est pas son rôle. Si les marques *(conditionnel)* sont encore présentes quand l'issue lui arrive, **c'est l'arbitrage qui manque** — il le signale et n'écrit pas la porte PDF.
+
 ### Étapes
-- [ ] Ajouter au bloc « Ajouter ou importer » (`main.jsx:188`) la création d'un **établissement** et d'un **compte**.
+- [ ] Ajouter au bloc « Ajouter ou importer » (ancre `<summary>Ajouter ou importer</summary>`) la création d'un **établissement** et d'un **compte**.
 - [ ] L'accueil vide (`main.jsx:71-72`) doit proposer un second chemin que « Connecter votre première banque ».
-- [ ] **Lire le rapport de T24 avant d'écrire la porte PDF.** Mesure de P42 réussie → étape suivante. Échouée → l'étape suivante ne se fait pas, et le rapport de livraison le dit explicitement.
-- [ ] *(conditionnel)* Ajouter l'import d'un **relevé PDF**, avec la correspondance compte par compte que la route exige.
-- [ ] **Vérification** : sur une base vide, créer un établissement et un compte **entièrement depuis l'interface**, sans terminal ; puis le relevé PDF si la porte est entrée.
+- [ ] *(conditionnel — à conserver ou rayer par Copilot avant lancement)* Ajouter l'import d'un **relevé PDF**, avec la correspondance compte par compte que la route exige.
+- [ ] **Vérification** : sur une base vide, créer un établissement et un compte **entièrement depuis l'interface**, sans terminal ; puis le relevé PDF si l'étape conditionnelle a été conservée.
 
 ### Critères d'acceptation
 1. Sur une base vide, un **établissement** et un **compte** s'ajoutent depuis l'interface seule, sans terminal.
 2. L'écran reste **identique sur mobile et sur desktop** — contrainte fondatrice du projet, vérifiée sur un vrai téléphone lors de la mise en service.
-3. *(conditionnel)* Si la porte PDF est entrée : un relevé PDF s'ajoute depuis l'interface, et un relevé **sans correspondance complète est refusé**, message visible à l'écran. Si elle n'est pas entrée, le rapport **nomme la mesure de P42 qui l'a bloquée** — une livraison muette sur ce point ne vaut pas livraison.
+3. *(conditionnel — même sort que l'étape)* Un relevé PDF s'ajoute depuis l'interface, et un relevé **sans correspondance complète est refusé**, message visible à l'écran.
+4. **Ce qui est préservé** : la saisie manuelle d'une transaction, seul contenu actuel du bloc « Ajouter ou importer », reste atteignable et fonctionne à l'identique.
 
 ---
 
@@ -286,7 +296,7 @@ Pourquoi : T24 **mesure** le chemin PDF, elle ne le corrige pas — si la mesure
 `web/public/sw.js` (555 octets) déclare **uniquement** un écouteur `fetch` — aucun `install`, aucun `self.skipWaiting()`, aucun `clients.claim()`. Rien n'est préchargé, et un service worker fraîchement activé ne contrôle pas la page qui l'a enregistré. Cache vide, `caches.match()` rend `undefined`, `event.respondWith(undefined)` produit une erreur réseau — l'écran « site inaccessible » constaté sur le téléphone le 2026-08-04.
 
 ### Périmètre
-`web/public/sw.js`, la configuration de construction Vite, `web/src/main.jsx:262` (enregistrement).
+`web/public/sw.js`, la configuration de construction Vite, l'enregistrement du service worker dans `web/src/main.jsx` (ancre `navigator.serviceWorker.register("/sw.js")`, l. 263 au 2026-08-06).
 
 ### Ne pas toucher
 Le cache du dernier solde en `localStorage` (`main.jsx:30` et `259`) : il fonctionne et porte déjà la date de fraîcheur exigée par P16.
@@ -534,8 +544,8 @@ Les deux CSV La Banque Postale sont lus par **deux** tests, pas un : `csv-import
 ### Périmètre
 - **Supprimés** : `src/csv-import.ts` (221 l.), `src/csv-import.test.ts`, `src/lab-replay.test.ts`.
 - `src/server.ts` — l'import l. 11, la route `POST /imports/csv` (l. 283 jusqu'à la fin de son handler, ~l. 341).
-- `web/src/main.jsx` — le gestionnaire `csv` (l. 180-187) et le formulaire « Importer un CSV » (l. 189).
-- `src/pdf-import.ts` — le message d'erreur « couche texte » qui oriente vers le CSV, et l'assertion qui le vérifie (`src/pdf-import.test.ts:20`).
+- `web/src/main.jsx` — le gestionnaire `csv` (ancre `const csv = async event =>` jusqu'à son `};`, l. 180-188 au 2026-08-06) et le formulaire « Importer un CSV » (l. 189).
+- `src/pdf-import.ts` — le message d'erreur « couche texte » qui oriente vers le CSV, et l'assertion qui le vérifie (ancre `/couche texte.*CSV.*saisie manuelle/i` dans `src/pdf-import.test.ts`, l. 21 au 2026-08-06).
 - **Ajouté** : un rejeu du rapprochement sur le chemin PDF, plus la mesure de P42.
 
 ### Rayon d'impact vérifié
@@ -543,7 +553,7 @@ Les deux CSV La Banque Postale sont lus par **deux** tests, pas un : `csv-import
 ⚠️ **Se repérer par symbole, pas par numéro de ligne.** T21 passe avant et **extrait le corps de la boucle de fond dans une fonction nommée** : toutes les lignes de `src/server.ts` sous la l. 70 se décalent. Les repères ci-dessus (`l. 11`, `l. 283`, `l. 297`, `l. 313`, `~l. 341`) datent d'avant T21 et **auront glissé**. Les régions restent disjointes — T21 ne touche ni la route `/imports/csv` ni l'import de tête — mais on cherche `app.post("/imports/csv"` et l'`import … from "./csv-import.js"`, pas une ligne.
 `deduplicateTransactions` a **trois** appelants : `server.ts:335` (CSV, supprimé), `:409` (PDF), `:836` (synchro). **Les deux survivants ne changent pas d'une ligne.**
 `/imports/csv` n'est appelé qu'à `web/src/main.jsx:185`. Rien dans `web/public/sw.js`, rien dans `scripts/`. Les erreurs `csv_institution_mismatch`, `csv_accounts_not_separable` et `csv_format_unrecognized` ne sont produites que par cette route, et l'UI affiche leur `message` sans les nommer.
-⚠️ **Le message d'erreur du chemin PDF oriente vers le CSV** : quand la couche texte manque, `src/pdf-import.ts` propose « CSV ou saisie manuelle », et `src/pdf-import.test.ts:20` l'asserte par `/couche texte.*CSV.*saisie manuelle/i`. Message et assertion doivent être réécrits **ensemble** — c'est le seul endroit du produit où la suppression laisse une phrase fausse à l'utilisateur.
+⚠️ **Le message d'erreur du chemin PDF oriente vers le CSV** : quand la couche texte manque, `src/pdf-import.ts` propose « CSV ou saisie manuelle », et `src/pdf-import.test.ts` l'asserte par `/couche texte.*CSV.*saisie manuelle/i` (l. 21 au 2026-08-06). Message et assertion doivent être réécrits **ensemble** — c'est le seul endroit du produit où la suppression laisse une phrase fausse à l'utilisateur.
 
 ### Ne pas toucher
 - ⚠️ **`CSV_IMPORT` reste dans `src/schema.ts:5` et dans le `CHECK` de `src/db.ts:75`.** Des transactions réelles portent cette valeur. La retirer de l'énumération ou de la contrainte rendrait des lignes existantes non réinsérables et casserait le typage à la lecture. **On supprime le chemin d'écriture, pas la trace de ce qui a été écrit.** Aucune migration, aucun `UPDATE` sur `transactions`, aucune suppression de données.
@@ -556,7 +566,7 @@ Les deux CSV La Banque Postale sont lus par **deux** tests, pas un : `csv-import
 - [ ] Supprimer `src/csv-import.ts` et `src/csv-import.test.ts`.
 - [ ] `src/server.ts` : supprimer l'import l. 11 et la route `POST /imports/csv` en entier. Vérifier qu'aucun symbole importé ne reste inutilisé (`npm run lint` le dira).
 - [ ] `web/src/main.jsx` : supprimer le gestionnaire `csv` et le bloc `<form>` « Importer un CSV ». Le `<details>` « Ajouter ou importer » conserve la saisie manuelle ; le `<hr />` qui séparait les deux formulaires part avec.
-- [ ] `src/pdf-import.ts` : le message d'erreur ne propose plus le CSV — **la saisie manuelle devient le seul repli**, et c'est assumé. Mettre à jour l'assertion de `src/pdf-import.test.ts:20` dans le même commit.
+- [ ] `src/pdf-import.ts` : le message d'erreur ne propose plus le CSV — **la saisie manuelle devient le seul repli**, et c'est assumé. Mettre à jour l'assertion `/couche texte.*CSV.*saisie manuelle/i` de `src/pdf-import.test.ts` dans le même commit.
 - [ ] **Remplacer `src/lab-replay.test.ts`, ne pas le supprimer sèchement.** C'est aujourd'hui la seule preuve que le rapprochement fonctionne entre deux canaux **réels**, et elle doit changer de support, pas disparaître. Le corpus le permet : les relevés BP vont du 2025-07-08 au 2026-06-08 et le corpus API La Banque Postale couvre 2026-05-04 → 2026-07-27 — le recouvrement est franc sur mai-juin 2026. Le nouveau test rejoue `parsePdfStatement("releve_CCP…_20260608")` contre le corpus API sur la fenêtre commune. ⚠️ **Porter les assertions de l'ancien test, ne pas en inventer de plus faibles.** `lab-replay.test.ts` prouve aujourd'hui **27 appariements et `toReview` vide, dans les DEUX ordres de canaux**. Une remplaçante qui ne vérifierait que « aucune transaction déjà connue n'est réintroduite », dans un seul sens, serait une perte de preuve silencieuse — le critère 4 dirait qu'elle existe, et il aurait raison. Le test de remplacement porte donc les trois mêmes choses sur le couple PDF↔API : un **décompte d'appariements figé**, `toReview` **vide**, et **les deux ordres**. Le décompte est **relevé sur la fenêtre commune, jamais deviné** — même règle que pour les 77 libellés non-ASCII. Et si `toReview` n'est **pas** vide sur ce couple : **on ne touche pas au test pour le faire passer**, c'est un constat, il est rapporté tel quel et T24 s'arrête là.
 - [ ] **Mesure de P42** — c'est elle qui justifie que T16 ait été fermée sans être faite. Sur le chemin PDF, **réimporter un relevé déjà importé** sur un compte **manuel** (Livret A ou Livret Jeune : aucune API, le solde **est** la somme des mouvements, donc un doublon y fausse directement le chiffre principal). Vérifier trois choses : aucune transaction ajoutée, solde inchangé, et `needs_review` posé dès que `toReview` n'est pas vide. **Si la mesure échoue, T24 s'arrête au constat** — le résultat est rapporté tel quel et la correction fait l'objet d'une tâche distincte. Ne pas corriger le chemin PDF dans cette tâche.
 - [ ] Écrire en tête de `src/pdf-import.test.ts` et du nouveau test de rejeu ce que leur corpus attend et **pourquoi il n'est pas versé** (relevés réels, dépôt public). C'est ce qui transforme P49 d'un problème en une contrainte assumée.
