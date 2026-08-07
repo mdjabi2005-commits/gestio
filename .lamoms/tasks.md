@@ -645,19 +645,58 @@ Corpus au 2026-08-07 : `bp/` = 12 relevés (`20250708` → `20260608`), `nickel/
 ## T26 — Trade Republic entre par le relevé
 
 **Problème** : P55.
+**Recherche** : `.lamoms/lab/agy/rapport_agy_recherche_3.md`, reçu le 2026-08-07 — **retenu avec quatre corrections**, consignées ci-dessous. Les mesures sont bonnes ; quatre conclusions du rapport ne le sont pas, et deux d'entre elles auraient cassé le parseur.
 
-### ⚠️ PLAN NON ÉCRIT — RECHERCHE MANQUANTE, destinataire : AGY
-Je ne planifie pas à l'aveugle. Écrire ce parseur demande des **repères mesurés dans le PDF réel**, que je n'ai pas. Ce que le rapport AGY doit rendre, sur `/mnt/c/Users/djabi/Documents/relevé pdf/trade republic/Relevé de compte.pdf` :
+> ⚠️ **Le rapport et les dumps `.lamoms/lab/agy/analyse_tr_pdf*` contiennent le nom et l'adresse postale du titulaire en clair** — le masquage n'a couvert que les montants et les IBAN. `.lamoms/lab/` est gitignoré, donc rien n'est publié. **Aucune chaîne de ce rapport ne se recopie dans un fichier versionné.** Les ancres ci-dessous ont été relues à cette fin.
 
-1. **Le PDF a-t-il une couche texte** exploitable par `pdfjs`, ou est-ce une image ? Toute la suite en dépend.
-2. **La chaîne d'en-tête** qui identifie le document de façon sûre — l'équivalent de `"NICKEL" + "PAIEMENTS ELECTRONIQUES"`.
-3. **Comment la période est écrite**, au caractère près.
-4. **La forme d'une ligne de mouvement** : colonnes, position de la date, du libellé, du montant ; débit et crédit en deux colonnes ou signés dans une seule.
-5. **Le relevé porte-t-il un ancien solde, un nouveau solde, ou des totaux ?** C'est ce qui décide si le parseur peut faire un **contrôle d'équilibre** comme LBP et Nickel, ou s'il en est privé — et il faut le savoir avant, pas pendant.
-6. **Un IBAN de compte figure-t-il sur le relevé, et sous quelle forme ?** Trade Republic est allemande : IBAN `DE`, 22 caractères. Réponse à croiser avec T27.
-7. **Le même relevé régénéré sur une autre période a-t-il exactement la même structure ?** Lamoms peut en produire un second pour le vérifier.
+### Ce qui est mesuré, et confirmé sur le dump brut
+Couche texte **présente et dense** (18 pages, 2 061 items, aucune page vide) — `pdfjs` suffit, pas d'OCR.
+Le document est **composite** : plusieurs sous-relevés dans un même PDF, chacun ouvert par `SYNTHÈSE DU RELEVÉ DE COMPTE` puis une ligne `PRODUIT` et sa ligne de valeurs.
+**Le sens des colonnes est établi par la donnée, pas déduit** : `Incoming transfer…` porte son montant à `x=417.1`, `Outgoing transfer…` à `x=452.4`, et `Interest payment` à `x=417.1`. **`x≈417` = ENTRÉE = crédit ; `x≈452` = SORTIE = débit.** C'est le mécanisme de LBP (signe déduit de la position), pas celui de Nickel.
+La **date d'un mouvement est coupée en deux lignes PDF** : `JJ mois.` à `x≈74.4`, puis l'**année seule** deux lignes plus bas, au même `x`. Le montant est sur la ligne intermédiaire. C'est la particularité de ce format.
 
-**Le plan de T26 s'écrit à la réception de ce rapport, pas avant.** Il suivra le modèle de `parseNickel` : un en-tête reconnu, une période, des mouvements, un contrôle d'équilibre s'il est possible.
+### ⚠️ Les quatre corrections au rapport — elles font partie du plan
+1. **Le motif de période proposé par le rapport est faux et je l'ai vérifié en l'exécutant.** `/(\d{1,2}\s+\w+\.?\s+\d{4})…/` échoue sur `01 déc. 2025 - 31 mai 2026`, `01 févr. 2026`, `01 août 2025` : en JavaScript `\w` ne couvre pas les lettres accentuées. **Trois mois sur douze — février, août, décembre — casseraient le parseur.** La preuve est dans le lab : l'analyse du second relevé rend `periodRaw: null` alors que la période est visible dans le document. **La table des mois s'écrit en clair, elle ne se devine pas par `\w`.**
+2. **La segmentation par numéro de page ne tient pas.** Le rapport situe les sous-relevés « pages 13 et 14 » et les sections parasites « page 10 », « page 11 ». Sur le **second** relevé, les mêmes sections sont aux pages **1, 8 et 9**. **On segmente par l'ancre `SYNTHÈSE DU RELEVÉ DE COMPTE`, jamais par un numéro de page**, et on lit le nom du produit sur la ligne qui suit `PRODUIT` — le rapport nomme mal les produits des deux derniers sous-relevés, et cette lecture rend l'erreur inoffensive.
+3. **L'« Exemple 1 » du rapport est intitulé « crédit » et conclut « débit ».** C'est le titre qui est faux, la conclusion est juste. Un Codex qui recopierait l'intitulé inverserait le signe.
+4. **La colonne SOLDE n'a pas de `x` fixe.** Le rapport la donne à `502.1` — c'est la position de l'**en-tête**. Sur les lignes de mouvement les valeurs tombent entre `487` et `499` selon la largeur du montant. **Le solde est l'item le plus à droite de la ligne, pas un `x` codé en dur.**
+
+### Périmètre
+`src/pdf-import.ts` uniquement. Un type d'institution et une clé de compte nouveaux, un `parseTradeRepublic`, ses fonctions de lignes.
+
+### ⚠️ ARBITRAGE À RENDRE AVANT DE LANCER L'ISSUE — destinataire : Lamoms, PAS Codex
+Le relevé contient **plusieurs produits** : le compte courant, et au moins un compte-titres. **Ce plan n'importe que le compte courant.** Les autres sous-relevés sont **détectés et rapportés comme non importés** — jamais ignorés en silence, parce qu'un relevé partiel présenté comme complet est exactement le mode de panne que ce projet existe pour empêcher (P28).
+
+Faire entrer un compte-titres dans l'agrégat est une **décision de produit** que je ne prends pas : son « solde » est une valorisation de portefeuille, pas de la trésorerie disponible, et la Core Feature est la **tréso disponible**. Si Lamoms décide qu'il y entre, c'est une tâche distincte.
+
+### Ne pas toucher
+- ⚠️ **`parseBanquePostale` et `parseNickel` ne changent pas d'une ligne.** Ce plan **ajoute** une branche ; les deux formats existants et leurs tests sont intouchables.
+- ⚠️ **Ne pas élargir l'ancre de reconnaissance.** `"SYNTHÈSE DU RELEVÉ DE COMPTE"` seul est trop générique — il faut la **conjonction** avec `"TRADE REPUBLIC BANK GMBH"`, comparée après `comparable()` (accents retirés, majuscules), comme les deux autres formats.
+- ⚠️ **Ne pas lire l'IBAN dans cette tâche.** Il est à `x≈404` sur la ligne d'en-tête, et il y en a d'autres **dans les libellés de virement** — ce sont des IBAN tiers. La distinction est le sujet de **T27**, pas d'ici. Y toucher ici ferait deux tâches se marcher dessus sur le même fichier.
+- **Aucune fixture versionnée.** C'est un relevé bancaire réel et le dépôt est **public** — même décision que pour le corpus PDF existant (T20, T24). Le test dépend de `GESTIO_PDF_CORPUS`, dépendance locale **assumée et commentée**.
+- Aucun fichier hors `src/pdf-import.ts` et son test.
+
+### Étapes
+- [ ] Ajouter `"TRADE_REPUBLIC"` à `PdfStatement["institution"]` et une clé de compte pour le compte courant à `PdfAccountKey`.
+- [ ] Brancher la reconnaissance dans `parsePdfStatement` (ancre `"Format PDF non reconnu"`), **après** les tests LBP et Nickel : conjonction `TRADE REPUBLIC BANK GMBH` + `SYNTHESE DU RELEVE DE COMPTE` sur le texte `comparable()`.
+- [ ] **Table des mois français explicite** — `janv. févr. mars avr. mai juin juil. août sept. oct. nov. déc.` → 01…12. ⚠️ `mars`, `mai`, `juin`, `août` **n'ont pas de point** ; les autres en ont un. Lire la période sur la ligne `DATE` de l'en-tête.
+- [ ] **Segmenter le document par l'ancre `SYNTHÈSE DU RELEVÉ DE COMPTE`**, et pour chaque segment lire le nom du produit sous `PRODUIT`. Retenir le segment du compte courant ; **compter et nommer les autres**.
+- [ ] Lire la ligne de synthèse du compte courant : solde de début (`x≈161`), total entrées (`x≈271`), total sorties (`x≈349`), solde de fin (**item le plus à droite**).
+- [ ] `tradeRepublicTransactions` : ancrer sur `JJ mois.` à `x≈74`, **recoller l'année** lue deux lignes plus bas au même `x`, prendre le montant entre `x≈410` et `x≈460`, le **solde comme item le plus à droite**, et concaténer comme libellé tous les items à `x ≥ 147` du groupe de lignes de la transaction.
+- [ ] **Signe du montant** : `montant.x < 434.5` → crédit (positif) ; sinon débit (négatif). Le seuil est le milieu des deux colonnes, comme LBP.
+- [ ] Exclure les lignes parasites **par leur contenu, pas par leur position** : en-tête de colonnes (`DATE TYPE DESCRIPTION SOLDE`), ligne de synthèse, pied de page (`Page N de M`), et la section de fonds monétaires dont les colonnes sont différentes.
+- [ ] **Contrôle d'équilibre, dans les deux sens** : `solde début + total entrées − total sorties = solde fin`, **et** la somme des mouvements lus égale les totaux annoncés — c'est ce second contrôle, celui de Nickel, qui attrape un mouvement manqué. Une divergence **lève une `PdfStatementError`**, elle ne s'arrondit pas.
+- [ ] **Vérification, sur les DEUX relevés du corpus** (`Relevé de compte.pdf` et `statement.pdf`) : les deux se parsent, les deux passent le contrôle d'équilibre, et **les périodes lues sont exactes** — c'est `statement.pdf`, avec son `déc.`, qui prouve la correction n° 1.
+- [ ] `npm test` (décompte non nul, `skipped 0`), puis `npm run lint && npm run typecheck && npm run build`.
+
+### Critères d'acceptation
+1. Les **deux** relevés Trade Republic du corpus se parsent, avec leur période exacte. ⚠️ **Un parseur qui ne lirait que le premier ne satisfait pas ce critère** : le second porte `01 déc. 2025 - 31 mai 2026`, et c'est lui qui démontre que la table des mois couvre les mois accentués.
+2. **Le contrôle d'équilibre est réel et il échoue quand il doit** : retirer artificiellement un mouvement lu fait lever une `PdfStatementError`. Un contrôle qui ne peut pas échouer n'est pas un contrôle.
+3. Le sens est juste sur des cas nommés : un `Incoming transfer` est **positif**, un `Outgoing transfer` est **négatif**. Ce sont les deux cas que le dump établit sans ambiguïté.
+4. Les sous-relevés non importés sont **comptés et nommés** dans le résultat. Aucun produit n'est ignoré en silence.
+5. **Ce qui est préservé** : les relevés La Banque Postale et Nickel se parsent à l'identique et **aucune assertion de leurs tests n'est modifiée**. `git diff --name-only` ne montre que `src/pdf-import.ts` et son test.
+6. Un PDF d'une autre banque est toujours refusé avec le message de format non reconnu, mis à jour pour nommer les trois formats.
+7. Aucun relevé, aucun extrait, aucun nom et aucune adresse n'entrent dans le dépôt. Le test dépend de `GESTIO_PDF_CORPUS` et le dit en commentaire.
 
 ---
 
@@ -691,6 +730,8 @@ Et `grep -niE "iban" src/pdf-import.ts src/schema.ts src/enable-banking.ts` **ne
 - [ ] **Committer l'oracle avant de commencer.** `Documents/releves-pdf/` n'est sous aucun git et ses 214 appariements sont la seule référence du portage. Geste de Lamoms, hors dépôt, **local et jamais poussé** — le dépôt gestio est public et ce code contient ses noms.
 - [ ] Colonne `iban` sur `accounts` (schéma + migration conditionnelle).
 - [ ] `parsePdfStatement` remonte l'IBAN de chaque compte du relevé. Le relevé LBP le porte pour chaque compte, Livret A compris — mesuré, P32.
+- [ ] ⚠️ **Le pays de l'IBAN Trade Republic n'est PAS établi — ne pas le coder en dur.** Le rapport AGY-3 conclut « IBAN DE, 22 caractères », mais ses trois occurrences mesurées sont des IBAN **tiers trouvés dans des libellés de virement**, pas celui du compte. La seule donnée d'en-tête établie est le **BIC `TRBKFRPPXXX`**, qui est **français** — l'entité est « Trade Republic Bank GmbH, **Branch France** ». Garder les deux tailles de la table Python (`FR` 27, `DE` 22) et **relever le pays réel à l'exécution**, jamais le supposer.
+- [ ] ⚠️ **Récolte gratuite, mesurée dans le lab et à exploiter** : les libellés de virement Trade Republic portent la **contrepartie et son IBAN entre parenthèses** (forme `Incoming transfer from <nom> (<IBAN>)`), et nomment la banque de destination pour les sorties. C'est exactement ce que `_score_interne` attend au niveau 100 (IBAN) et au niveau 60 (banque nommée). L'appariement La Banque Postale ↔ Trade Republic est donc atteignable au **niveau certain**, à condition de distinguer l'IBAN **du compte** (ligne d'en-tête du relevé) de ceux **des libellés** (contreparties).
 - [ ] `src/qualification.ts` — porter, dans cet ordre : `extraire_ibans` et `normaliser_iban` (IBAN `FR` 27, `DE` 22) ; les prédicats `est_virement`, `est_retrait_especes`, `est_frais_retrait`, `est_depot_especes` ; `_apparier` — appariement **mutuel** (chacun est le meilleur candidat de l'autre), montants **opposés**, comptes **différents**, tolérance **±3 jours** ; `_score_interne` — les trois niveaux `iban` (100) > `même institution` (80) > `banque nommée` (60), moins l'écart en jours ; `_qualifier_seul` — dont la catégorie **`virement_a_verifier`**.
 - [ ] ⚠️ **Porter aussi la règle du candidat unique** : `_apparier` ne retient un candidat que s'il est **seul** ou **strictement meilleur** que le suivant. En cas d'égalité, **aucun appariement**. C'est ce qui empêche d'apparier au hasard deux virements identiques du même jour — cas réel du 17/06/2025, deux virements de 22,00 €.
 - [ ] Poser la nature à l'entrée des mouvements dans `src/server.ts`, et **rejouer la qualification sur l'existant** — le libellé brut est en base, l'IBAN devient disponible, rien n'est perdu.
