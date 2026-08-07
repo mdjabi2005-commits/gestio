@@ -583,6 +583,133 @@ Les deux CSV La Banque Postale sont lus par **deux** tests, pas un : `csv-import
 
 ---
 
+### Intercalaire — l'architecture d'ingestion se referme (2026-08-07)
+
+Partie de deux questions de Lamoms — *« qu'est-ce qu'on résout concrètement pour l'utilisateur ? »* puis *« il n'y a pas déjà des scripts Python qui détectent les virements internes ? »*. Trois faits en sont sortis, tous mesurés.
+
+**1. Le PDF n'est pas le canal du bilan mensuel de toutes les banques.** Vérifié par Lamoms le 2026-08-07 : **l'API Revolut rend environ dix ans d'historique**. Revolut est en **API seule**, son rattrapage se fait par pagination. Le PDF est le rattrapage des banques à **fenêtre API courte** (La Banque Postale, Trade Republic) ou **sans API** (Nickel). Ma formulation précédente rangeait Revolut parmi les banques à relevé — elle était fausse, elle est corrigée au carnet (P55).
+
+**2. Trade Republic entre dans la même mécanique que les deux autres.** Son relevé se génère **sur une période choisie** ; l'unique PDF du corpus est un échantillon de format, pas un manque de couverture. Aucun recollement de périodes n'est nécessaire. Ce qui manque est le **parseur** — P55.
+
+**3. Le portage du moteur Python n'est pas une traduction.** Comparaison faite module par module contre `Documents/releves-pdf/src/gestio_releves/` : le TypeScript couvre déjà l'extraction PDF, la normalisation des libellés et le rapprochement inter-canaux. Il ne couvre **rien** de la qualification — et surtout, **`grep -niE "iban" src/pdf-import.ts src/schema.ts src/enable-banking.ts` ne rend rien**. L'IBAN, meilleure preuve du moteur Python, n'existe nulle part. P56.
+
+| | Tâche | Problèmes | Fichiers principaux |
+|---|---|---|---|
+| **T25** | Les relevés s'importent en une fois | P54 | `web/src/main.jsx` |
+| **T26** | Trade Republic entre par le relevé | P55 | `src/pdf-import.ts` — **plan non écrit, recherche manquante** |
+| **T27** | Un virement entre tes comptes cesse d'être une dépense | P56, P30 | `src/pdf-import.ts`, `src/schema.ts`, `src/db.ts`, nouveau module, `src/server.ts` |
+
+**Ordre imposé — il ne remplace pas le précédent, il le prolonge** : **T22 → T24 → T18 → T21 → T17 → T19 → T25 → T26 → T27.** Confirmé par Lamoms le 2026-08-07 : l'ordre déjà en cours ne bouge pas.
+
+**Pourquoi T27 en dernier, et ce n'est pas une préférence** : P30 apparie une écriture **avec sa contre-écriture**. Tant que les quatre comptes ne sont pas dans l'outil, chaque virement interne n'a qu'une moitié visible et serait classé `virement_externe` — l'inverse exact du but. T18 (portes de création) et T25 (rattrapage des relevés) sont donc des **conditions**, pas un rangement.
+
+---
+
+## T25 — Les relevés s'importent en une fois
+
+**Problème** : P54.
+**Pourquoi ensuite** : la route existe et déduplique déjà correctement ; T18 vient de lui donner sa porte. Il ne manque que le nombre. Le rattrapage de plus de vingt relevés se fait une fois, mais le **bilan mensuel** se répète pour trois banques — un geste pénible chaque mois ne se fait pas.
+
+### ⚠️ Dépendance à l'arbitrage de T18 — à vérifier AVANT d'ouvrir l'issue
+Cette tâche **étend la porte d'import PDF de T18**. Si l'arbitrage de T18 a rayé l'étape conditionnelle — mesure de P42 mauvaise —, **il n'y a pas de porte à étendre et T25 n'a pas d'objet**. Copilot le vérifie au lancement : porte PDF absente de `main.jsx` → T25 attend la tâche de correction de P42. Codex n'a pas cet arbitrage à rendre.
+
+### Ce qui est mesuré
+`POST /imports/pdf` prend **un** `pdfBase64` et **un** objet `accountIds` par appel. La correspondance, elle, est **stable** : `parseBanquePostale` exige les trois mêmes comptes dans chaque relevé (ancre `"Les trois comptes attendus sont absents"`), donc **une** correspondance vaut pour les douze relevés LBP ; Nickel n'a qu'un compte. Le lot, c'est **N fichiers pour une correspondance par banque**.
+Le réimport est déjà sans danger : déduplication puis `INSERT OR IGNORE`, dans une transaction SQLite unique.
+Corpus au 2026-08-07 : `bp/` = 12 relevés (`20250708` → `20260608`), `nickel/` = 9 relevés (période `2025-09` → `2026-05`).
+
+### Périmètre
+`web/src/main.jsx` uniquement.
+
+### Ne pas toucher
+- ⚠️ **La route `POST /imports/pdf` ne change pas d'une ligne** — ni sa signature, ni sa déduplication, ni son refus d'une correspondance incomplète (`accountIds must map every statement account`). Cette tâche est **entièrement côté interface** : elle appelle N fois une route qui marche.
+- ⚠️ **Ne pas paralléliser les appels.** La route ouvre une transaction SQLite ; les envois sont **séquentiels**, un fichier à la fois.
+- ⚠️ **Ne pas deviner la banque d'un fichier depuis son nom.** Le nom est un numéro de compte chez LBP et une date chez Nickel ; c'est `parsePdfStatement` qui reconnaît l'en-tête, et lui seul. Si un fichier n'est pas reconnu, il est **signalé et sauté**, jamais deviné — le dossier `nickel/` de Lamoms contient six fichiers étrangers, dont un installeur.
+- Aucun fichier de `src/`.
+
+### Étapes
+- [ ] Le champ de fichier de la porte PDF accepte **plusieurs fichiers** (`multiple`).
+- [ ] Les fichiers sont envoyés **un par un, séquentiellement**, à `POST /imports/pdf`, avec la **même** correspondance pour tous ceux d'une même banque.
+- [ ] **Compte rendu par fichier, à l'écran** : nom du fichier, importées, soldes, `needs_review`, ou le message d'erreur de la route. Un échec **n'interrompt pas** le lot — les suivants passent.
+- [ ] **Vérification** : importer les 12 relevés LBP en une fois sur une base vide ; relancer le **même** lot ; le second passage n'ajoute **aucune** transaction et ne change **aucun** solde.
+
+### Critères d'acceptation
+1. Douze relevés s'importent en **un** geste, avec **une** correspondance saisie, sans terminal.
+2. **Idempotence démontrée** : second passage du même lot → 0 transaction ajoutée, soldes identiques. C'est ce qui rend le geste mensuel sans risque.
+3. Un fichier non reconnu (prendre un des fichiers étrangers de `nickel/`) est **signalé nommément** et **les autres fichiers du lot s'importent quand même**.
+4. **Ce qui est préservé** : l'import d'un **seul** relevé fonctionne à l'identique, et `POST /imports/pdf` est inchangée — `git diff --name-only` ne montre **aucun** fichier de `src/`.
+5. L'écran reste identique sur mobile et sur desktop.
+
+---
+
+## T26 — Trade Republic entre par le relevé
+
+**Problème** : P55.
+
+### ⚠️ PLAN NON ÉCRIT — RECHERCHE MANQUANTE, destinataire : AGY
+Je ne planifie pas à l'aveugle. Écrire ce parseur demande des **repères mesurés dans le PDF réel**, que je n'ai pas. Ce que le rapport AGY doit rendre, sur `/mnt/c/Users/djabi/Documents/relevé pdf/trade republic/Relevé de compte.pdf` :
+
+1. **Le PDF a-t-il une couche texte** exploitable par `pdfjs`, ou est-ce une image ? Toute la suite en dépend.
+2. **La chaîne d'en-tête** qui identifie le document de façon sûre — l'équivalent de `"NICKEL" + "PAIEMENTS ELECTRONIQUES"`.
+3. **Comment la période est écrite**, au caractère près.
+4. **La forme d'une ligne de mouvement** : colonnes, position de la date, du libellé, du montant ; débit et crédit en deux colonnes ou signés dans une seule.
+5. **Le relevé porte-t-il un ancien solde, un nouveau solde, ou des totaux ?** C'est ce qui décide si le parseur peut faire un **contrôle d'équilibre** comme LBP et Nickel, ou s'il en est privé — et il faut le savoir avant, pas pendant.
+6. **Un IBAN de compte figure-t-il sur le relevé, et sous quelle forme ?** Trade Republic est allemande : IBAN `DE`, 22 caractères. Réponse à croiser avec T27.
+7. **Le même relevé régénéré sur une autre période a-t-il exactement la même structure ?** Lamoms peut en produire un second pour le vérifier.
+
+**Le plan de T26 s'écrit à la réception de ce rapport, pas avant.** Il suivra le modèle de `parseNickel` : un en-tête reconnu, une période, des mouvements, un contrôle d'équilibre s'il est possible.
+
+---
+
+## T27 — Un virement entre tes comptes cesse d'être une dépense
+
+**Problèmes** : P56 (l'obstacle mesuré), **P30** (le défaut subi : 44 % des débits).
+**Pourquoi en dernier** : voir l'ordre imposé ci-dessus — un appariement sur des comptes incomplets produit de faux `virement_externe`.
+
+### Ce qui est mesuré
+Sur les 43 transactions réelles de La Banque Postale, **15 sur 43** sont des virements du titulaire vers lui-même : **1 286,60 € sur 2 912,34 €** de débits, soit **44 %**. L'agrégat reste juste — l'argent change de poche — mais « combien j'ai dépensé » est presque doublé, et « combien je peux dépenser » qui en découle est faux.
+Le moteur qui résout ça existe et tourne sur le corpus réel : **214 virements inter-comptes sur 478 mouvements**. Il est en Python, hors dépôt, **sous aucun git**.
+Et `grep -niE "iban" src/pdf-import.ts src/schema.ts src/enable-banking.ts` **ne rend rien**.
+
+### Périmètre — plus large que le fichier évident, et c'est nécessaire
+- `src/pdf-import.ts` — extraction de l'IBAN de chaque compte du relevé.
+- `src/schema.ts` et `src/db.ts` — colonne IBAN sur `accounts`, migration.
+- **Nouveau module** `src/qualification.ts` — le portage proprement dit.
+- `src/server.ts` — là où les mouvements entrent, pour poser la nature.
+- `web/src/main.jsx` — pour que la nature soit **visible** ; un classement invisible ne règle pas P30.
+
+### Ne pas toucher
+- ⚠️ **`src/deduplication.ts` ne bouge pas.** La qualification est une **seconde passe** sur des transactions déjà en base, pas une modification du rapprochement. Le jaccard et `matchKey` sont éprouvés sur données réelles — les toucher casserait les preuves de T24.
+- ⚠️ **Ne rien porter de l'outillage Python** : `cli.py`, `export_*.py`, `releve_lisible.py`, `miroirs_mensuels.py`, `ambiguites.py`. Environ 1 350 lignes sur 1 610 ne servent pas ce produit.
+- ⚠️ **Ne pas réécrire l'extraction PDF, la normalisation ni le rapprochement** — le TypeScript les couvre déjà (`parsePdfStatement`, `normalizeTransactionLabel`, `deduplicateTransactions`).
+- ⚠️ **`NOMS_PERSONNELS` ne se code pas en dur.** `rapprochement.py:20` contient les noms de Lamoms en clair. **Le dépôt gestio est PUBLIC.** Ces noms viennent de la base ou de la configuration, jamais du code.
+- ⚠️ **Ne jamais supprimer une transaction ni modifier son montant.** Qualifier, c'est **annoter**. Un virement interne reste une transaction ; il cesse seulement de compter comme dépense.
+- ⚠️ **Ne pas fusionner les deux moitiés d'un virement interne en une seule écriture.** Chaque compte garde la sienne ; c'est ce qui préserve le solde par compte.
+- La migration suit l'idiome déjà en place : `pragma("table_info(...)")` puis `ALTER TABLE ... ADD COLUMN` conditionnel (`src/db.ts`, ancre `if (!columns.some(column => column.name === "transaction_at"))`). **Aucun outil de migration nouveau.**
+
+### Étapes
+- [ ] **Committer l'oracle avant de commencer.** `Documents/releves-pdf/` n'est sous aucun git et ses 214 appariements sont la seule référence du portage. Geste de Lamoms, hors dépôt, **local et jamais poussé** — le dépôt gestio est public et ce code contient ses noms.
+- [ ] Colonne `iban` sur `accounts` (schéma + migration conditionnelle).
+- [ ] `parsePdfStatement` remonte l'IBAN de chaque compte du relevé. Le relevé LBP le porte pour chaque compte, Livret A compris — mesuré, P32.
+- [ ] `src/qualification.ts` — porter, dans cet ordre : `extraire_ibans` et `normaliser_iban` (IBAN `FR` 27, `DE` 22) ; les prédicats `est_virement`, `est_retrait_especes`, `est_frais_retrait`, `est_depot_especes` ; `_apparier` — appariement **mutuel** (chacun est le meilleur candidat de l'autre), montants **opposés**, comptes **différents**, tolérance **±3 jours** ; `_score_interne` — les trois niveaux `iban` (100) > `même institution` (80) > `banque nommée` (60), moins l'écart en jours ; `_qualifier_seul` — dont la catégorie **`virement_a_verifier`**.
+- [ ] ⚠️ **Porter aussi la règle du candidat unique** : `_apparier` ne retient un candidat que s'il est **seul** ou **strictement meilleur** que le suivant. En cas d'égalité, **aucun appariement**. C'est ce qui empêche d'apparier au hasard deux virements identiques du même jour — cas réel du 17/06/2025, deux virements de 22,00 €.
+- [ ] Poser la nature à l'entrée des mouvements dans `src/server.ts`, et **rejouer la qualification sur l'existant** — le libellé brut est en base, l'IBAN devient disponible, rien n'est perdu.
+- [ ] Rendre la nature **visible** dans l'interface, et `virement_a_verifier` **distinguable** des deux autres.
+- [ ] **Vérification** : rejouer le corpus réel et **retrouver les 214**, avec la même répartition des niveaux de confiance.
+- [ ] `npm test` (décompte non nul, `skipped 0`), puis `npm run lint && npm run typecheck && npm run build`.
+
+### Critères d'acceptation
+1. **Les 214 virements inter-comptes sont retrouvés sur le corpus réel**, avec la **même répartition** des trois niveaux de confiance. C'est la seule preuve qui dise que le portage n'a rien perdu. Un décompte différent est un **constat à rapporter**, jamais une assertion à ajuster.
+2. Les deux virements de 22,00 € du 17/06/2025 ne sont **pas** appariés l'un à l'autre au hasard : soit chacun trouve sa vraie contre-écriture, soit aucun n'est apparié.
+3. **Ce qui est préservé — le total.** La somme des soldes par compte et l'agrégat sont **identiques au centime** avant et après. Qualifier n'est pas déplacer : un virement interne reste une transaction sur chacun des deux comptes.
+4. **Ce qui est préservé — le rapprochement.** `src/deduplication.ts` est **inchangé**, et les tests de T24 (appariements PDF↔API, `toReview` vide, les deux ordres) passent **sans qu'une assertion soit modifiée**.
+5. **Ce qui est préservé — les données.** Aucune transaction supprimée, aucun montant modifié : `SELECT COUNT(*), SUM(amount_cents) FROM transactions` rend les mêmes valeurs avant et après.
+6. Un virement dont le libellé suggère un compte personnel sans contre-écriture unique est classé **`virement_a_verifier`** et **visible comme tel** — il n'est ni compté comme dépense, ni silencieusement traité comme interne.
+7. **Aucun nom de personne dans `src/`** : `grep -rinE "djabi|mohamed" src/ web/` ne rend rien.
+8. `Documents/releves-pdf/` a été **commité avant** le début de la tâche. Il ne se supprime qu'**après** que ce plan soit vert — c'est l'oracle du critère 1.
+
+---
+
 ## Recette de mise en service — après clôture du PRD, pas avant
 
 **Posée par Lamoms le 2026-08-06.** Une seule recette sur l'état final, plutôt qu'une par tâche. Ce n'est **pas une tâche de code** : aucun fichier n'est modifié, Codex n'y intervient pas. C'est un rejeu de l'étape 4 de `.lamoms/mise-en-service.md` sur la base réelle, une fois **T22, T21, T24 et T18** fusionnées.
