@@ -664,10 +664,14 @@ La **date d'un mouvement est coupée en deux lignes PDF** : `JJ mois.` à `x≈7
 ### Périmètre
 `src/pdf-import.ts` uniquement. Un type d'institution et une clé de compte nouveaux, un `parseTradeRepublic`, ses fonctions de lignes.
 
-### ⚠️ ARBITRAGE À RENDRE AVANT DE LANCER L'ISSUE — destinataire : Lamoms, PAS Codex
-Le relevé contient **plusieurs produits** : le compte courant, et au moins un compte-titres. **Ce plan n'importe que le compte courant.** Les autres sous-relevés sont **détectés et rapportés comme non importés** — jamais ignorés en silence, parce qu'un relevé partiel présenté comme complet est exactement le mode de panne que ce projet existe pour empêcher (P28).
+### ✅ ARBITRAGE RENDU PAR LAMOMS le 2026-08-07 — le compte-titres n'entre pas
+Le relevé contient **plusieurs produits** : le compte courant, et au moins un compte-titres. **Lamoms a tranché : le compte-titres n'est pas compté pour l'instant.** La liste est donc **fermée** et Codex n'a aucun arbitrage à rendre : **on importe le compte courant, et lui seul**.
 
-Faire entrer un compte-titres dans l'agrégat est une **décision de produit** que je ne prends pas : son « solde » est une valorisation de portefeuille, pas de la trésorerie disponible, et la Core Feature est la **tréso disponible**. Si Lamoms décide qu'il y entre, c'est une tâche distincte.
+Cohérent avec la Core Feature : le « solde » d'un compte-titres est une valorisation de portefeuille, pas de la **trésorerie disponible**.
+
+⚠️ **Mais non importé ne veut pas dire invisible.** Les autres sous-relevés sont **détectés, comptés et nommés** dans le résultat de l'import — jamais ignorés en silence. Un relevé partiel présenté comme complet est exactement le mode de panne que ce projet existe pour empêcher (P28). C'est ce que porte le critère 4, et il ne se raye pas avec l'arbitrage.
+
+Faire entrer le compte-titres plus tard sera une tâche distincte, pas un élargissement de celle-ci.
 
 ### Ne pas toucher
 - ⚠️ **`parseBanquePostale` et `parseNickel` ne changent pas d'une ligne.** Ce plan **ajoute** une branche ; les deux formats existants et leurs tests sont intouchables.
