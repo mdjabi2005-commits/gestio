@@ -298,7 +298,9 @@ Les routes serveur. Le contrat d'entrée est déjà fixé : `readAccountInput` (
 
 ---
 
-## T19 — Le hors connexion tient sa promesse
+## ~~T19 — Le hors connexion tient sa promesse~~
+
+> **FERMÉE le 2026-08-08** — issue #28, VERT.
 
 **Problèmes** : P43, et la contrainte fondatrice **P16**.
 
