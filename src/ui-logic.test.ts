@@ -6,6 +6,7 @@ import {
   missingUpdatedAtCount,
   oldestUpdatedAt,
   reviewGroups,
+  visibleTransactionLabel,
   type UiAccount,
   type UiTransaction
 } from "./ui-logic.js";
@@ -44,4 +45,13 @@ test("only exposes unresolved review markers that form a real group", () => {
   assert.deepEqual(reviewGroups([transaction(1, true), transaction(2, true)]).map(group => group.map(item => item.id)), [[1, 2]]);
   assert.deepEqual(reviewGroups([{ ...transaction(1, false), resolvedAt: "2026-08-04 12:00:00" }, transaction(2, false)]), []);
   assert.deepEqual(reviewGroups([transaction(1, true), transaction(2, true, -20_00)]), []);
+});
+
+test("distinguishes otherwise identical unlabeled transactions", () => {
+  const first = { id: 41, label: "" };
+  const second = { id: 42, label: "" };
+  assert.equal(visibleTransactionLabel(first), "Sans libellé n°41");
+  assert.equal(visibleTransactionLabel(second), "Sans libellé n°42");
+  assert.notEqual(visibleTransactionLabel(first), visibleTransactionLabel(second));
+  assert.equal(visibleTransactionLabel({ id: 43, label: "Salaire" }), "Salaire");
 });

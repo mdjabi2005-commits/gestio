@@ -82,6 +82,10 @@ export function reviewGroups(transactions: readonly UiTransaction[]) {
   );
 }
 
+export function visibleTransactionLabel(transaction: Pick<UiTransaction, "id" | "label">) {
+  return transaction.label || `Sans libellé n°${transaction.id}`;
+}
+
 function dateValue(value: string) {
   return Date.parse(value.includes("T") ? value : `${value.replace(" ", "T")}Z`);
 }

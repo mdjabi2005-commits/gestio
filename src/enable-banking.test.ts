@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test, { type TestContext } from "node:test";
 import { openDatabase } from "./db.js";
 import { decimalCents, EnableBankingError, parseBalance, parseBankTransaction, type EnableBankingApi } from "./enable-banking.js";
-import { buildApp } from "./server.js";
+import { buildApp, syncedAccountNames } from "./server.js";
 
 type ApiOptions = {
   body?: unknown;
@@ -154,6 +154,36 @@ test("replays the local Trade Republic capture", () => {
   assert.equal(dates[0], "2026-05-20");
   assert.equal(dates.at(-1), "2026-08-01");
   assert.deepEqual(parseBalance(capture.balances), { balanceCents: 47, currency: "EUR" });
+});
+
+test("derives stable, distinct account names from bank details and account types", () => {
+  const account = (externalUid: string, cashAccountType: string, details: string | null = null) => ({
+    externalUid,
+    account: { name: "Titulaire", product: null, details, cash_account_type: cashAccountType }
+  });
+  const revolut = [
+    account("pocket-assurance", "SVGS", "Assurance"),
+    account("pocket-auto", "SVGS", "Auto entreprise déclaration paiement"),
+    account("account-main", "CACC"),
+    account("pocket-abonnement", "SVGS", "Abonnement feu vert")
+  ];
+
+  assert.deepEqual(syncedAccountNames(revolut), [
+    "Assurance",
+    "Auto entreprise déclaration paiement",
+    "Compte courant",
+    "Abonnement feu vert"
+  ]);
+  assert.deepEqual(syncedAccountNames([account("lbp-main", "CACC")]), ["Compte courant"]);
+  assert.deepEqual(syncedAccountNames([account("pocket-sans-details", "SVGS")]), ["Compte épargne"]);
+  assert.deepEqual(syncedAccountNames([{
+    externalUid: "unknown",
+    account: { name: "Nom bancaire", product: "Produit bancaire", cash_account_type: "OTHR" }
+  }]), ["Nom bancaire"]);
+
+  const homonyms = [account("account-1111", "CACC"), account("account-2222", "CACC")];
+  assert.deepEqual(syncedAccountNames(homonyms), ["Compte courant · 1111", "Compte courant · 2222"]);
+  assert.deepEqual(syncedAccountNames([...homonyms].reverse()).reverse(), syncedAccountNames(homonyms));
 });
 
 test("connects out-of-band, exhausts empty pages, stores API balance freshness, and resyncs idempotently", async (t) => {

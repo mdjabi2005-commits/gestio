@@ -5,7 +5,8 @@ import {
   knownSinceLabel,
   missingUpdatedAtCount,
   oldestUpdatedAt,
-  reviewGroups
+  reviewGroups,
+  visibleTransactionLabel
 } from "../../src/ui-logic.ts";
 import "./styles.css";
 
@@ -163,7 +164,7 @@ function Transactions({ accounts, transactions, offline, onChanged }) {
 }
 
 function TransactionLine({ transaction, accountName }) {
-  return <div className="transaction"><div className="row"><span>{transaction.label || "Sans libellé"}</span><strong className={transaction.amountCents >= 0 ? "positive" : "negative"}>{money(transaction.amountCents)}</strong></div><small className="muted">{formatDate(transaction.transactionDate)} · {accountName ?? "Compte inconnu"}</small></div>;
+  return <div className="transaction"><div className="row"><span>{visibleTransactionLabel(transaction)}</span><strong className={transaction.amountCents >= 0 ? "positive" : "negative"}>{money(transaction.amountCents)}</strong></div><small className="muted">{formatDate(transaction.transactionDate)} · {accountName ?? "Compte inconnu"}</small></div>;
 }
 
 function TransactionActions({ accounts, onChanged }) {
