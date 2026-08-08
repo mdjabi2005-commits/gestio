@@ -80,6 +80,21 @@ Le cas le plus dangereux, corrigé : T17 disait « ne pas toucher l'upsert de sy
 
 Les repères de ligne qui subsistent portent leur date de relevé (« l. 363 au 2026-08-06 ») et ne sont qu'une **indication de proximité** : c'est toujours le symbole qui fait foi. Toute tâche écrite ensuite suit cette convention.
 
+**⚠️ CINQ REPÈRES Y ONT ÉCHAPPÉ, relevés le 2026-08-08 — la convention a été posée dans ce fichier, pas dans les corps d'issues déjà ouverts.** Or **c'est l'issue que Codex lit**. #26, #27, #28 et #30 ont été ouvertes le 2026-08-04, avant la convention ; la resynchronisation a été demandée le 2026-08-07 et n'a été faite que sur #33. Le même mécanisme qu'en 2026-08-06 va donc se rejouer, et cette fois il est **mesuré à l'avance** : T24 retire `app.post("/imports/csv")` de `src/server.ts` — de la ligne 283 à ~362 au 2026-08-08, soit **~80 lignes** — plus `src/csv-import.ts` (221 l.) et, dans `web/src/main.jsx`, le gestionnaire `const csv = async event =>` (l. 180-188, **9 lignes**) et sa moitié de la ligne 189.
+
+| Issue | Repère dans le corps | Après la fusion de T24 |
+|---|---|---|
+| #30 (T21) | ancre `strategy: firstSync ? "longest" : "default"`, l. 824 au 2026-08-08 | remonte d'~80 lignes |
+| #30 (T21) | effacement de `last_sync_error` au premier succès, l. 908 au 2026-08-08 | remonte d'~80 lignes |
+| #30 (T21) | bouton *Synchroniser* et son identifiant `localStorage`, l. 208 et 224 au 2026-08-08 | remontent d'~9 lignes |
+| #28 (T19) | cache du dernier solde en lecture — ancre `localStorage.getItem(cacheKey)`, l. **260** au 2026-08-08 (l'écriture `localStorage.setItem(cacheKey, …)`, l. 30, est sous la coupe et ne bouge pas) | remonte d'~9 lignes |
+
+**⚠️ Ce repère était faux d'une ligne, et il l'était déjà dans le corps de #28 — mesuré par Copilot le 2026-08-08, vérifié par mes soins.** `web/src/main.jsx:259` est `function formatDateTime(date)`, sans rapport avec le cache ; `readCachedBalance()` et son `localStorage.getItem(cacheKey)` sont à la **260**. J'avais recopié l'adresse depuis l'issue au lieu de la relever dans le code — c'est la faute même que la convention interdit, commise en écrivant la convention. **Le symbole fait foi, le numéro n'est qu'une indication datée** : c'est la seule raison pour laquelle l'erreur est sans conséquence ici.
+
+**La collision est certaine, pas probable** : dans l'ordre en vigueur, T21 (#30) et T19 (#28) passent toutes deux **après** T24. Sous le point de coupe, rien ne bouge — `src/server.ts:56` et `:60`, `web/src/main.jsx:30`, `:61`, `:71-72`, `:115`, `:163` restent justes. #26 et #27 sont indemnes : leurs repères sont au-dessus de la coupe ou déjà ancrés par symbole (`app.post("/imports/pdf"`, `ON CONFLICT(external_hash) DO UPDATE`).
+
+**Action, pour Copilot, APRÈS la fusion de T24 et AVANT que #30 et #28 partent chez Codex** : ré-ancrer ces cinq repères **par symbole** dans le corps des deux issues, en citant le texte du code plutôt que son adresse. **Aucun périmètre fonctionnel ne change** — c'est un ancrage, pas une réécriture de tâche ; si une étape paraît fausse au passage, elle me revient. Le remède ne consiste pas à recalculer les numéros après chaque fusion : un numéro recalculé pourrit à la fusion suivante, un symbole non.
+
 **P51 est parké** — mode de panne sûr (refus, jamais d'écriture fausse), déclenché seulement par un renommage d'établissement. Aucune tâche ouverte ; à rouvrir au premier import légitime refusé.
 
 **Ce qui répond bien au besoin et n'est pas remis en cause** : Trade Republic entre effectivement en base (T13) ; `message` journalisé aux quatre sites, `0,00 €` remplacé par « Solde inconnu », total marqué incomplet, `last_sync_at` préservé (T14) ; les deux refus de l'incident du 2026-08-04 sont couverts et la règle multi-comptes est portée par le registre `bankCsvFormats`, pas par un `if` dans la route (T15).
@@ -251,39 +266,34 @@ la dérivation du nom pendant la synchro — ancre `const name = optionalApiStri
 
 **Problème** : P40.
 
-### Ce qui est mesuré
-`POST /accounts` (l. 183), `POST /institutions` (l. 193) et `POST /imports/pdf` (ancre `app.post("/imports/pdf"`, l. 363 au 2026-08-06) existent et fonctionnent — ils ont servi pendant la mise en service, **par `curl`**. Aucun n'a de porte dans l'interface : le bloc `<details className="card"><summary>Ajouter ou importer</summary>` (l. 189 au 2026-08-06) n'offre que la saisie manuelle d'une transaction. Conséquence : sur une installation neuve, le seul chemin vers un premier compte est une banque API (`main.jsx:71-72`, l'accueil ne propose que « Connecter votre première banque »). Un utilisateur qui n'a que Nickel et un Livret A **ne peut pas franchir l'accueil**.
+### Ce qui est mesuré — repères resynchronisés sur `origin/main` `ee7995b` (2026-08-08)
+`POST /accounts` (ancre `app.post("/accounts"`, l. 182), `POST /institutions` (ancre `app.post("/institutions"`, l. 192) et `POST /imports/pdf` (ancre `app.post("/imports/pdf"`, l. 282) existent et fonctionnent — ils ont servi pendant la mise en service, **par `curl`**. Aucun n'a de porte dans l'interface : le bloc `<details className="card"><summary>Ajouter ou importer</summary>` (ancre `<summary>Ajouter ou importer</summary>`, dans `function TransactionActions`, l. 180) n'offre que la saisie manuelle d'une transaction. Conséquence : sur une installation neuve, le seul chemin vers un premier compte est une banque API (`function Onboarding`, l. 187-188, l'accueil ne propose que « Connecter votre première banque »). Un utilisateur qui n'a que Nickel et un Livret A **ne peut pas franchir l'accueil**.
 
-> **Constat corrigé le 2026-08-06.** La formulation d'origine disait « n'offre que la saisie manuelle **et l'import CSV** ». C'était vrai le 2026-08-04 ; T24 retire le formulaire CSV et T18 passe après elle. Codex partirait sinon d'un repère périmé pour se placer dans la ligne 189.
+> **Constat corrigé le 2026-08-06** : la formulation d'origine disait « n'offre que la saisie manuelle **et l'import CSV** ». T24 (#33) a retiré le formulaire CSV ; le bloc ne contient plus que la saisie manuelle.
+> **Repères datés du 2026-08-08, base `ee7995b`** : T24 a retiré la route `/imports/csv` (~80 lignes dans `src/server.ts`, le formulaire CSV et son gestionnaire dans `web/src/main.jsx`) — les numéros cités le 2026-08-04 et le 2026-08-06 ont glissé. Convention du 2026-08-06 : se repérer par **symbole**, pas par ligne.
 
 ### Périmètre
 `web/src/main.jsx` uniquement — les trois routes serveur existent et ne changent pas.
 
 ### Ne pas toucher
-Les routes serveur. Le contrat d'entrée est déjà fixé : `readAccountInput` (ancre `function readAccountInput(body: unknown)`, l. 591 au 2026-08-06) attend `{ name, type: BANK|LIVRET_A|OTHER, institutionId? }` ; `POST /imports/pdf` exige un `accountIds` couvrant **chaque** compte du relevé.
+Les routes serveur. Le contrat d'entrée est déjà fixé : `readAccountInput` (ancre `function readAccountInput(body: unknown)`, l. 510 au 2026-08-08) attend `{ name, type: BANK|LIVRET_A|OTHER, institutionId? }` (sans `institutionId` → « Comptes manuels », `manualInstitutionId`, l. 863) ; `readInstitutionInput` (l. 518) attend `{ name, country }` ISO 3166-1 alpha-2 ; `GET /institutions` (l. 199) et `GET /accounts` (l. 201) existent pour alimenter les listes ; `POST /imports/pdf` (l. 282) exige un `accountIds` couvrant **chaque** compte du relevé, chaque clé (`CCP`/`LIVRET_A`/`LIVRET_JEUNE`/`NICKEL`) vers un `accountId` existant distinct.
 
-### ⚠️ ARBITRAGE À RENDRE AVANT DE LANCER L'ISSUE — destinataire : Copilot, PAS Codex
-**Posé le 2026-08-06, corrigé le même jour.** Les trois portes n'ont pas le même risque. Deux **n'écrivent aucune transaction** ; la troisième ouvre au grand public le chemin d'écriture dont on ne sait pas encore s'il est sain.
+### ✅ ARBITRAGE RENDU — 2026-08-08 : la porte PDF ENTRE, liste fermée à trois portes
+**Posé le 2026-08-06.** Les trois portes n'ont pas le même risque. Deux **n'écrivent aucune transaction** ; la troisième ouvre au grand public le chemin d'écriture dont on ne savait pas encore s'il était sain.
 
 - **Inconditionnel** — création d'**établissement** et création de **compte**. Elles suffisent à lever le cas nommé par P40 : « un utilisateur qui n'a que Nickel et un Livret A ne peut pas franchir l'accueil ».
-- **Conditionnel** — l'import **PDF**, subordonné au **résultat de la mesure de P42** rapportée par T24. Mesure bonne → la porte entre. Mesure mauvaise → **elle attend la tâche de correction**, et T18 se livre sans elle, les deux autres portes acquises.
-
-Pourquoi : T24 **mesure** le chemin PDF, elle ne le corrige pas — si la mesure échoue, elle s'arrête au constat (c'est son plan). Ouvrir la porte grand public entre-temps exposerait le seul chemin d'alimentation du **Livret A, du Livret Jeune et de Nickel**, dont le solde **est** la somme des mouvements : un doublon non détecté y fausse directement le chiffre principal.
-
-**Comment l'arbitrage se rend, et par qui.** T24 est fusionnée **avant** que cette issue parte : son rapport dit si la mesure de P42 est bonne ou mauvaise. **Copilot tranche à ce moment-là** et raye du plan ci-dessous soit rien, soit l'étape et le critère marqués *(conditionnel)*. Codex reçoit alors **une liste fermée** — deux portes ou trois — et n'a aucun arbitrage à rendre.
-
-> **Ce que Codex ne doit PAS faire** : lire le rapport d'une autre tâche, ni décider lui-même si la porte PDF entre. Il travaille dans un worktree isolé, sur une issue ; il n'a pas ce rapport et ce n'est pas son rôle. Si les marques *(conditionnel)* sont encore présentes quand l'issue lui arrive, **c'est l'arbitrage qui manque** — il le signale et n'écrit pas la porte PDF.
+- **Rendu par Copilot le 2026-08-08 — la porte PDF ENTRE.** La mesure de P42 rapportée par T24 (#33, review VERT, intégrée `ee7995b`) est **verte** sur le Livret A et désormais automatisée dans la suite : réimport d'un relevé déjà importé → `imported: 0, duplicates: 49, balancesImported: 0, reviewNeeded: 0`, `assert.deepEqual(manualState(), stateAfterFirstImport)` (solde et décompte inchangés), `needs_review = 1` posé dès que `toReview` non vide. **Liste fermée : TROIS portes.** Les marques *(conditionnel)* sont rayées ci-dessous ; Codex reçoit une liste fermée et n'a aucun arbitrage à rendre.
 
 ### Étapes
-- [ ] Ajouter au bloc « Ajouter ou importer » (ancre `<summary>Ajouter ou importer</summary>`) la création d'un **établissement** et d'un **compte**.
-- [ ] L'accueil vide (`main.jsx:71-72`) doit proposer un second chemin que « Connecter votre première banque ».
-- [ ] *(conditionnel — à conserver ou rayer par Copilot avant lancement)* Ajouter l'import d'un **relevé PDF**, avec la correspondance compte par compte que la route exige.
-- [ ] **Vérification** : sur une base vide, créer un établissement et un compte **entièrement depuis l'interface**, sans terminal ; puis le relevé PDF si l'étape conditionnelle a été conservée.
+- [ ] Ajouter au bloc « Ajouter ou importer » (ancre `<summary>Ajouter ou importer</summary>`, `function TransactionActions`) la création d'un **établissement** et d'un **compte**.
+- [ ] L'accueil vide (`function Onboarding`, « Connecter votre première banque ») doit proposer un second chemin que « Connecter votre première banque ».
+- [ ] Ajouter l'import d'un **relevé PDF**, avec la correspondance compte par compte que la route exige.
+- [ ] **Vérification** : sur une base vide, créer un établissement et un compte **entièrement depuis l'interface**, sans terminal ; puis le relevé PDF.
 
 ### Critères d'acceptation
 1. Sur une base vide, un **établissement** et un **compte** s'ajoutent depuis l'interface seule, sans terminal.
 2. L'écran reste **identique sur mobile et sur desktop** — contrainte fondatrice du projet, vérifiée sur un vrai téléphone lors de la mise en service.
-3. *(conditionnel — même sort que l'étape)* Un relevé PDF s'ajoute depuis l'interface, et un relevé **sans correspondance complète est refusé**, message visible à l'écran.
+3. Un relevé PDF s'ajoute depuis l'interface, et un relevé **sans correspondance complète est refusé**, message visible à l'écran.
 4. **Ce qui est préservé** : la saisie manuelle d'une transaction, seul contenu actuel du bloc « Ajouter ou importer », reste atteignable et fonctionne à l'identique.
 
 ---
@@ -580,6 +590,216 @@ Les deux CSV La Banque Postale sont lus par **deux** tests, pas un : `csv-import
 5. La mesure de P42 sur un compte manuel a été **exécutée et son résultat rapporté**, bon ou mauvais. Un rapport qui ne la mentionne pas ne vaut pas livraison.
 6. Le message d'erreur du PDF sans couche texte ne propose plus le CSV, et son assertion a suivi dans le même commit.
 7. `git diff --stat` montre une **suppression nette** — au moins 400 lignes de moins qu'ajoutées.
+
+---
+
+### Intercalaire — l'architecture d'ingestion se referme (2026-08-07)
+
+Partie de deux questions de Lamoms — *« qu'est-ce qu'on résout concrètement pour l'utilisateur ? »* puis *« il n'y a pas déjà des scripts Python qui détectent les virements internes ? »*. Trois faits en sont sortis, tous mesurés.
+
+**1. Le PDF n'est pas le canal du bilan mensuel de toutes les banques.** Vérifié par Lamoms le 2026-08-07 : **l'API Revolut rend environ dix ans d'historique**. Revolut est en **API seule**, son rattrapage se fait par pagination. Le PDF est le rattrapage des banques à **fenêtre API courte** (La Banque Postale, Trade Republic) ou **sans API** (Nickel). Ma formulation précédente rangeait Revolut parmi les banques à relevé — elle était fausse, elle est corrigée au carnet (P55).
+
+**2. Trade Republic entre dans la même mécanique que les deux autres.** Son relevé se génère **sur une période choisie** ; l'unique PDF du corpus est un échantillon de format, pas un manque de couverture. Aucun recollement de périodes n'est nécessaire. Ce qui manque est le **parseur** — P55.
+
+**3. Le portage du moteur Python n'est pas une traduction.** Comparaison faite module par module contre `Documents/releves-pdf/src/gestio_releves/` : le TypeScript couvre déjà l'extraction PDF, la normalisation des libellés et le rapprochement inter-canaux. Il ne couvre **rien** de la qualification — et surtout, **`grep -niE "iban" src/pdf-import.ts src/schema.ts src/enable-banking.ts` ne rend rien**. L'IBAN, meilleure preuve du moteur Python, n'existe nulle part. P56.
+
+| | Tâche | Problèmes | Fichiers principaux |
+|---|---|---|---|
+| **T25** | Les relevés s'importent en une fois | P54 | `web/src/main.jsx` |
+| **T26** | Trade Republic entre par le relevé | P55 | `src/pdf-import.ts` — **plan non écrit, recherche manquante** |
+| **T27** | Un virement entre tes comptes cesse d'être une dépense | P56, P30 | `src/pdf-import.ts`, `src/schema.ts`, `src/db.ts`, nouveau module, `src/server.ts` |
+
+**Ordre imposé — il ne remplace pas le précédent, il le prolonge** : **T22 → T24 → T18 → T21 → T17 → T19 → T25 → T26 → T27.** Confirmé par Lamoms le 2026-08-07 : l'ordre déjà en cours ne bouge pas.
+
+**⚠️ AMENDEMENT DU 2026-08-08 — T28 s'insère en tête, avant T24.** Ordre en vigueur : **T22 (faite) → T28 → T24 → T18 → T21 → T17 → T19 → T25 → T26 → T27.** Ce n'est pas une préférence et ce n'est pas un rangement. `npm test` est **rouge sur `master` `838e731`** (30 tests, 29 pass, 1 fail) à cause de P57, et le critère de vérification de **chacune** des huit tâches restantes est « `npm test` passe ». Tant que l'échec préexistant est là, aucune de ces vérifications ne distingue ce qu'une tâche vient de casser de ce qui l'était déjà — c'est mot pour mot le raisonnement qui avait mis T20 en tête. T28 coûte un fichier de test ; la laisser en file coûte la lisibilité de huit recettes.
+
+---
+
+## T28 — Le décompte de relevés cesse de casser à chaque téléchargement
+
+**Problème** : P57.
+**Pourquoi en tête** : voir l'amendement ci-dessus. Elle rend la file de nouveau lisible.
+
+### Ce qui est mesuré
+`npm test` sur `master` `838e731` : **30 tests, 29 pass, 1 fail**, `src/pdf-import.test.ts:31`, `assert.equal(bpStatements.length, 12)` → `13 !== 12`. Le relevé `releve_CCP0984209Z024_20260708` est arrivé dans `bp/` le 2026-08-08 à 13:09 ; T22 avait été fusionnée à 12:51. **T22 n'est pas en cause** — son diff est de −8/+4 sur trois fichiers de test, aucun fichier de production. Elle a rendu la dérive visible en moins de deux heures, ce qui était son objet.
+
+Un **second échec est caché derrière le premier** : `nickel/` porte 11 fichiers `RM*.pdf` quand la ligne 44 en attend 9 ; l'assertion de la ligne 31 échoue avant, la 44 n'a jamais tourné. **Vérifier les deux**, ne pas s'arrêter au premier vert obtenu.
+
+### Périmètre
+`src/pdf-import.test.ts` **uniquement**.
+
+### Ne pas toucher
+- ⚠️ **Aucun fichier de production.** Le parseur est juste : c'est le test qui est écrit contre un dossier mouvant. `git diff --name-only` ne montre **que** `src/pdf-import.test.ts`.
+- ⚠️ **Aucune variable d'environnement, aucun `skip`, aucun `existsSync` conditionnel qui rendrait le test vert quand le corpus manque.** T22 vient de fermer cette porte (P52) ; la rouvrir ici, dans le fichier même qui hérite du problème, serait la troisième récidive de la famille. Corpus absent = **rouge**, avec un `assert.ok` qui nomme le chemin.
+- ⚠️ **Aucune valeur d'assertion recalculée ni devinée.** `299`, `45`, `6`, `54` ont été relevées sur des fichiers précis ; elles restent telles quelles, sur ces fichiers-là.
+
+### Étapes
+- [ ] **Nommer les fichiers du décompte figé.** Deux listes en dur, par nom de fichier : les **12** relevés BP de `releve_CCP0984209Z024_20250708` à `…_20260608`, et les **9** Nickel de `2025-9-251005RM…` à `2026-5-260607RM…`. Les décomptes existants (`299` CCP, `45` LIVRET_A, `6` LIVRET_JEUNE, `54` NICKEL, et `12`/`9` relevés) portent désormais sur **ces listes**, pas sur le contenu du dossier. Corpus complet mais un fichier nommé manquant → **rouge**, avec son nom.
+- [ ] **Invariants sur TOUS les fichiers trouvés**, listes nommées comprises : chaque relevé BP porte exactement `CCP,LIVRET_A,LIVRET_JEUNE` (l'assertion de la l. 36 existe déjà, elle s'applique à l'ensemble) et chaque relevé s'équilibre. Ces assertions **gagnent** en force quand le corpus grossit ; c'est là que le treizième relevé entre.
+- [ ] **Plancher** : `assert.ok(bpFiles.length >= 12)` et l'équivalent Nickel, pour qu'un dossier vidé ou tronqué reste rouge — le plancher ne remplace pas le décompte figé, il le double.
+- [ ] **Vérification** : `npm test` **vert**, avec un décompte de tests **non nul** et **au moins égal à 30**. Puis, preuve que la tâche a bien fait son travail : **déplacer temporairement** `releve_CCP0984209Z024_20260708` hors de `bp/`, relancer — la suite reste **verte** ; le remettre, relancer — elle reste **verte**. Enfin `npm run lint && npm run typecheck && npm run build`.
+
+### Critères d'acceptation
+1. `npm test` est **vert** sur les 30 tests, corpus complet au 2026-08-08 (`bp/` = 13, `nickel/` = 11).
+2. **L'ajout d'un relevé ne rend plus la suite rouge**, démontré par le retrait/remise du relevé de juillet — c'est la raison d'être de la tâche.
+3. **Ce qui est préservé, et c'est le critère qui compte** : la preuve ne faiblit pas. Les décomptes `299`, `45`, `6`, `54` sont **toujours vérifiés**, sur les relevés nommés ; un dossier vide ou amputé d'un fichier nommé rend la suite **rouge** avec ce nom. Un diff qui obtiendrait le vert en supprimant ou en assouplissant ces assertions **ne satisfait pas ce critère**.
+4. **Aucune porte de sortie réintroduite** : `grep -rnE "SKIP|t\.skip\(|skip:" src/pdf-import.test.ts` ne rend rien.
+5. `git diff --name-only` ne montre que `src/pdf-import.test.ts`.
+
+### Contexte
+P57 (cause), P52 (la porte que T22 vient de fermer et qu'on ne rouvre pas), P35 (c'est parce que Lamoms **doit** télécharger d'autres relevés que le décompte figé est intenable), P47 (la famille du vert qui ne vérifie rien).
+
+**Pourquoi T27 en dernier, et ce n'est pas une préférence** : P30 apparie une écriture **avec sa contre-écriture**. Tant que les quatre comptes ne sont pas dans l'outil, chaque virement interne n'a qu'une moitié visible et serait classé `virement_externe` — l'inverse exact du but. T18 (portes de création) et T25 (rattrapage des relevés) sont donc des **conditions**, pas un rangement.
+
+---
+
+## T25 — Les relevés s'importent en une fois
+
+**Problème** : P54.
+**Pourquoi ensuite** : la route existe et déduplique déjà correctement ; T18 vient de lui donner sa porte. Il ne manque que le nombre. Le rattrapage de plus de vingt relevés se fait une fois, mais le **bilan mensuel** se répète pour trois banques — un geste pénible chaque mois ne se fait pas.
+
+### ⚠️ Dépendance à l'arbitrage de T18 — à vérifier AVANT d'ouvrir l'issue
+Cette tâche **étend la porte d'import PDF de T18**. Si l'arbitrage de T18 a rayé l'étape conditionnelle — mesure de P42 mauvaise —, **il n'y a pas de porte à étendre et T25 n'a pas d'objet**. Copilot le vérifie au lancement : porte PDF absente de `main.jsx` → T25 attend la tâche de correction de P42. Codex n'a pas cet arbitrage à rendre.
+
+### Ce qui est mesuré
+`POST /imports/pdf` prend **un** `pdfBase64` et **un** objet `accountIds` par appel. La correspondance, elle, est **stable** : `parseBanquePostale` exige les trois mêmes comptes dans chaque relevé (ancre `"Les trois comptes attendus sont absents"`), donc **une** correspondance vaut pour les douze relevés LBP ; Nickel n'a qu'un compte. Le lot, c'est **N fichiers pour une correspondance par banque**.
+Le réimport est déjà sans danger : déduplication puis `INSERT OR IGNORE`, dans une transaction SQLite unique.
+**Corpus — un chiffre relevé, jamais un chiffre gravé.** Au 2026-08-08 : `bp/` = **13** relevés (`20250708` → `20260708`), `nickel/` = **11** relevés (`2025-09` → `2026-07`). ⚠️ **Ces nombres bougent tous les mois** — ils ont grossi de 12 et 9 le jour même, et P35 impose d'en télécharger encore avant le 2026-09-06. Aucune étape ni aucun critère de cette tâche ne doit être écrit sur un décompte figé : on dit « tous les relevés du dossier », jamais « les douze ». Voir P57.
+
+### Périmètre
+`web/src/main.jsx` uniquement.
+
+### Ne pas toucher
+- ⚠️ **La route `POST /imports/pdf` ne change pas d'une ligne** — ni sa signature, ni sa déduplication, ni son refus d'une correspondance incomplète (`accountIds must map every statement account`). Cette tâche est **entièrement côté interface** : elle appelle N fois une route qui marche.
+- ⚠️ **Ne pas paralléliser les appels.** La route ouvre une transaction SQLite ; les envois sont **séquentiels**, un fichier à la fois.
+- ⚠️ **Ne pas deviner la banque d'un fichier depuis son nom.** Le nom est un numéro de compte chez LBP et une date chez Nickel ; c'est `parsePdfStatement` qui reconnaît l'en-tête, et lui seul. Si un fichier n'est pas reconnu, il est **signalé et sauté**, jamais deviné — le dossier `nickel/` de Lamoms contient six fichiers étrangers, dont un installeur.
+- Aucun fichier de `src/`.
+
+### Étapes
+- [ ] Le champ de fichier de la porte PDF accepte **plusieurs fichiers** (`multiple`).
+- [ ] Les fichiers sont envoyés **un par un, séquentiellement**, à `POST /imports/pdf`, avec la **même** correspondance pour tous ceux d'une même banque.
+- [ ] **Compte rendu par fichier, à l'écran** : nom du fichier, importées, soldes, `needs_review`, ou le message d'erreur de la route. Un échec **n'interrompt pas** le lot — les suivants passent.
+- [ ] **Vérification** : importer **tous les relevés LBP du dossier** en une fois sur une base vide ; relancer le **même** lot ; le second passage n'ajoute **aucune** transaction et ne change **aucun** solde.
+
+### Critères d'acceptation
+1. **Tous les relevés LBP du dossier** s'importent en **un** geste, avec **une** correspondance saisie, sans terminal — le nombre est celui du dossier au moment de la recette, jamais un nombre écrit d'avance.
+2. **Idempotence démontrée** : second passage du même lot → 0 transaction ajoutée, soldes identiques. C'est ce qui rend le geste mensuel sans risque.
+3. Un fichier non reconnu (prendre un des fichiers étrangers de `nickel/`) est **signalé nommément** et **les autres fichiers du lot s'importent quand même**.
+4. **Ce qui est préservé** : l'import d'un **seul** relevé fonctionne à l'identique, et `POST /imports/pdf` est inchangée — `git diff --name-only` ne montre **aucun** fichier de `src/`.
+5. L'écran reste identique sur mobile et sur desktop.
+
+---
+
+## T26 — Trade Republic entre par le relevé
+
+**Problème** : P55.
+**Recherche** : `.lamoms/lab/agy/rapport_agy_recherche_3.md`, reçu le 2026-08-07 — **retenu avec quatre corrections**, consignées ci-dessous. Les mesures sont bonnes ; quatre conclusions du rapport ne le sont pas, et deux d'entre elles auraient cassé le parseur.
+
+> ⚠️ **Le rapport et les dumps `.lamoms/lab/agy/analyse_tr_pdf*` contiennent le nom et l'adresse postale du titulaire en clair** — le masquage n'a couvert que les montants et les IBAN. `.lamoms/lab/` est gitignoré, donc rien n'est publié. **Aucune chaîne de ce rapport ne se recopie dans un fichier versionné.** Les ancres ci-dessous ont été relues à cette fin.
+
+### Ce qui est mesuré, et confirmé sur le dump brut
+Couche texte **présente et dense** (18 pages, 2 061 items, aucune page vide) — `pdfjs` suffit, pas d'OCR.
+Le document est **composite** : plusieurs sous-relevés dans un même PDF, chacun ouvert par `SYNTHÈSE DU RELEVÉ DE COMPTE` puis une ligne `PRODUIT` et sa ligne de valeurs.
+**Le sens des colonnes est établi par la donnée, pas déduit** : `Incoming transfer…` porte son montant à `x=417.1`, `Outgoing transfer…` à `x=452.4`, et `Interest payment` à `x=417.1`. **`x≈417` = ENTRÉE = crédit ; `x≈452` = SORTIE = débit.** C'est le mécanisme de LBP (signe déduit de la position), pas celui de Nickel.
+La **date d'un mouvement est coupée en deux lignes PDF** : `JJ mois.` à `x≈74.4`, puis l'**année seule** deux lignes plus bas, au même `x`. Le montant est sur la ligne intermédiaire. C'est la particularité de ce format.
+
+### ⚠️ Les quatre corrections au rapport — elles font partie du plan
+1. **Le motif de période proposé par le rapport est faux et je l'ai vérifié en l'exécutant.** `/(\d{1,2}\s+\w+\.?\s+\d{4})…/` échoue sur `01 déc. 2025 - 31 mai 2026`, `01 févr. 2026`, `01 août 2025` : en JavaScript `\w` ne couvre pas les lettres accentuées. **Trois mois sur douze — février, août, décembre — casseraient le parseur.** La preuve est dans le lab : l'analyse du second relevé rend `periodRaw: null` alors que la période est visible dans le document. **La table des mois s'écrit en clair, elle ne se devine pas par `\w`.**
+2. **La segmentation par numéro de page ne tient pas.** Le rapport situe les sous-relevés « pages 13 et 14 » et les sections parasites « page 10 », « page 11 ». Sur le **second** relevé, les mêmes sections sont aux pages **1, 8 et 9**. **On segmente par l'ancre `SYNTHÈSE DU RELEVÉ DE COMPTE`, jamais par un numéro de page**, et on lit le nom du produit sur la ligne qui suit `PRODUIT` — le rapport nomme mal les produits des deux derniers sous-relevés, et cette lecture rend l'erreur inoffensive.
+3. **L'« Exemple 1 » du rapport est intitulé « crédit » et conclut « débit ».** C'est le titre qui est faux, la conclusion est juste. Un Codex qui recopierait l'intitulé inverserait le signe.
+4. **La colonne SOLDE n'a pas de `x` fixe.** Le rapport la donne à `502.1` — c'est la position de l'**en-tête**. Sur les lignes de mouvement les valeurs tombent entre `487` et `499` selon la largeur du montant. **Le solde est l'item le plus à droite de la ligne, pas un `x` codé en dur.**
+
+### Périmètre
+`src/pdf-import.ts` uniquement. Un type d'institution et une clé de compte nouveaux, un `parseTradeRepublic`, ses fonctions de lignes.
+
+### ✅ ARBITRAGE RENDU PAR LAMOMS le 2026-08-07 — le compte-titres n'entre pas
+Le relevé contient **plusieurs produits** : le compte courant, et au moins un compte-titres. **Lamoms a tranché : le compte-titres n'est pas compté pour l'instant.** La liste est donc **fermée** et Codex n'a aucun arbitrage à rendre : **on importe le compte courant, et lui seul**.
+
+Cohérent avec la Core Feature : le « solde » d'un compte-titres est une valorisation de portefeuille, pas de la **trésorerie disponible**.
+
+⚠️ **Mais non importé ne veut pas dire invisible.** Les autres sous-relevés sont **détectés, comptés et nommés** dans le résultat de l'import — jamais ignorés en silence. Un relevé partiel présenté comme complet est exactement le mode de panne que ce projet existe pour empêcher (P28). C'est ce que porte le critère 4, et il ne se raye pas avec l'arbitrage.
+
+Faire entrer le compte-titres plus tard sera une tâche distincte, pas un élargissement de celle-ci.
+
+### Ne pas toucher
+- ⚠️ **`parseBanquePostale` et `parseNickel` ne changent pas d'une ligne.** Ce plan **ajoute** une branche ; les deux formats existants et leurs tests sont intouchables.
+- ⚠️ **Ne pas élargir l'ancre de reconnaissance.** `"SYNTHÈSE DU RELEVÉ DE COMPTE"` seul est trop générique — il faut la **conjonction** avec `"TRADE REPUBLIC BANK GMBH"`, comparée après `comparable()` (accents retirés, majuscules), comme les deux autres formats.
+- ⚠️ **Ne pas lire l'IBAN dans cette tâche.** Il est à `x≈404` sur la ligne d'en-tête, et il y en a d'autres **dans les libellés de virement** — ce sont des IBAN tiers. La distinction est le sujet de **T27**, pas d'ici. Y toucher ici ferait deux tâches se marcher dessus sur le même fichier.
+- **Aucune fixture versionnée.** C'est un relevé bancaire réel et le dépôt est **public** — même décision que pour le corpus PDF existant (T20, T24). Le test dépend de `GESTIO_PDF_CORPUS`, dépendance locale **assumée et commentée**.
+- Aucun fichier hors `src/pdf-import.ts` et son test.
+
+### Étapes
+- [ ] Ajouter `"TRADE_REPUBLIC"` à `PdfStatement["institution"]` et une clé de compte pour le compte courant à `PdfAccountKey`.
+- [ ] Brancher la reconnaissance dans `parsePdfStatement` (ancre `"Format PDF non reconnu"`), **après** les tests LBP et Nickel : conjonction `TRADE REPUBLIC BANK GMBH` + `SYNTHESE DU RELEVE DE COMPTE` sur le texte `comparable()`.
+- [ ] **Table des mois français explicite** — `janv. févr. mars avr. mai juin juil. août sept. oct. nov. déc.` → 01…12. ⚠️ `mars`, `mai`, `juin`, `août` **n'ont pas de point** ; les autres en ont un. Lire la période sur la ligne `DATE` de l'en-tête.
+- [ ] **Segmenter le document par l'ancre `SYNTHÈSE DU RELEVÉ DE COMPTE`**, et pour chaque segment lire le nom du produit sous `PRODUIT`. Retenir le segment du compte courant ; **compter et nommer les autres**.
+- [ ] Lire la ligne de synthèse du compte courant : solde de début (`x≈161`), total entrées (`x≈271`), total sorties (`x≈349`), solde de fin (**item le plus à droite**).
+- [ ] `tradeRepublicTransactions` : ancrer sur `JJ mois.` à `x≈74`, **recoller l'année** lue deux lignes plus bas au même `x`, prendre le montant entre `x≈410` et `x≈460`, le **solde comme item le plus à droite**, et concaténer comme libellé tous les items à `x ≥ 147` du groupe de lignes de la transaction.
+- [ ] **Signe du montant** : `montant.x < 434.5` → crédit (positif) ; sinon débit (négatif). Le seuil est le milieu des deux colonnes, comme LBP.
+- [ ] Exclure les lignes parasites **par leur contenu, pas par leur position** : en-tête de colonnes (`DATE TYPE DESCRIPTION SOLDE`), ligne de synthèse, pied de page (`Page N de M`), et la section de fonds monétaires dont les colonnes sont différentes.
+- [ ] **Contrôle d'équilibre, dans les deux sens** : `solde début + total entrées − total sorties = solde fin`, **et** la somme des mouvements lus égale les totaux annoncés — c'est ce second contrôle, celui de Nickel, qui attrape un mouvement manqué. Une divergence **lève une `PdfStatementError`**, elle ne s'arrondit pas.
+- [ ] **Vérification, sur les DEUX relevés du corpus** (`Relevé de compte.pdf` et `statement.pdf`) : les deux se parsent, les deux passent le contrôle d'équilibre, et **les périodes lues sont exactes** — c'est `statement.pdf`, avec son `déc.`, qui prouve la correction n° 1.
+- [ ] `npm test` (décompte non nul, `skipped 0`), puis `npm run lint && npm run typecheck && npm run build`.
+
+### Critères d'acceptation
+1. Les **deux** relevés Trade Republic du corpus se parsent, avec leur période exacte. ⚠️ **Un parseur qui ne lirait que le premier ne satisfait pas ce critère** : le second porte `01 déc. 2025 - 31 mai 2026`, et c'est lui qui démontre que la table des mois couvre les mois accentués.
+2. **Le contrôle d'équilibre est réel et il échoue quand il doit** : retirer artificiellement un mouvement lu fait lever une `PdfStatementError`. Un contrôle qui ne peut pas échouer n'est pas un contrôle.
+3. Le sens est juste sur des cas nommés : un `Incoming transfer` est **positif**, un `Outgoing transfer` est **négatif**. Ce sont les deux cas que le dump établit sans ambiguïté.
+4. Les sous-relevés non importés sont **comptés et nommés** dans le résultat. Aucun produit n'est ignoré en silence.
+5. **Ce qui est préservé** : les relevés La Banque Postale et Nickel se parsent à l'identique et **aucune assertion de leurs tests n'est modifiée**. `git diff --name-only` ne montre que `src/pdf-import.ts` et son test.
+6. Un PDF d'une autre banque est toujours refusé avec le message de format non reconnu, mis à jour pour nommer les trois formats.
+7. Aucun relevé, aucun extrait, aucun nom et aucune adresse n'entrent dans le dépôt. Le test dépend de `GESTIO_PDF_CORPUS` et le dit en commentaire.
+
+---
+
+## T27 — Un virement entre tes comptes cesse d'être une dépense
+
+**Problèmes** : P56 (l'obstacle mesuré), **P30** (le défaut subi : 44 % des débits).
+**Pourquoi en dernier** : voir l'ordre imposé ci-dessus — un appariement sur des comptes incomplets produit de faux `virement_externe`.
+
+### Ce qui est mesuré
+Sur les 43 transactions réelles de La Banque Postale, **15 sur 43** sont des virements du titulaire vers lui-même : **1 286,60 € sur 2 912,34 €** de débits, soit **44 %**. L'agrégat reste juste — l'argent change de poche — mais « combien j'ai dépensé » est presque doublé, et « combien je peux dépenser » qui en découle est faux.
+Le moteur qui résout ça existe et tourne sur le corpus réel : **214 virements inter-comptes sur 478 mouvements**. Il est en Python, hors dépôt, **sous aucun git**.
+Et `grep -niE "iban" src/pdf-import.ts src/schema.ts src/enable-banking.ts` **ne rend rien**.
+
+### Périmètre — plus large que le fichier évident, et c'est nécessaire
+- `src/pdf-import.ts` — extraction de l'IBAN de chaque compte du relevé.
+- `src/schema.ts` et `src/db.ts` — colonne IBAN sur `accounts`, migration.
+- **Nouveau module** `src/qualification.ts` — le portage proprement dit.
+- `src/server.ts` — là où les mouvements entrent, pour poser la nature.
+- `web/src/main.jsx` — pour que la nature soit **visible** ; un classement invisible ne règle pas P30.
+
+### Ne pas toucher
+- ⚠️ **`src/deduplication.ts` ne bouge pas.** La qualification est une **seconde passe** sur des transactions déjà en base, pas une modification du rapprochement. Le jaccard et `matchKey` sont éprouvés sur données réelles — les toucher casserait les preuves de T24.
+- ⚠️ **Ne rien porter de l'outillage Python** : `cli.py`, `export_*.py`, `releve_lisible.py`, `miroirs_mensuels.py`, `ambiguites.py`. Environ 1 350 lignes sur 1 610 ne servent pas ce produit.
+- ⚠️ **Ne pas réécrire l'extraction PDF, la normalisation ni le rapprochement** — le TypeScript les couvre déjà (`parsePdfStatement`, `normalizeTransactionLabel`, `deduplicateTransactions`).
+- ⚠️ **`NOMS_PERSONNELS` ne se code pas en dur.** `rapprochement.py:20` contient les noms de Lamoms en clair. **Le dépôt gestio est PUBLIC.** Ces noms viennent de la base ou de la configuration, jamais du code.
+- ⚠️ **Ne jamais supprimer une transaction ni modifier son montant.** Qualifier, c'est **annoter**. Un virement interne reste une transaction ; il cesse seulement de compter comme dépense.
+- ⚠️ **Ne pas fusionner les deux moitiés d'un virement interne en une seule écriture.** Chaque compte garde la sienne ; c'est ce qui préserve le solde par compte.
+- La migration suit l'idiome déjà en place : `pragma("table_info(...)")` puis `ALTER TABLE ... ADD COLUMN` conditionnel (`src/db.ts`, ancre `if (!columns.some(column => column.name === "transaction_at"))`). **Aucun outil de migration nouveau.**
+
+### Étapes
+- [ ] **Committer l'oracle avant de commencer.** `Documents/releves-pdf/` n'est sous aucun git et ses 214 appariements sont la seule référence du portage. Geste de Lamoms, hors dépôt, **local et jamais poussé** — le dépôt gestio est public et ce code contient ses noms.
+- [ ] Colonne `iban` sur `accounts` (schéma + migration conditionnelle).
+- [ ] `parsePdfStatement` remonte l'IBAN de chaque compte du relevé. Le relevé LBP le porte pour chaque compte, Livret A compris — mesuré, P32.
+- [ ] ⚠️ **Le pays de l'IBAN Trade Republic n'est PAS établi — ne pas le coder en dur.** Le rapport AGY-3 conclut « IBAN DE, 22 caractères », mais ses trois occurrences mesurées sont des IBAN **tiers trouvés dans des libellés de virement**, pas celui du compte. La seule donnée d'en-tête établie est le **BIC `TRBKFRPPXXX`**, qui est **français** — l'entité est « Trade Republic Bank GmbH, **Branch France** ». Garder les deux tailles de la table Python (`FR` 27, `DE` 22) et **relever le pays réel à l'exécution**, jamais le supposer.
+- [ ] ⚠️ **Récolte gratuite, mesurée dans le lab et à exploiter** : les libellés de virement Trade Republic portent la **contrepartie et son IBAN entre parenthèses** (forme `Incoming transfer from <nom> (<IBAN>)`), et nomment la banque de destination pour les sorties. C'est exactement ce que `_score_interne` attend au niveau 100 (IBAN) et au niveau 60 (banque nommée). L'appariement La Banque Postale ↔ Trade Republic est donc atteignable au **niveau certain**, à condition de distinguer l'IBAN **du compte** (ligne d'en-tête du relevé) de ceux **des libellés** (contreparties).
+- [ ] `src/qualification.ts` — porter, dans cet ordre : `extraire_ibans` et `normaliser_iban` (IBAN `FR` 27, `DE` 22) ; les prédicats `est_virement`, `est_retrait_especes`, `est_frais_retrait`, `est_depot_especes` ; `_apparier` — appariement **mutuel** (chacun est le meilleur candidat de l'autre), montants **opposés**, comptes **différents**, tolérance **±3 jours** ; `_score_interne` — les trois niveaux `iban` (100) > `même institution` (80) > `banque nommée` (60), moins l'écart en jours ; `_qualifier_seul` — dont la catégorie **`virement_a_verifier`**.
+- [ ] ⚠️ **Porter aussi la règle du candidat unique** : `_apparier` ne retient un candidat que s'il est **seul** ou **strictement meilleur** que le suivant. En cas d'égalité, **aucun appariement**. C'est ce qui empêche d'apparier au hasard deux virements identiques du même jour — cas réel du 17/06/2025, deux virements de 22,00 €.
+- [ ] Poser la nature à l'entrée des mouvements dans `src/server.ts`, et **rejouer la qualification sur l'existant** — le libellé brut est en base, l'IBAN devient disponible, rien n'est perdu.
+- [ ] Rendre la nature **visible** dans l'interface, et `virement_a_verifier` **distinguable** des deux autres.
+- [ ] **Vérification** : rejouer le corpus réel et **retrouver les 214**, avec la même répartition des niveaux de confiance.
+- [ ] `npm test` (décompte non nul, `skipped 0`), puis `npm run lint && npm run typecheck && npm run build`.
+
+### Critères d'acceptation
+1. **Les 214 virements inter-comptes sont retrouvés sur le corpus réel**, avec la **même répartition** des trois niveaux de confiance. C'est la seule preuve qui dise que le portage n'a rien perdu. Un décompte différent est un **constat à rapporter**, jamais une assertion à ajuster.
+2. Les deux virements de 22,00 € du 17/06/2025 ne sont **pas** appariés l'un à l'autre au hasard : soit chacun trouve sa vraie contre-écriture, soit aucun n'est apparié.
+3. **Ce qui est préservé — le total.** La somme des soldes par compte et l'agrégat sont **identiques au centime** avant et après. Qualifier n'est pas déplacer : un virement interne reste une transaction sur chacun des deux comptes.
+4. **Ce qui est préservé — le rapprochement.** `src/deduplication.ts` est **inchangé**, et les tests de T24 (appariements PDF↔API, `toReview` vide, les deux ordres) passent **sans qu'une assertion soit modifiée**.
+5. **Ce qui est préservé — les données.** Aucune transaction supprimée, aucun montant modifié : `SELECT COUNT(*), SUM(amount_cents) FROM transactions` rend les mêmes valeurs avant et après.
+6. Un virement dont le libellé suggère un compte personnel sans contre-écriture unique est classé **`virement_a_verifier`** et **visible comme tel** — il n'est ni compté comme dépense, ni silencieusement traité comme interne.
+7. **Aucun nom de personne dans `src/`** : `grep -rinE "djabi|mohamed" src/ web/` ne rend rien.
+8. `Documents/releves-pdf/` a été **commité avant** le début de la tâche. Il ne se supprime qu'**après** que ce plan soit vert — c'est l'oracle du critère 1.
 
 ---
 
