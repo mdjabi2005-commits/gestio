@@ -80,6 +80,19 @@ Le cas le plus dangereux, corrigé : T17 disait « ne pas toucher l'upsert de sy
 
 Les repères de ligne qui subsistent portent leur date de relevé (« l. 363 au 2026-08-06 ») et ne sont qu'une **indication de proximité** : c'est toujours le symbole qui fait foi. Toute tâche écrite ensuite suit cette convention.
 
+**⚠️ CINQ REPÈRES Y ONT ÉCHAPPÉ, relevés le 2026-08-08 — la convention a été posée dans ce fichier, pas dans les corps d'issues déjà ouverts.** Or **c'est l'issue que Codex lit**. #26, #27, #28 et #30 ont été ouvertes le 2026-08-04, avant la convention ; la resynchronisation a été demandée le 2026-08-07 et n'a été faite que sur #33. Le même mécanisme qu'en 2026-08-06 va donc se rejouer, et cette fois il est **mesuré à l'avance** : T24 retire `app.post("/imports/csv")` de `src/server.ts` — de la ligne 283 à ~362 au 2026-08-08, soit **~80 lignes** — plus `src/csv-import.ts` (221 l.) et, dans `web/src/main.jsx`, le gestionnaire `const csv = async event =>` (l. 180-188, **9 lignes**) et sa moitié de la ligne 189.
+
+| Issue | Repère dans le corps | Après la fusion de T24 |
+|---|---|---|
+| #30 (T21) | `src/server.ts:824` (`strategy: firstSync ? "longest" : "default"`) | remonte d'~80 lignes |
+| #30 (T21) | `src/server.ts:908` (effacement de `last_sync_error`) | remonte d'~80 lignes |
+| #30 (T21) | `web/src/main.jsx:208` et `:224` (bouton Synchroniser et son identifiant `localStorage`) | remontent d'~9 lignes |
+| #28 (T19) | `web/src/main.jsx:259` (cache du dernier solde, avec `:30`) | remonte d'~9 lignes |
+
+**La collision est certaine, pas probable** : dans l'ordre en vigueur, T21 (#30) et T19 (#28) passent toutes deux **après** T24. Sous le point de coupe, rien ne bouge — `src/server.ts:56` et `:60`, `web/src/main.jsx:30`, `:61`, `:71-72`, `:115`, `:163` restent justes. #26 et #27 sont indemnes : leurs repères sont au-dessus de la coupe ou déjà ancrés par symbole (`app.post("/imports/pdf"`, `ON CONFLICT(external_hash) DO UPDATE`).
+
+**Action, pour Copilot, APRÈS la fusion de T24 et AVANT que #30 et #28 partent chez Codex** : ré-ancrer ces cinq repères **par symbole** dans le corps des deux issues, en citant le texte du code plutôt que son adresse. **Aucun périmètre fonctionnel ne change** — c'est un ancrage, pas une réécriture de tâche ; si une étape paraît fausse au passage, elle me revient. Le remède ne consiste pas à recalculer les numéros après chaque fusion : un numéro recalculé pourrit à la fusion suivante, un symbole non.
+
 **P51 est parké** — mode de panne sûr (refus, jamais d'écriture fausse), déclenché seulement par un renommage d'établissement. Aucune tâche ouverte ; à rouvrir au premier import légitime refusé.
 
 **Ce qui répond bien au besoin et n'est pas remis en cause** : Trade Republic entre effectivement en base (T13) ; `message` journalisé aux quatre sites, `0,00 €` remplacé par « Solde inconnu », total marqué incomplet, `last_sync_at` préservé (T14) ; les deux refus de l'incident du 2026-08-04 sont couverts et la règle multi-comptes est portée par le registre `bankCsvFormats`, pas par un `if` dans la route (T15).
