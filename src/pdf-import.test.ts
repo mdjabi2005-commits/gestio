@@ -1,3 +1,5 @@
+// Requiert les arborescences bp/ et nickel/ de 21 relevés réels (246 Mo).
+// Le corpus n'est pas versé car il contient IBAN, adresse et titulaire dans un dépôt public.
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
@@ -39,10 +41,10 @@ const nickelReferenceFiles = [
   "2026-5-260607RM40001128530.pdf"
 ];
 
-test("refuses a PDF without a text layer and proposes another import path", async () => {
+test("refuses a PDF without a text layer and proposes manual entry", async () => {
   await assert.rejects(
     parsePdfStatement(blankPdf()),
-    (error: unknown) => error instanceof PdfStatementError && /couche texte.*CSV.*saisie manuelle/i.test(error.message)
+    (error: unknown) => error instanceof PdfStatementError && /couche texte.*saisie manuelle/i.test(error.message)
   );
 });
 
@@ -114,12 +116,12 @@ test("imports a multi-account statement atomically and remains idempotent", asyn
     accountIds[key] = response.json().id;
   }
 
-  const existing = parsed.accounts[0].transactions[0];
+  const existing = parsed.accounts.find(account => account.key === "LIVRET_A")!.transactions[0];
   assert.equal((await app.inject({
     method: "POST",
     url: "/transactions",
     headers: { cookie },
-    payload: { accountId: accountIds.CCP, ...existing, label: "Libellé externe complètement différent" }
+    payload: { accountId: accountIds.LIVRET_A, ...existing, label: "Libellé externe complètement différent" }
   })).statusCode, 201);
 
   const payload = { pdfBase64: pdf.toString("base64"), accountIds };
@@ -132,6 +134,14 @@ test("imports a multi-account statement atomically and remains idempotent", asyn
     balancesImported: 3,
     reviewNeeded: 1
   });
+  assert.equal(database.sqlite.prepare("SELECT COUNT(*) FROM transactions WHERE needs_review = 1").pluck().get(), 1);
+
+  const manualState = () => database.sqlite.prepare(`
+    SELECT a.balance_cents AS balanceCents, COUNT(t.id) AS transactionCount
+    FROM accounts a LEFT JOIN transactions t ON t.account_id = a.id
+    WHERE a.id = ? GROUP BY a.id
+  `).get(accountIds.LIVRET_A);
+  const stateAfterFirstImport = manualState();
 
   const second = await app.inject({ method: "POST", url: "/imports/pdf", headers: { cookie }, payload });
   assert.equal(second.statusCode, 200);
@@ -142,6 +152,7 @@ test("imports a multi-account statement atomically and remains idempotent", asyn
     balancesImported: 0,
     reviewNeeded: 0
   });
+  assert.deepEqual(manualState(), stateAfterFirstImport);
   assert.equal(database.sqlite.prepare("SELECT COUNT(*) FROM transactions").pluck().get(), 50);
 
   const storedAccounts = () => database.sqlite.prepare(`

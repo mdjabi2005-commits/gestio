@@ -177,16 +177,7 @@ function TransactionActions({ accounts, onChanged }) {
       onChanged("Transaction ajoutée.");
     } catch (cause) { setError(cause.message); }
   };
-  const csv = async event => {
-    event.preventDefault();
-    setError("");
-    const data = new FormData(event.currentTarget);
-    try {
-      const result = await api("/imports/csv", { method: "POST", body: JSON.stringify({ accountId: Number(data.get("accountId")), bank: data.get("bank"), contentBase64: await fileBase64(data.get("file")) }) });
-      onChanged(`${result.imported} transactions ajoutées, ${result.duplicates} doublons ignorés.`);
-    } catch (cause) { setError(cause.message); }
-  };
-  return <details className="card"><summary>Ajouter ou importer</summary><p className="muted">Pour un compte synchronisé, le solde publié par la banque fait foi : corriger une transaction ne modifie pas ce solde.</p>{error && <p className="error" role="alert">{error}</p>}<form className="stack" onSubmit={manual}><h3>Saisie manuelle</h3><AccountSelect accounts={accounts} /><label>Date<input name="date" type="date" required /></label><label>Libellé<input name="label" required /></label><label>Montant en euros<input name="amount" inputMode="decimal" required /></label><button>Ajouter</button></form><hr /><form className="stack" onSubmit={csv}><h3>Importer un CSV</h3><AccountSelect accounts={accounts} /><label>Banque<select name="bank"><option value="LA_BANQUE_POSTALE">La Banque Postale</option><option value="REVOLUT">Revolut</option></select></label><label>Fichier CSV<input name="file" type="file" accept=".csv,text/csv" required /></label><button>Importer</button></form></details>;
+  return <details className="card"><summary>Ajouter ou importer</summary><p className="muted">Pour un compte synchronisé, le solde publié par la banque fait foi : corriger une transaction ne modifie pas ce solde.</p>{error && <p className="error" role="alert">{error}</p>}<form className="stack" onSubmit={manual}><h3>Saisie manuelle</h3><AccountSelect accounts={accounts} /><label>Date<input name="date" type="date" required /></label><label>Libellé<input name="label" required /></label><label>Montant en euros<input name="amount" inputMode="decimal" required /></label><button>Ajouter</button></form></details>;
 }
 
 function AccountSelect({ accounts }) {
@@ -258,7 +249,5 @@ function money(cents) { return new Intl.NumberFormat("fr-FR", { style: "currency
 function formatDate(date) { return new Intl.DateTimeFormat("fr-FR").format(new Date(`${date}T00:00:00`)); }
 function formatDateTime(date) { return date ? new Intl.DateTimeFormat("fr-FR", { dateStyle: "short", timeStyle: "short" }).format(new Date(date.includes("T") ? date : `${date.replace(" ", "T")}Z`)) : "date inconnue"; }
 function readCachedBalance() { try { const cached = JSON.parse(localStorage.getItem(cacheKey)); return cached?.balance && Array.isArray(cached.balance.accounts) ? cached : null; } catch { return null; } }
-function fileBase64(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result).split(",", 2)[1]); reader.onerror = () => reject(reader.error); reader.readAsDataURL(file); }); }
-
 if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(console.warn));
 createRoot(document.getElementById("root")).render(<App />);
