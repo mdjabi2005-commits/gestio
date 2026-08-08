@@ -1,4 +1,4 @@
-# Observations UX / maintenance — Gestio
+# Registre UX/maintenance — constats non bloquants
 
 Ce fichier liste les constats non bloquants rapportés par Hermès / reviewT.
 Il ne contient que des points d’amélioration UX ou de maintenance du socle.
@@ -35,3 +35,9 @@ Tout point devenu bloquant doit sortir de ce registre et être traité comme pro
 - Constat : import PDF sans vérification de cohérence banque → compte
 - Gravité : faible
 - Recommandation : interdire le mapping d’un relevé vers un compte d’un autre établissement, comme pour le CSV
+
+### T17 — Observation 1
+- Issue : T17 / #26
+- Constat : changement du chemin d'échec en deux passes ; si un /details échoue, aucun compte de la session n'est synchronisé.
+- Gravité : faible
+- Recommandation : known behavior à surveiller en production si les pannes /details deviennent fréquentes ; sinon, conserver le compromis structurel.
