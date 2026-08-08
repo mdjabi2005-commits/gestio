@@ -266,39 +266,34 @@ la dérivation du nom pendant la synchro — ancre `const name = optionalApiStri
 
 **Problème** : P40.
 
-### Ce qui est mesuré
-`POST /accounts` (l. 183), `POST /institutions` (l. 193) et `POST /imports/pdf` (ancre `app.post("/imports/pdf"`, l. 363 au 2026-08-06) existent et fonctionnent — ils ont servi pendant la mise en service, **par `curl`**. Aucun n'a de porte dans l'interface : le bloc `<details className="card"><summary>Ajouter ou importer</summary>` (l. 189 au 2026-08-06) n'offre que la saisie manuelle d'une transaction. Conséquence : sur une installation neuve, le seul chemin vers un premier compte est une banque API (`main.jsx:71-72`, l'accueil ne propose que « Connecter votre première banque »). Un utilisateur qui n'a que Nickel et un Livret A **ne peut pas franchir l'accueil**.
+### Ce qui est mesuré — repères resynchronisés sur `origin/main` `ee7995b` (2026-08-08)
+`POST /accounts` (ancre `app.post("/accounts"`, l. 182), `POST /institutions` (ancre `app.post("/institutions"`, l. 192) et `POST /imports/pdf` (ancre `app.post("/imports/pdf"`, l. 282) existent et fonctionnent — ils ont servi pendant la mise en service, **par `curl`**. Aucun n'a de porte dans l'interface : le bloc `<details className="card"><summary>Ajouter ou importer</summary>` (ancre `<summary>Ajouter ou importer</summary>`, dans `function TransactionActions`, l. 180) n'offre que la saisie manuelle d'une transaction. Conséquence : sur une installation neuve, le seul chemin vers un premier compte est une banque API (`function Onboarding`, l. 187-188, l'accueil ne propose que « Connecter votre première banque »). Un utilisateur qui n'a que Nickel et un Livret A **ne peut pas franchir l'accueil**.
 
-> **Constat corrigé le 2026-08-06.** La formulation d'origine disait « n'offre que la saisie manuelle **et l'import CSV** ». C'était vrai le 2026-08-04 ; T24 retire le formulaire CSV et T18 passe après elle. Codex partirait sinon d'un repère périmé pour se placer dans la ligne 189.
+> **Constat corrigé le 2026-08-06** : la formulation d'origine disait « n'offre que la saisie manuelle **et l'import CSV** ». T24 (#33) a retiré le formulaire CSV ; le bloc ne contient plus que la saisie manuelle.
+> **Repères datés du 2026-08-08, base `ee7995b`** : T24 a retiré la route `/imports/csv` (~80 lignes dans `src/server.ts`, le formulaire CSV et son gestionnaire dans `web/src/main.jsx`) — les numéros cités le 2026-08-04 et le 2026-08-06 ont glissé. Convention du 2026-08-06 : se repérer par **symbole**, pas par ligne.
 
 ### Périmètre
 `web/src/main.jsx` uniquement — les trois routes serveur existent et ne changent pas.
 
 ### Ne pas toucher
-Les routes serveur. Le contrat d'entrée est déjà fixé : `readAccountInput` (ancre `function readAccountInput(body: unknown)`, l. 591 au 2026-08-06) attend `{ name, type: BANK|LIVRET_A|OTHER, institutionId? }` ; `POST /imports/pdf` exige un `accountIds` couvrant **chaque** compte du relevé.
+Les routes serveur. Le contrat d'entrée est déjà fixé : `readAccountInput` (ancre `function readAccountInput(body: unknown)`, l. 510 au 2026-08-08) attend `{ name, type: BANK|LIVRET_A|OTHER, institutionId? }` (sans `institutionId` → « Comptes manuels », `manualInstitutionId`, l. 863) ; `readInstitutionInput` (l. 518) attend `{ name, country }` ISO 3166-1 alpha-2 ; `GET /institutions` (l. 199) et `GET /accounts` (l. 201) existent pour alimenter les listes ; `POST /imports/pdf` (l. 282) exige un `accountIds` couvrant **chaque** compte du relevé, chaque clé (`CCP`/`LIVRET_A`/`LIVRET_JEUNE`/`NICKEL`) vers un `accountId` existant distinct.
 
-### ⚠️ ARBITRAGE À RENDRE AVANT DE LANCER L'ISSUE — destinataire : Copilot, PAS Codex
-**Posé le 2026-08-06, corrigé le même jour.** Les trois portes n'ont pas le même risque. Deux **n'écrivent aucune transaction** ; la troisième ouvre au grand public le chemin d'écriture dont on ne sait pas encore s'il est sain.
+### ✅ ARBITRAGE RENDU — 2026-08-08 : la porte PDF ENTRE, liste fermée à trois portes
+**Posé le 2026-08-06.** Les trois portes n'ont pas le même risque. Deux **n'écrivent aucune transaction** ; la troisième ouvre au grand public le chemin d'écriture dont on ne savait pas encore s'il était sain.
 
 - **Inconditionnel** — création d'**établissement** et création de **compte**. Elles suffisent à lever le cas nommé par P40 : « un utilisateur qui n'a que Nickel et un Livret A ne peut pas franchir l'accueil ».
-- **Conditionnel** — l'import **PDF**, subordonné au **résultat de la mesure de P42** rapportée par T24. Mesure bonne → la porte entre. Mesure mauvaise → **elle attend la tâche de correction**, et T18 se livre sans elle, les deux autres portes acquises.
-
-Pourquoi : T24 **mesure** le chemin PDF, elle ne le corrige pas — si la mesure échoue, elle s'arrête au constat (c'est son plan). Ouvrir la porte grand public entre-temps exposerait le seul chemin d'alimentation du **Livret A, du Livret Jeune et de Nickel**, dont le solde **est** la somme des mouvements : un doublon non détecté y fausse directement le chiffre principal.
-
-**Comment l'arbitrage se rend, et par qui.** T24 est fusionnée **avant** que cette issue parte : son rapport dit si la mesure de P42 est bonne ou mauvaise. **Copilot tranche à ce moment-là** et raye du plan ci-dessous soit rien, soit l'étape et le critère marqués *(conditionnel)*. Codex reçoit alors **une liste fermée** — deux portes ou trois — et n'a aucun arbitrage à rendre.
-
-> **Ce que Codex ne doit PAS faire** : lire le rapport d'une autre tâche, ni décider lui-même si la porte PDF entre. Il travaille dans un worktree isolé, sur une issue ; il n'a pas ce rapport et ce n'est pas son rôle. Si les marques *(conditionnel)* sont encore présentes quand l'issue lui arrive, **c'est l'arbitrage qui manque** — il le signale et n'écrit pas la porte PDF.
+- **Rendu par Copilot le 2026-08-08 — la porte PDF ENTRE.** La mesure de P42 rapportée par T24 (#33, review VERT, intégrée `ee7995b`) est **verte** sur le Livret A et désormais automatisée dans la suite : réimport d'un relevé déjà importé → `imported: 0, duplicates: 49, balancesImported: 0, reviewNeeded: 0`, `assert.deepEqual(manualState(), stateAfterFirstImport)` (solde et décompte inchangés), `needs_review = 1` posé dès que `toReview` non vide. **Liste fermée : TROIS portes.** Les marques *(conditionnel)* sont rayées ci-dessous ; Codex reçoit une liste fermée et n'a aucun arbitrage à rendre.
 
 ### Étapes
-- [ ] Ajouter au bloc « Ajouter ou importer » (ancre `<summary>Ajouter ou importer</summary>`) la création d'un **établissement** et d'un **compte**.
-- [ ] L'accueil vide (`main.jsx:71-72`) doit proposer un second chemin que « Connecter votre première banque ».
-- [ ] *(conditionnel — à conserver ou rayer par Copilot avant lancement)* Ajouter l'import d'un **relevé PDF**, avec la correspondance compte par compte que la route exige.
-- [ ] **Vérification** : sur une base vide, créer un établissement et un compte **entièrement depuis l'interface**, sans terminal ; puis le relevé PDF si l'étape conditionnelle a été conservée.
+- [ ] Ajouter au bloc « Ajouter ou importer » (ancre `<summary>Ajouter ou importer</summary>`, `function TransactionActions`) la création d'un **établissement** et d'un **compte**.
+- [ ] L'accueil vide (`function Onboarding`, « Connecter votre première banque ») doit proposer un second chemin que « Connecter votre première banque ».
+- [ ] Ajouter l'import d'un **relevé PDF**, avec la correspondance compte par compte que la route exige.
+- [ ] **Vérification** : sur une base vide, créer un établissement et un compte **entièrement depuis l'interface**, sans terminal ; puis le relevé PDF.
 
 ### Critères d'acceptation
 1. Sur une base vide, un **établissement** et un **compte** s'ajoutent depuis l'interface seule, sans terminal.
 2. L'écran reste **identique sur mobile et sur desktop** — contrainte fondatrice du projet, vérifiée sur un vrai téléphone lors de la mise en service.
-3. *(conditionnel — même sort que l'étape)* Un relevé PDF s'ajoute depuis l'interface, et un relevé **sans correspondance complète est refusé**, message visible à l'écran.
+3. Un relevé PDF s'ajoute depuis l'interface, et un relevé **sans correspondance complète est refusé**, message visible à l'écran.
 4. **Ce qui est préservé** : la saisie manuelle d'une transaction, seul contenu actuel du bloc « Ajouter ou importer », reste atteignable et fonctionne à l'identique.
 
 ---
