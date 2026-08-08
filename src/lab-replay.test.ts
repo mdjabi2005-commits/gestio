@@ -22,9 +22,7 @@ type ApiTransaction = {
 
 const lab = process.env.GESTIO_LAB_CORPUS ?? "/mnt/c/Users/djabi/gestio/.lamoms/lab/agy";
 
-test("replays the real T2 corpus in both channel orders", {
-  skip: process.env.GESTIO_SKIP_CORPUS === "1"
-}, () => {
+test("replays the real T2 corpus in both channel orders", () => {
   const apiPath = join(lab, "enable_banking_transactions_reelles.json");
   const csvPaths = ["0984209Z0241785448406468.csv", "0984209Z0241785448417573.csv"]
     .map(name => join(lab, name));

@@ -11,9 +11,8 @@ const lab = process.env.GESTIO_LAB_CORPUS ?? "/mnt/c/Users/djabi/gestio/.lamoms/
 const statementCorpus = process.env.GESTIO_PDF_CORPUS ?? "/mnt/c/Users/djabi/Documents/relevé pdf";
 const revolutCsv = process.env.GESTIO_REVOLUT_CSV
   ?? join(statementCorpus, "revolut", "account-statement_2025-09-01_2026-06-14_fr-fr_646623.csv");
-const corpusTest = { skip: process.env.GESTIO_SKIP_CORPUS === "1" };
 
-test("parses the real La Banque Postale and Revolut CSV corpus", corpusTest, () => {
+test("parses the real La Banque Postale and Revolut CSV corpus", () => {
   const lbpCounts = ["0984209Z0241785448406468.csv", "0984209Z0241785448417573.csv"].map(name => {
     const path = join(lab, name);
     assert.ok(existsSync(path), `Corpus CSV La Banque Postale absent : ${path}`);
