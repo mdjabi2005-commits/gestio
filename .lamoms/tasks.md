@@ -84,10 +84,12 @@ Les repères de ligne qui subsistent portent leur date de relevé (« l. 363 au 
 
 | Issue | Repère dans le corps | Après la fusion de T24 |
 |---|---|---|
-| #30 (T21) | `src/server.ts:824` (`strategy: firstSync ? "longest" : "default"`) | remonte d'~80 lignes |
-| #30 (T21) | `src/server.ts:908` (effacement de `last_sync_error`) | remonte d'~80 lignes |
-| #30 (T21) | `web/src/main.jsx:208` et `:224` (bouton Synchroniser et son identifiant `localStorage`) | remontent d'~9 lignes |
-| #28 (T19) | `web/src/main.jsx:259` (cache du dernier solde, avec `:30`) | remonte d'~9 lignes |
+| #30 (T21) | ancre `strategy: firstSync ? "longest" : "default"`, l. 824 au 2026-08-08 | remonte d'~80 lignes |
+| #30 (T21) | effacement de `last_sync_error` au premier succès, l. 908 au 2026-08-08 | remonte d'~80 lignes |
+| #30 (T21) | bouton *Synchroniser* et son identifiant `localStorage`, l. 208 et 224 au 2026-08-08 | remontent d'~9 lignes |
+| #28 (T19) | cache du dernier solde en lecture — ancre `localStorage.getItem(cacheKey)`, l. **260** au 2026-08-08 (l'écriture `localStorage.setItem(cacheKey, …)`, l. 30, est sous la coupe et ne bouge pas) | remonte d'~9 lignes |
+
+**⚠️ Ce repère était faux d'une ligne, et il l'était déjà dans le corps de #28 — mesuré par Copilot le 2026-08-08, vérifié par mes soins.** `web/src/main.jsx:259` est `function formatDateTime(date)`, sans rapport avec le cache ; `readCachedBalance()` et son `localStorage.getItem(cacheKey)` sont à la **260**. J'avais recopié l'adresse depuis l'issue au lieu de la relever dans le code — c'est la faute même que la convention interdit, commise en écrivant la convention. **Le symbole fait foi, le numéro n'est qu'une indication datée** : c'est la seule raison pour laquelle l'erreur est sans conséquence ici.
 
 **La collision est certaine, pas probable** : dans l'ordre en vigueur, T21 (#30) et T19 (#28) passent toutes deux **après** T24. Sous le point de coupe, rien ne bouge — `src/server.ts:56` et `:60`, `web/src/main.jsx:30`, `:61`, `:71-72`, `:115`, `:163` restent justes. #26 et #27 sont indemnes : leurs repères sont au-dessus de la coupe ou déjà ancrés par symbole (`app.post("/imports/pdf"`, `ON CONFLICT(external_hash) DO UPDATE`).
 
@@ -614,6 +616,44 @@ Partie de deux questions de Lamoms — *« qu'est-ce qu'on résout concrètement
 
 **Ordre imposé — il ne remplace pas le précédent, il le prolonge** : **T22 → T24 → T18 → T21 → T17 → T19 → T25 → T26 → T27.** Confirmé par Lamoms le 2026-08-07 : l'ordre déjà en cours ne bouge pas.
 
+**⚠️ AMENDEMENT DU 2026-08-08 — T28 s'insère en tête, avant T24.** Ordre en vigueur : **T22 (faite) → T28 → T24 → T18 → T21 → T17 → T19 → T25 → T26 → T27.** Ce n'est pas une préférence et ce n'est pas un rangement. `npm test` est **rouge sur `master` `838e731`** (30 tests, 29 pass, 1 fail) à cause de P57, et le critère de vérification de **chacune** des huit tâches restantes est « `npm test` passe ». Tant que l'échec préexistant est là, aucune de ces vérifications ne distingue ce qu'une tâche vient de casser de ce qui l'était déjà — c'est mot pour mot le raisonnement qui avait mis T20 en tête. T28 coûte un fichier de test ; la laisser en file coûte la lisibilité de huit recettes.
+
+---
+
+## T28 — Le décompte de relevés cesse de casser à chaque téléchargement
+
+**Problème** : P57.
+**Pourquoi en tête** : voir l'amendement ci-dessus. Elle rend la file de nouveau lisible.
+
+### Ce qui est mesuré
+`npm test` sur `master` `838e731` : **30 tests, 29 pass, 1 fail**, `src/pdf-import.test.ts:31`, `assert.equal(bpStatements.length, 12)` → `13 !== 12`. Le relevé `releve_CCP0984209Z024_20260708` est arrivé dans `bp/` le 2026-08-08 à 13:09 ; T22 avait été fusionnée à 12:51. **T22 n'est pas en cause** — son diff est de −8/+4 sur trois fichiers de test, aucun fichier de production. Elle a rendu la dérive visible en moins de deux heures, ce qui était son objet.
+
+Un **second échec est caché derrière le premier** : `nickel/` porte 11 fichiers `RM*.pdf` quand la ligne 44 en attend 9 ; l'assertion de la ligne 31 échoue avant, la 44 n'a jamais tourné. **Vérifier les deux**, ne pas s'arrêter au premier vert obtenu.
+
+### Périmètre
+`src/pdf-import.test.ts` **uniquement**.
+
+### Ne pas toucher
+- ⚠️ **Aucun fichier de production.** Le parseur est juste : c'est le test qui est écrit contre un dossier mouvant. `git diff --name-only` ne montre **que** `src/pdf-import.test.ts`.
+- ⚠️ **Aucune variable d'environnement, aucun `skip`, aucun `existsSync` conditionnel qui rendrait le test vert quand le corpus manque.** T22 vient de fermer cette porte (P52) ; la rouvrir ici, dans le fichier même qui hérite du problème, serait la troisième récidive de la famille. Corpus absent = **rouge**, avec un `assert.ok` qui nomme le chemin.
+- ⚠️ **Aucune valeur d'assertion recalculée ni devinée.** `299`, `45`, `6`, `54` ont été relevées sur des fichiers précis ; elles restent telles quelles, sur ces fichiers-là.
+
+### Étapes
+- [ ] **Nommer les fichiers du décompte figé.** Deux listes en dur, par nom de fichier : les **12** relevés BP de `releve_CCP0984209Z024_20250708` à `…_20260608`, et les **9** Nickel de `2025-9-251005RM…` à `2026-5-260607RM…`. Les décomptes existants (`299` CCP, `45` LIVRET_A, `6` LIVRET_JEUNE, `54` NICKEL, et `12`/`9` relevés) portent désormais sur **ces listes**, pas sur le contenu du dossier. Corpus complet mais un fichier nommé manquant → **rouge**, avec son nom.
+- [ ] **Invariants sur TOUS les fichiers trouvés**, listes nommées comprises : chaque relevé BP porte exactement `CCP,LIVRET_A,LIVRET_JEUNE` (l'assertion de la l. 36 existe déjà, elle s'applique à l'ensemble) et chaque relevé s'équilibre. Ces assertions **gagnent** en force quand le corpus grossit ; c'est là que le treizième relevé entre.
+- [ ] **Plancher** : `assert.ok(bpFiles.length >= 12)` et l'équivalent Nickel, pour qu'un dossier vidé ou tronqué reste rouge — le plancher ne remplace pas le décompte figé, il le double.
+- [ ] **Vérification** : `npm test` **vert**, avec un décompte de tests **non nul** et **au moins égal à 30**. Puis, preuve que la tâche a bien fait son travail : **déplacer temporairement** `releve_CCP0984209Z024_20260708` hors de `bp/`, relancer — la suite reste **verte** ; le remettre, relancer — elle reste **verte**. Enfin `npm run lint && npm run typecheck && npm run build`.
+
+### Critères d'acceptation
+1. `npm test` est **vert** sur les 30 tests, corpus complet au 2026-08-08 (`bp/` = 13, `nickel/` = 11).
+2. **L'ajout d'un relevé ne rend plus la suite rouge**, démontré par le retrait/remise du relevé de juillet — c'est la raison d'être de la tâche.
+3. **Ce qui est préservé, et c'est le critère qui compte** : la preuve ne faiblit pas. Les décomptes `299`, `45`, `6`, `54` sont **toujours vérifiés**, sur les relevés nommés ; un dossier vide ou amputé d'un fichier nommé rend la suite **rouge** avec ce nom. Un diff qui obtiendrait le vert en supprimant ou en assouplissant ces assertions **ne satisfait pas ce critère**.
+4. **Aucune porte de sortie réintroduite** : `grep -rnE "SKIP|t\.skip\(|skip:" src/pdf-import.test.ts` ne rend rien.
+5. `git diff --name-only` ne montre que `src/pdf-import.test.ts`.
+
+### Contexte
+P57 (cause), P52 (la porte que T22 vient de fermer et qu'on ne rouvre pas), P35 (c'est parce que Lamoms **doit** télécharger d'autres relevés que le décompte figé est intenable), P47 (la famille du vert qui ne vérifie rien).
+
 **Pourquoi T27 en dernier, et ce n'est pas une préférence** : P30 apparie une écriture **avec sa contre-écriture**. Tant que les quatre comptes ne sont pas dans l'outil, chaque virement interne n'a qu'une moitié visible et serait classé `virement_externe` — l'inverse exact du but. T18 (portes de création) et T25 (rattrapage des relevés) sont donc des **conditions**, pas un rangement.
 
 ---
@@ -629,7 +669,7 @@ Cette tâche **étend la porte d'import PDF de T18**. Si l'arbitrage de T18 a ra
 ### Ce qui est mesuré
 `POST /imports/pdf` prend **un** `pdfBase64` et **un** objet `accountIds` par appel. La correspondance, elle, est **stable** : `parseBanquePostale` exige les trois mêmes comptes dans chaque relevé (ancre `"Les trois comptes attendus sont absents"`), donc **une** correspondance vaut pour les douze relevés LBP ; Nickel n'a qu'un compte. Le lot, c'est **N fichiers pour une correspondance par banque**.
 Le réimport est déjà sans danger : déduplication puis `INSERT OR IGNORE`, dans une transaction SQLite unique.
-Corpus au 2026-08-07 : `bp/` = 12 relevés (`20250708` → `20260608`), `nickel/` = 9 relevés (période `2025-09` → `2026-05`).
+**Corpus — un chiffre relevé, jamais un chiffre gravé.** Au 2026-08-08 : `bp/` = **13** relevés (`20250708` → `20260708`), `nickel/` = **11** relevés (`2025-09` → `2026-07`). ⚠️ **Ces nombres bougent tous les mois** — ils ont grossi de 12 et 9 le jour même, et P35 impose d'en télécharger encore avant le 2026-09-06. Aucune étape ni aucun critère de cette tâche ne doit être écrit sur un décompte figé : on dit « tous les relevés du dossier », jamais « les douze ». Voir P57.
 
 ### Périmètre
 `web/src/main.jsx` uniquement.
@@ -644,10 +684,10 @@ Corpus au 2026-08-07 : `bp/` = 12 relevés (`20250708` → `20260608`), `nickel/
 - [ ] Le champ de fichier de la porte PDF accepte **plusieurs fichiers** (`multiple`).
 - [ ] Les fichiers sont envoyés **un par un, séquentiellement**, à `POST /imports/pdf`, avec la **même** correspondance pour tous ceux d'une même banque.
 - [ ] **Compte rendu par fichier, à l'écran** : nom du fichier, importées, soldes, `needs_review`, ou le message d'erreur de la route. Un échec **n'interrompt pas** le lot — les suivants passent.
-- [ ] **Vérification** : importer les 12 relevés LBP en une fois sur une base vide ; relancer le **même** lot ; le second passage n'ajoute **aucune** transaction et ne change **aucun** solde.
+- [ ] **Vérification** : importer **tous les relevés LBP du dossier** en une fois sur une base vide ; relancer le **même** lot ; le second passage n'ajoute **aucune** transaction et ne change **aucun** solde.
 
 ### Critères d'acceptation
-1. Douze relevés s'importent en **un** geste, avec **une** correspondance saisie, sans terminal.
+1. **Tous les relevés LBP du dossier** s'importent en **un** geste, avec **une** correspondance saisie, sans terminal — le nombre est celui du dossier au moment de la recette, jamais un nombre écrit d'avance.
 2. **Idempotence démontrée** : second passage du même lot → 0 transaction ajoutée, soldes identiques. C'est ce qui rend le geste mensuel sans risque.
 3. Un fichier non reconnu (prendre un des fichiers étrangers de `nickel/`) est **signalé nommément** et **les autres fichiers du lot s'importent quand même**.
 4. **Ce qui est préservé** : l'import d'un **seul** relevé fonctionne à l'identique, et `POST /imports/pdf` est inchangée — `git diff --name-only` ne montre **aucun** fichier de `src/`.
