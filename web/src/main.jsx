@@ -10,6 +10,7 @@ import "./styles.css";
 
 const cacheKey = "gestio.last-balance";
 const authorizationKey = "gestio.authorization-id";
+const pdfAccountKeys = [["CCP", "Compte courant (CCP)"], ["LIVRET_A", "Livret A"], ["LIVRET_JEUNE", "Livret Jeune"], ["NICKEL", "Nickel"]];
 
 function App() {
   const [screen, setScreen] = useState({ name: "loading" });
@@ -69,7 +70,7 @@ function App() {
           <a key={id} href={`#${id}`} aria-current={page === id ? "page" : undefined}>{label}</a>)}
       </nav>
       {!accounts.length && !offline
-        ? <Onboarding onConnected={() => { setNotice("Banque connectée. Le solde est à jour."); refresh(); }} />
+        ? <Onboarding onConnected={() => { setNotice("Banque connectée. Le solde est à jour."); refresh(); }} onChanged={message => { setNotice(message); refresh(); }} />
         : page === "ou"
           ? <Accounts accounts={accounts} />
           : page === "quoi"
@@ -177,15 +178,73 @@ function TransactionActions({ accounts, onChanged }) {
       onChanged("Transaction ajoutée.");
     } catch (cause) { setError(cause.message); }
   };
-  return <details className="card"><summary>Ajouter ou importer</summary><p className="muted">Pour un compte synchronisé, le solde publié par la banque fait foi : corriger une transaction ne modifie pas ce solde.</p>{error && <p className="error" role="alert">{error}</p>}<form className="stack" onSubmit={manual}><h3>Saisie manuelle</h3><AccountSelect accounts={accounts} /><label>Date<input name="date" type="date" required /></label><label>Libellé<input name="label" required /></label><label>Montant en euros<input name="amount" inputMode="decimal" required /></label><button>Ajouter</button></form></details>;
+  return <details className="card"><summary>Ajouter ou importer</summary><p className="muted">Pour un compte synchronisé, le solde publié par la banque fait foi : corriger une transaction ne modifie pas ce solde.</p>{error && <p className="error" role="alert">{error}</p>}<form className="stack" onSubmit={manual}><h3>Saisie manuelle</h3><AccountSelect accounts={accounts} /><label>Date<input name="date" type="date" required /></label><label>Libellé<input name="label" required /></label><label>Montant en euros<input name="amount" inputMode="decimal" required /></label><button>Ajouter</button></form><hr /><ManualSetup accounts={accounts} onChanged={onChanged} /></details>;
 }
 
 function AccountSelect({ accounts }) {
   return <label>Compte<select name="accountId">{accounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>;
 }
 
-function Onboarding({ onConnected }) {
-  return <section><h2>Connecter votre première banque</h2><p>La connexion bancaire mène directement à votre premier solde. En MVP, terminez l’authentification sur l’ordinateur serveur.</p><BankConnect onConnected={onConnected} /></section>;
+function ManualSetup({ accounts, onChanged }) {
+  const [institutions, setInstitutions] = useState([]);
+  const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
+
+  useEffect(() => { api("/institutions").then(setInstitutions, cause => setError(cause.message)); }, []);
+
+  const createInstitution = async event => {
+    event.preventDefault();
+    setError("");
+    setStatus("");
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    try {
+      const institution = await api("/institutions", { method: "POST", body: JSON.stringify({ name: data.get("name"), country: data.get("country") }) });
+      setInstitutions(current => [...current.filter(item => item.id !== institution.id), institution]);
+      form.reset();
+      setStatus("Établissement ajouté.");
+    } catch (cause) { setError(cause.message); }
+  };
+
+  const createAccount = async event => {
+    event.preventDefault();
+    setError("");
+    setStatus("");
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const institutionId = Number(data.get("institutionId")) || undefined;
+    try {
+      await api("/accounts", { method: "POST", body: JSON.stringify({ name: data.get("name"), type: data.get("type"), ...(institutionId ? { institutionId } : {}) }) });
+      form.reset();
+      onChanged("Compte ajouté.");
+    } catch (cause) { setError(cause.message); }
+  };
+
+  const importPdf = async event => {
+    event.preventDefault();
+    setError("");
+    setStatus("");
+    const form = event.currentTarget;
+    const data = new FormData(form);
+    const file = data.get("pdf");
+    if (!(file instanceof File) || !file.size) return setError("Choisissez un relevé PDF.");
+    const accountIds = {};
+    for (const [key] of pdfAccountKeys) {
+      const id = Number(data.get(key));
+      if (id) accountIds[key] = id;
+    }
+    try {
+      const result = await api("/imports/pdf", { method: "POST", body: JSON.stringify({ pdfBase64: await fileBase64(file), accountIds }) });
+      form.reset();
+      onChanged(`Relevé importé : ${result.imported} transaction${result.imported === 1 ? "" : "s"} ajoutée${result.imported === 1 ? "" : "s"}.`);
+    } catch (cause) { setError(cause.message); }
+  };
+
+  return <><h3>Ajouter un établissement</h3>{error && <p className="error" role="alert">{error}</p>}{status && <p className="notice" role="status">{status}</p>}<form className="stack" onSubmit={createInstitution}><label>Nom<input name="name" required /></label><label>Pays<input name="country" defaultValue="FR" minLength="2" maxLength="2" required /></label><button>Ajouter l’établissement</button></form><hr /><form className="stack" onSubmit={createAccount}><h3>Ajouter un compte</h3><label>Nom<input name="name" required /></label><label>Type<select name="type"><option value="BANK">Compte bancaire</option><option value="LIVRET_A">Livret A</option><option value="OTHER">Autre</option></select></label><label>Établissement<select name="institutionId"><option value="">Comptes manuels (automatique)</option>{institutions.map(institution => <option key={institution.id} value={institution.id}>{institution.name}</option>)}</select></label><button>Ajouter le compte</button></form>{accounts.length > 0 && <><hr /><form className="stack" onSubmit={importPdf}><h3>Importer un relevé PDF</h3><p className="muted">Associez chaque compte présent sur le relevé. Une correspondance manquante ou réutilisée sera refusée.</p><label>Relevé PDF<input name="pdf" type="file" accept="application/pdf,.pdf" required /></label>{pdfAccountKeys.map(([key, label]) => <label key={key}>{label}<select name={key} defaultValue=""><option value="">Non présent sur ce relevé</option>{accounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>)}<button>Importer le relevé</button></form></>}</>;
+}
+
+function Onboarding({ onConnected, onChanged }) {
+  return <section><h2>Connecter votre première banque</h2><p>La connexion bancaire mène directement à votre premier solde. En MVP, terminez l’authentification sur l’ordinateur serveur.</p><BankConnect onConnected={onConnected} /><hr /><h2>Ou ajouter un compte manuel</h2><p>Créez d’abord son établissement, puis le compte, sans passer par une banque compatible.</p><ManualSetup accounts={[]} onChanged={onChanged} /></section>;
 }
 
 function BankConnect({ onConnected }) {
@@ -230,6 +289,15 @@ async function api(path, options = {}) {
     throw error;
   }
   return response.status === 204 ? null : response.json();
+}
+
+function fileBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(String(reader.result).split(",", 2)[1]));
+    reader.addEventListener("error", () => reject(new Error("Le relevé PDF n’a pas pu être lu.")));
+    reader.readAsDataURL(file);
+  });
 }
 
 function logout() { return api("/auth/logout", { method: "POST" }); }
