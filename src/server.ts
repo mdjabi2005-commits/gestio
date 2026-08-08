@@ -716,12 +716,22 @@ async function syncBankConnection(
   let oldestDate: string | null = null;
   const syncedAt = new Date().toISOString();
 
+  const syncedAccounts: Array<{
+    externalUid: string;
+    externalHash: string;
+    account: Record<string, unknown>;
+  }> = [];
   for (const value of accountValues) {
     const accountReference = apiObject(value, "account reference");
     const externalUid = requiredApiString(accountReference.uid, "account.uid");
     const externalHash = requiredApiString(accountReference.identification_hash, "account.identification_hash");
     const account = await api.request<Record<string, unknown>>("GET", `/accounts/${externalUid}/details`, { headers });
-    const name = optionalApiString(account.name) ?? optionalApiString(account.product) ?? "Compte bancaire";
+    syncedAccounts.push({ externalUid, externalHash, account });
+  }
+
+  const names = syncedAccountNames(syncedAccounts);
+  for (const [index, { externalUid, externalHash, account }] of syncedAccounts.entries()) {
+    const name = names[index];
     const type: AccountType = account.cash_account_type === "CACC" ? "BANK" : "OTHER";
     const storedAccount = database.sqlite.prepare(`
       INSERT INTO accounts (institution_id, name, type, external_uid, external_hash)
@@ -838,6 +848,28 @@ async function syncBankConnection(
     stopReason: "continuation_exhausted"
   });
   return { status: "AUTHORIZED", pages: totalPages, transactionsWritten: totalWritten, oldestDate, syncedAt };
+}
+
+export function syncedAccountNames(accounts: readonly {
+  externalUid: string;
+  account: Record<string, unknown>;
+}[]) {
+  const names = accounts.map(({ account }) => optionalApiString(account.details)
+    ?? accountTypeName(account.cash_account_type)
+    ?? optionalApiString(account.name)
+    ?? optionalApiString(account.product)
+    ?? "Compte bancaire");
+  const occurrences = new Map<string, number>();
+  for (const name of names) occurrences.set(name, (occurrences.get(name) ?? 0) + 1);
+  return names.map((name, index) => occurrences.get(name)! > 1
+    ? `${name} · ${accounts[index].externalUid.slice(-4)}`
+    : name);
+}
+
+function accountTypeName(value: unknown) {
+  if (value === "CACC") return "Compte courant";
+  if (value === "SVGS") return "Compte épargne";
+  return null;
 }
 
 function nextFingerprint(database: AppDatabase, accountId: number, transaction: ParsedBankTransaction) {
