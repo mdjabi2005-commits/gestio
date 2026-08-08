@@ -67,7 +67,7 @@ export async function parsePdfStatement(input: Uint8Array): Promise<PdfStatement
 
     if (!pages.some(page => page.text.trim())) {
       throw new PdfStatementError(
-        "Le PDF ne contient pas de couche texte. Utilisez un CSV ou la saisie manuelle."
+        "Le PDF ne contient pas de couche texte. Utilisez la saisie manuelle."
       );
     }
 

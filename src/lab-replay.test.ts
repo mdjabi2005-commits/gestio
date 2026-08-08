@@ -1,55 +1,34 @@
+// Requiert le relevé PDF BP de juin 2026 et la capture API réelle correspondante.
+// Ils ne sont pas versés car ils contiennent des données bancaires personnelles dans un dépôt public.
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import test from "node:test";
-import { parseBankCsv } from "./csv-import.js";
-import { deduplicateTransactions, signedAmountCents } from "./deduplication.js";
-import { decimalCents } from "./enable-banking.js";
-
-type Transaction = {
-  id: string;
-  transactionDate: string;
-  amountCents: number;
-  label: string | null;
-};
-
-type ApiTransaction = {
-  booking_date: string;
-  credit_debit_indicator: "CRDT" | "DBIT";
-  transaction_amount: { amount: string };
-  remittance_information?: string[];
-};
+import { deduplicateTransactions, type TransactionForDeduplication } from "./deduplication.js";
+import { parseBankTransaction } from "./enable-banking.js";
+import { parsePdfStatement } from "./pdf-import.js";
 
 const lab = process.env.GESTIO_LAB_CORPUS ?? "/mnt/c/Users/djabi/gestio/.lamoms/lab/agy";
+const statements = process.env.GESTIO_PDF_CORPUS ?? "/mnt/c/Users/djabi/Documents/relevé pdf";
 
-test("replays the real T2 corpus in both channel orders", () => {
+test("replays the real PDF and API corpus in both channel orders", async () => {
   const apiPath = join(lab, "enable_banking_transactions_reelles.json");
-  const csvPaths = ["0984209Z0241785448406468.csv", "0984209Z0241785448417573.csv"]
-    .map(name => join(lab, name));
-  for (const path of [apiPath, ...csvPaths]) assert.ok(existsSync(path), `Corpus T2 absent : ${path}`);
+  const pdfPath = join(statements, "bp", "releve_CCP0984209Z024_20260608");
+  for (const path of [apiPath, pdfPath]) assert.ok(existsSync(path), `Corpus PDF/API absent : ${path}`);
 
-  const apiSource = JSON.parse(readFileSync(apiPath, "utf8")) as { transactions: ApiTransaction[] };
-  const api = apiSource.transactions.map((transaction, index): Transaction => ({
-    id: `api-${index}`,
-    transactionDate: transaction.booking_date,
-    amountCents: signedAmountCents(decimalCents(transaction.transaction_amount.amount), transaction.credit_debit_indicator),
-    label: transaction.remittance_information?.join(" ") || null
-  }));
-  const csv = csvPaths.flatMap((path, fileIndex) =>
-    parseBankCsv("LA_BANQUE_POSTALE", readFileSync(path)).transactions.map((transaction, index): Transaction => ({
-      id: `csv-${fileIndex}-${index}`,
-      transactionDate: transaction.transactionDate,
-      amountCents: transaction.amountCents,
-      label: transaction.label
-    }))
-  );
-  const inWindow = (transaction: Transaction) => transaction.transactionDate >= "2026-06-01";
+  const statement = await parsePdfStatement(new Uint8Array(readFileSync(pdfPath)));
+  const pdf = statement.accounts.find(account => account.key === "CCP")!.transactions;
+  const apiSource = JSON.parse(readFileSync(apiPath, "utf8")) as { transactions: unknown[] };
+  const api = apiSource.transactions.map(parseBankTransaction);
+  const inWindow = (transaction: { transactionDate: string }) =>
+    transaction.transactionDate >= statement.periodStart && transaction.transactionDate <= statement.periodEnd;
   const apiWindow = api.filter(inWindow);
-  const csvWindow = csv.filter(inWindow);
+  const pdfWindow = pdf.filter(inWindow);
 
-  for (const channels of [[apiWindow, csvWindow], [csvWindow, apiWindow]]) {
+  const orders: TransactionForDeduplication[][][] = [[apiWindow, pdfWindow], [pdfWindow, apiWindow]];
+  for (const channels of orders) {
     const result = deduplicateTransactions(channels);
-    assert.equal(result.matches.length, 27);
+    assert.equal(result.matches.length, 16);
     assert.equal(result.transactions.length - result.matches.length, 0);
     assert.equal(result.toReview.length, 0);
   }

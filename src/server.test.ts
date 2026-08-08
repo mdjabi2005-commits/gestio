@@ -46,6 +46,7 @@ test("creates an account, records transactions, and returns exact balances", asy
   const sessionToken = cookie.split("=", 2)[1];
   assert.match(cookie, /^gestio_session=[a-f0-9]{64}$/);
   assert.deepEqual((await app.inject({ method: "GET", url: "/auth/state" })).json(), { configured: true });
+  assert.equal((await app.inject({ method: "POST", url: "/imports/csv", headers: { cookie } })).statusCode, 404);
 
   const passwordHash = database.sqlite.prepare(
     "SELECT password_hash FROM local_auth WHERE id = 1"

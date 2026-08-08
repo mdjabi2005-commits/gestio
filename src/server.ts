@@ -8,7 +8,6 @@ import { eq } from "drizzle-orm";
 import { accounts, accountTypes, institutions, transactions, transactionSources, type AccountType } from "./schema.js";
 import { openDatabase, type AppDatabase } from "./db.js";
 import { deduplicateTransactions, normalizeTransactionLabel } from "./deduplication.js";
-import { bankCsvFormats, CsvFormatError, parseBankCsv } from "./csv-import.js";
 import { parsePdfStatement, PdfStatementError } from "./pdf-import.js";
 import { reviewGroups, type UiTransaction } from "./ui-logic.js";
 import {
@@ -278,86 +277,6 @@ export function buildApp(options: BuildAppOptions = {}) {
     }
     database.sqlite.prepare("DELETE FROM transactions WHERE id = ?").run(transactionId);
     return reply.code(204).send();
-  });
-
-  app.post("/imports/csv", async (request, reply) => {
-    const data = objectBody(request.body);
-    const accountId = requiredInteger(data.accountId, "accountId");
-    const bank = requiredString(data.bank, "bank");
-    const bytes = requiredBase64(data.contentBase64, "contentBase64");
-    const account = database.sqlite.prepare(`
-      SELECT i.name AS institutionName
-      FROM accounts a JOIN institutions i ON i.id = a.institution_id
-      WHERE a.id = ?
-    `).get(accountId) as { institutionName: string } | undefined;
-    if (!account) {
-      return reply.code(404).send({ error: "account_not_found" });
-    }
-
-    const format = bankCsvFormats[bank as keyof typeof bankCsvFormats];
-    if (format && format.institutionName !== account.institutionName) {
-      return reply.code(400).send({
-        error: "csv_institution_mismatch",
-        message: `Le fichier CSV ${bank} ne correspond pas à l’établissement « ${account.institutionName} » du compte cible.`
-      });
-    }
-    if (format?.multiAccount) {
-      return reply.code(400).send({
-        error: "csv_accounts_not_separable",
-        message: `Le fichier CSV ${bank} mélange plusieurs comptes et rien ne permet de les séparer. Utilisez la synchronisation API.`
-      });
-    }
-
-    let parsed;
-    try {
-      parsed = parseBankCsv(bank, bytes);
-    } catch (error) {
-      if (error instanceof CsvFormatError) {
-        return reply.code(400).send({ error: "csv_format_unrecognized", message: error.message });
-      }
-      throw error;
-    }
-
-    const imported = database.sqlite.transaction(() => {
-      // ponytail: full account scan is enough for one user; filter by imported date range if history becomes large.
-      const existing = database.sqlite.prepare(`
-        SELECT transaction_date AS transactionDate, amount_cents AS amountCents, label
-        FROM transactions WHERE account_id = ? ORDER BY id
-      `).all(accountId) as Array<{ transactionDate: string; amountCents: number; label: string }>;
-      const occurrences = new Map<string, number>();
-      const candidates = parsed.transactions.map(transaction => {
-        const input = readTransactionInput({ ...transaction, accountId, source: "CSV_IMPORT" });
-        const occurrence = occurrences.get(input.fingerprint) ?? 0;
-        occurrences.set(input.fingerprint, occurrence + 1);
-        return { ...transaction, ...input, occurrence };
-      });
-      const candidateSet = new Set(candidates);
-      const pending = deduplicateTransactions([existing, candidates]).transactions.filter(
-        (transaction): transaction is typeof candidates[number] => candidateSet.has(transaction as typeof candidates[number])
-      );
-      const insert = database.sqlite.prepare(`
-        INSERT OR IGNORE INTO transactions
-          (account_id, transaction_date, transaction_at, label, amount_cents, source, fingerprint, occurrence)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `);
-      return pending.reduce((count, transaction) => count + insert.run(
-        transaction.accountId,
-        transaction.transactionDate,
-        transaction.transactionAt,
-        transaction.label,
-        transaction.amountCents,
-        transaction.source,
-        transaction.fingerprint,
-        transaction.occurrence
-      ).changes, 0);
-    })();
-
-    return reply.code(200).send({
-      read: parsed.transactions.length,
-      imported,
-      duplicates: parsed.transactions.length - imported,
-      ignored: parsed.ignored
-    });
   });
 
   app.post("/imports/pdf", async (request, reply) => {
