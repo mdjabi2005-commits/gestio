@@ -10,7 +10,6 @@ import { buildApp } from "./server.js";
 const corpus = process.env.GESTIO_PDF_CORPUS ?? "/mnt/c/Users/djabi/Documents/relevé pdf";
 const bpDirectory = join(corpus, "bp");
 const nickelDirectory = join(corpus, "nickel");
-const corpusTest = { skip: process.env.GESTIO_SKIP_CORPUS === "1" };
 const bpFiles = existsSync(bpDirectory)
   ? readdirSync(bpDirectory).filter(name => name.startsWith("releve_")).sort()
   : [];
@@ -22,7 +21,7 @@ test("refuses a PDF without a text layer and proposes another import path", asyn
   );
 });
 
-test("parses and balances every real La Banque Postale and Nickel statement", corpusTest, async () => {
+test("parses and balances every real La Banque Postale and Nickel statement", async () => {
   assert.ok(existsSync(bpDirectory), `Corpus PDF La Banque Postale absent : ${bpDirectory}`);
   assert.ok(existsSync(nickelDirectory), `Corpus PDF Nickel absent : ${nickelDirectory}`);
   const bpStatements = await Promise.all(
@@ -46,7 +45,7 @@ test("parses and balances every real La Banque Postale and Nickel statement", co
   assert.equal(totalTransactions(nickelStatements, "NICKEL"), 54);
 });
 
-test("imports a multi-account statement atomically and remains idempotent", corpusTest, async (t) => {
+test("imports a multi-account statement atomically and remains idempotent", async (t) => {
   assert.ok(bpFiles.length, `Corpus PDF La Banque Postale absent ou vide : ${bpDirectory}`);
   const path = join(bpDirectory, bpFiles[0]);
   const pdf = readFileSync(path);
