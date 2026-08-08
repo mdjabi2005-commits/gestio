@@ -13,6 +13,31 @@ const nickelDirectory = join(corpus, "nickel");
 const bpFiles = existsSync(bpDirectory)
   ? readdirSync(bpDirectory).filter(name => name.startsWith("releve_")).sort()
   : [];
+const bpReferenceFiles = [
+  "releve_CCP0984209Z024_20250708",
+  "releve_CCP0984209Z024_20250808",
+  "releve_CCP0984209Z024_20250908",
+  "releve_CCP0984209Z024_20251008",
+  "releve_CCP0984209Z024_20251107",
+  "releve_CCP0984209Z024_20251208",
+  "releve_CCP0984209Z024_20260108",
+  "releve_CCP0984209Z024_20260206",
+  "releve_CCP0984209Z024_20260306",
+  "releve_CCP0984209Z024_20260408",
+  "releve_CCP0984209Z024_20260507",
+  "releve_CCP0984209Z024_20260608"
+];
+const nickelReferenceFiles = [
+  "2025-9-251005RM40001128530.pdf",
+  "2025-10-251102RM40001128530.pdf",
+  "2025-11-251207RM40001128530.pdf",
+  "2025-12-260104RM40001128530.pdf",
+  "2026-1-260201RM40001128530.pdf",
+  "2026-2-260301RM40001128530.pdf",
+  "2026-3-260405RM40001128530.pdf",
+  "2026-4-260503RM40001128530.pdf",
+  "2026-5-260607RM40001128530.pdf"
+];
 
 test("refuses a PDF without a text layer and proposes another import path", async () => {
   await assert.rejects(
@@ -28,21 +53,29 @@ test("parses and balances every real La Banque Postale and Nickel statement", as
     bpFiles
       .map(name => parsePdfStatement(new Uint8Array(readFileSync(join(bpDirectory, name)))))
   );
-  assert.equal(bpStatements.length, 12);
-  assert.equal(bpStatements.flatMap(statement => statement.accounts).filter(account => account.key === "LIVRET_A").length, 12);
-  assert.equal(totalTransactions(bpStatements, "CCP"), 299);
-  assert.equal(totalTransactions(bpStatements, "LIVRET_A"), 45);
-  assert.equal(totalTransactions(bpStatements, "LIVRET_JEUNE"), 6);
+  for (const name of bpReferenceFiles) {
+    assert.ok(bpFiles.includes(name), `Relevé PDF La Banque Postale manquant : ${join(bpDirectory, name)}`);
+  }
+  assert.ok(bpFiles.length >= 12);
+  const bpReferenceStatements = bpReferenceFiles.map(name => bpStatements[bpFiles.indexOf(name)]);
+  assert.equal(bpReferenceStatements.length, 12);
+  assert.equal(bpReferenceStatements.flatMap(statement => statement.accounts).filter(account => account.key === "LIVRET_A").length, 12);
+  assert.equal(totalTransactions(bpReferenceStatements, "CCP"), 299);
+  assert.equal(totalTransactions(bpReferenceStatements, "LIVRET_A"), 45);
+  assert.equal(totalTransactions(bpReferenceStatements, "LIVRET_JEUNE"), 6);
   assert.ok(bpStatements.every(statement => statement.accounts.map(account => account.key).join() === "CCP,LIVRET_A,LIVRET_JEUNE"));
 
+  const nickelFiles = readdirSync(nickelDirectory).filter(name => /RM.*\.pdf$/.test(name)).sort();
   const nickelStatements = await Promise.all(
-    readdirSync(nickelDirectory)
-      .filter(name => /RM.*\.pdf$/.test(name))
-      .sort()
-      .map(name => parsePdfStatement(new Uint8Array(readFileSync(join(nickelDirectory, name)))))
+    nickelFiles.map(name => parsePdfStatement(new Uint8Array(readFileSync(join(nickelDirectory, name)))))
   );
-  assert.equal(nickelStatements.length, 9);
-  assert.equal(totalTransactions(nickelStatements, "NICKEL"), 54);
+  for (const name of nickelReferenceFiles) {
+    assert.ok(nickelFiles.includes(name), `Relevé PDF Nickel manquant : ${join(nickelDirectory, name)}`);
+  }
+  assert.ok(nickelFiles.length >= 9);
+  const nickelReferenceStatements = nickelReferenceFiles.map(name => nickelStatements[nickelFiles.indexOf(name)]);
+  assert.equal(nickelReferenceStatements.length, 9);
+  assert.equal(totalTransactions(nickelReferenceStatements, "NICKEL"), 54);
 });
 
 test("imports a multi-account statement atomically and remains idempotent", async (t) => {
