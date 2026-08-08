@@ -44,7 +44,7 @@ export function buildApp(options: BuildAppOptions = {}) {
   } satisfies FastifyHttpsOptions<HttpsServer>);
 
   let backgroundSyncRunning = false;
-  const backgroundSync = setInterval(async () => {
+  async function runBackgroundSync() {
     if (backgroundSyncRunning) return;
     backgroundSyncRunning = true;
     try {
@@ -52,7 +52,7 @@ export function buildApp(options: BuildAppOptions = {}) {
         SELECT authorization_id AS authorizationId, institution_id AS institutionId, state,
                session_id AS sessionId, consent_valid_until AS consentValidUntil, status,
                last_sync_at AS lastSyncAt, last_sync_error AS lastSyncError
-        FROM bank_connections WHERE status = 'AUTHORIZED'
+        FROM bank_connections WHERE status IN ('AUTHORIZED', 'FAILED')
       `).all() as BankConnection[];
       for (const connection of connections) {
         try {
@@ -66,7 +66,8 @@ export function buildApp(options: BuildAppOptions = {}) {
     } finally {
       backgroundSyncRunning = false;
     }
-  }, 6 * 60 * 60 * 1000);
+  }
+  const backgroundSync = setInterval(runBackgroundSync, 6 * 60 * 60 * 1000);
   backgroundSync.unref();
   app.addHook("onClose", () => {
     clearInterval(backgroundSync);
@@ -504,7 +505,7 @@ export function buildApp(options: BuildAppOptions = {}) {
     }
   });
 
-  return app;
+  return Object.assign(app, { runBackgroundSync });
 }
 
 function readAccountInput(body: unknown) {

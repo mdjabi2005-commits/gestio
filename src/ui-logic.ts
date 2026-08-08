@@ -53,10 +53,14 @@ export function groupAccountsByInstitution(accounts: readonly UiAccount[]) {
 export function oldestUpdatedAt(accounts: readonly UiAccount[]) {
   let oldest: string | null = null;
   for (const account of accounts) {
-    if (!account.updatedAt) return null;
+    if (!account.updatedAt) continue;
     if (!oldest || dateValue(account.updatedAt) < dateValue(oldest)) oldest = account.updatedAt;
   }
   return oldest;
+}
+
+export function missingUpdatedAtCount(accounts: readonly UiAccount[]) {
+  return accounts.filter(account => !account.updatedAt).length;
 }
 
 export function knownSinceLabel(date: string | null) {

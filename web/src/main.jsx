@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import {
   groupAccountsByInstitution,
   knownSinceLabel,
+  missingUpdatedAtCount,
   oldestUpdatedAt,
   reviewGroups
 } from "../../src/ui-logic.ts";
@@ -59,6 +60,7 @@ function App() {
   const { balance, transactions, offline } = screen;
   const accounts = balance.accounts ?? [];
   const freshness = oldestUpdatedAt(accounts);
+  const missingFreshnessCount = missingUpdatedAtCount(accounts);
   const offlineDate = freshness ?? screen.savedAt;
   return (
     <main className="shell">
@@ -75,7 +77,7 @@ function App() {
           ? <Accounts accounts={accounts} />
           : page === "quoi"
             ? <Transactions accounts={accounts} transactions={transactions} offline={offline} onChanged={message => { setNotice(message); refresh(); }} />
-            : <Balance balance={balance} freshness={freshness} offline={offline} onChanged={message => { setNotice(message); refresh(); }} />}
+            : <Balance balance={balance} freshness={freshness} missingFreshnessCount={missingFreshnessCount} offline={offline} onChanged={message => { setNotice(message); refresh(); }} />}
     </main>
   );
 }
@@ -107,13 +109,13 @@ function AuthForm({ mode, onSuccess }) {
   );
 }
 
-function Balance({ balance, freshness, offline, onChanged }) {
+function Balance({ balance, freshness, missingFreshnessCount, offline, onChanged }) {
   return (
     <section aria-labelledby="balance-title">
       <h2 id="balance-title">Combien j’ai</h2>
       <p className="total">{money(balance.totalCents)}</p>
       {balance.unknownBalanceCount > 0 && <p className="warning">Total incomplet : {balance.unknownBalanceCount} compte{balance.unknownBalanceCount > 1 ? "s" : ""} sans solde connu.</p>}
-      <p className="muted">{freshness ? `À jour au ${formatDateTime(freshness)}` : "Fraîcheur inconnue"}</p>
+      <p className="muted">{freshness ? `À jour au ${formatDateTime(freshness)}${missingFreshnessCount ? ` · ${missingFreshnessCount} compte${missingFreshnessCount > 1 ? "s" : ""} sans date` : ""}` : "Fraîcheur inconnue"}</p>
       {!offline && <div className="actions"><SyncButton onChanged={onChanged} /><details><summary>Connecter ou reconnecter une banque</summary><BankConnect onConnected={() => onChanged("Banque connectée.")} /></details></div>}
     </section>
   );

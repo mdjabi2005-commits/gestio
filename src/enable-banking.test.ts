@@ -281,14 +281,40 @@ test("connects out-of-band, exhausts empty pages, stores API balance freshness, 
   assert.equal(grouped.institutions[0].accounts.length, 3);
 });
 
-test("background synchronization sends no PSU headers", async (t) => {
-  const { api, runBackgroundSync } = await connectedFixture(t);
+test("background synchronization retries a failed connection without PSU headers", async (t) => {
+  const { api, app, database } = await connectedFixture(t);
+  database.sqlite.prepare("UPDATE bank_connections SET last_sync_at = '2026-01-01T00:00:00Z' WHERE authorization_id = 'authorization-1'").run();
+  api.rateLimited = true;
+  await app.runBackgroundSync();
+  assert.deepEqual(database.sqlite.prepare(`
+    SELECT status, last_sync_at AS lastSyncAt FROM bank_connections WHERE authorization_id = 'authorization-1'
+  `).get(), { status: "FAILED", lastSyncAt: "2026-01-01T00:00:00Z" });
+
+  api.rateLimited = false;
   const callCount = api.calls.length;
+  await app.runBackgroundSync();
 
-  await runBackgroundSync();
-
+  const recovered = database.sqlite.prepare(`
+    SELECT status, last_sync_at AS lastSyncAt, last_sync_error AS lastSyncError
+    FROM bank_connections WHERE authorization_id = 'authorization-1'
+  `).get() as { status: string; lastSyncAt: string; lastSyncError: string | null };
+  assert.equal(recovered.status, "AUTHORIZED");
+  assert.ok(Date.parse(recovered.lastSyncAt) > Date.parse("2026-01-01T00:00:00Z"));
+  assert.equal(recovered.lastSyncError, null);
   const transactionCall = api.calls.slice(callCount).find(call => call.path.endsWith("/transactions"));
   assert.deepEqual(transactionCall?.options.headers, {});
+});
+
+test("background synchronization excludes expired and pending connections", async (t) => {
+  const { api, app, database } = await connectedFixture(t);
+
+  for (const status of ["EXPIRED", "PENDING"]) {
+    database.sqlite.prepare("UPDATE bank_connections SET status = ? WHERE authorization_id = 'authorization-1'").run(status);
+    const callCount = api.calls.length;
+    await app.runBackgroundSync();
+    assert.equal(api.calls.length, callCount);
+    assert.equal(database.sqlite.prepare("SELECT status FROM bank_connections WHERE authorization_id = 'authorization-1'").pluck().get(), status);
+  }
 });
 
 test("a shorter synchronization never moves known_since forward", async (t) => {
@@ -367,19 +393,7 @@ async function connectedFixture(t: TestContext) {
   const dir = mkdtempSync(join(tmpdir(), "gestio-enable-banking-proof-"));
   const database = openDatabase({ path: join(dir, "gestio.db"), key: "test-db-key-32-random-characters" });
   const api = new FakeEnableBanking();
-  let runBackgroundSync: () => Promise<void> = async () => assert.fail("Background synchronization was not registered");
-  const nativeSetInterval = globalThis.setInterval;
-  globalThis.setInterval = ((callback: () => Promise<void>) => {
-    runBackgroundSync = callback;
-    return nativeSetInterval(() => {}, 2_147_483_647);
-  }) as typeof setInterval;
-  const app = (() => {
-    try {
-      return buildApp({ database, enableBanking: api, logger: false });
-    } finally {
-      globalThis.setInterval = nativeSetInterval;
-    }
-  })();
+  const app = buildApp({ database, enableBanking: api, logger: false });
   t.after(async () => {
     await app.close();
     rmSync(dir, { recursive: true, force: true });
@@ -403,5 +417,5 @@ async function connectedFixture(t: TestContext) {
     headers: { "user-agent": "Gestio test browser" },
     remoteAddress: "192.0.2.10"
   });
-  return { api, app, cookie, database, runBackgroundSync };
+  return { api, app, cookie, database };
 }

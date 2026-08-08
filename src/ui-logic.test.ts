@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   groupAccountsByInstitution,
   knownSinceLabel,
+  missingUpdatedAtCount,
   oldestUpdatedAt,
   reviewGroups,
   type UiAccount,
@@ -22,7 +23,9 @@ test("derives the visible balance rules without DOM state", () => {
     { name: "Revolut", balanceCents: 50_00, unknownBalanceCount: 1, accounts: 2 }
   ]);
   assert.equal(oldestUpdatedAt(accounts.slice(0, 3)), "2026-08-01T09:00:00Z");
-  assert.equal(oldestUpdatedAt(accounts), null);
+  assert.equal(oldestUpdatedAt(accounts), "2026-08-01T09:00:00Z");
+  assert.equal(missingUpdatedAtCount(accounts), 1);
+  assert.equal(oldestUpdatedAt([accounts[3]]), null);
   assert.equal(knownSinceLabel("2025-07-08"), "Connu depuis le 08/07/2025");
 });
 
