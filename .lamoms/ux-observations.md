@@ -65,3 +65,27 @@ Tout point devenu bloquant doit sortir de ce registre et être traité comme pro
 - Constat : le passage `EXPIRED` pendant la reprise n'est pas couvert par un test.
 - Gravité : faible
 - Recommandation : ajouter un test optionnel si le cycle veut verrouiller la sémantique terminale.
+
+### T25 — Observation 1
+- Issue : T25 / #34
+- Constat : `form.reset()` inconditionnel efface la correspondance de comptes en cas d’échec d’un fichier du lot
+- Gravité : faible
+- Recommandation : reset conditionnel après succès seulement, ou conserver les sélections en cas d’erreur
+
+### T25 — Observation 2
+- Issue : T25 / #34
+- Constat : un fichier vide est filtré sans aucun message
+- Gravité : faible
+- Recommandation : afficher une erreur explicite par fichier, y compris pour les fichiers de 0 octet
+
+### T25 — Observation 3
+- Issue : T25 / #34
+- Constat : le sélecteur de fichiers masque par défaut les relevés La Banque Postale sans extension
+- Gravité : faible
+- Recommandation : faciliter la sélection de ces fichiers, par exemple en acceptant `*/*` ou en rappelant « Tous les fichiers »
+
+### T25 — Observation 4
+- Issue : T25 / #34
+- Constat : le message global d’import ne nomme pas le ou les fichiers en échec
+- Gravité : faible
+- Recommandation : mentionner les échecs dans la notice globale, en complément de la liste détaillée

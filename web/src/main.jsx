@@ -192,6 +192,7 @@ function ManualSetup({ accounts, onChanged }) {
   const [institutions, setInstitutions] = useState([]);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  const [pdfResults, setPdfResults] = useState([]);
 
   useEffect(() => { api("/institutions").then(setInstitutions, cause => setError(cause.message)); }, []);
 
@@ -229,21 +230,28 @@ function ManualSetup({ accounts, onChanged }) {
     setStatus("");
     const form = event.currentTarget;
     const data = new FormData(form);
-    const file = data.get("pdf");
-    if (!(file instanceof File) || !file.size) return setError("Choisissez un relevé PDF.");
+    const files = data.getAll("pdf").filter(file => file instanceof File && file.size);
+    if (!files.length) return setError("Choisissez un relevé PDF.");
     const accountIds = {};
     for (const [key] of pdfAccountKeys) {
       const id = Number(data.get(key));
       if (id) accountIds[key] = id;
     }
-    try {
-      const result = await api("/imports/pdf", { method: "POST", body: JSON.stringify({ pdfBase64: await fileBase64(file), accountIds }) });
-      form.reset();
-      onChanged(`Relevé importé : ${result.imported} transaction${result.imported === 1 ? "" : "s"} ajoutée${result.imported === 1 ? "" : "s"}.`);
-    } catch (cause) { setError(cause.message); }
+    const results = [];
+    setPdfResults(results);
+    for (const file of files) {
+      try {
+        const result = await api("/imports/pdf", { method: "POST", body: JSON.stringify({ pdfBase64: await fileBase64(file), accountIds }) });
+        results.push({ name: file.name, ...result });
+      } catch (cause) { results.push({ name: file.name, error: cause.message }); }
+      setPdfResults([...results]);
+    }
+    form.reset();
+    const imported = results.filter(result => !result.error).length;
+    onChanged(`${imported} relevé${imported === 1 ? "" : "s"} importé${imported === 1 ? "" : "s"} sur ${files.length}.`);
   };
 
-  return <><h3>Ajouter un établissement</h3>{error && <p className="error" role="alert">{error}</p>}{status && <p className="notice" role="status">{status}</p>}<form className="stack" onSubmit={createInstitution}><label>Nom<input name="name" required /></label><label>Pays<input name="country" defaultValue="FR" minLength="2" maxLength="2" required /></label><button>Ajouter l’établissement</button></form><hr /><form className="stack" onSubmit={createAccount}><h3>Ajouter un compte</h3><label>Nom<input name="name" required /></label><label>Type<select name="type"><option value="BANK">Compte bancaire</option><option value="LIVRET_A">Livret A</option><option value="OTHER">Autre</option></select></label><label>Établissement<select name="institutionId"><option value="">Comptes manuels (automatique)</option>{institutions.map(institution => <option key={institution.id} value={institution.id}>{institution.name}</option>)}</select></label><button>Ajouter le compte</button></form>{accounts.length > 0 && <><hr /><form className="stack" onSubmit={importPdf}><h3>Importer un relevé PDF</h3><p className="muted">Associez chaque compte présent sur le relevé. Une correspondance manquante ou réutilisée sera refusée.</p><label>Relevé PDF<input name="pdf" type="file" accept="application/pdf,.pdf" required /></label>{pdfAccountKeys.map(([key, label]) => <label key={key}>{label}<select name={key} defaultValue=""><option value="">Non présent sur ce relevé</option>{accounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>)}<button>Importer le relevé</button></form></>}</>;
+  return <><h3>Ajouter un établissement</h3>{error && <p className="error" role="alert">{error}</p>}{status && <p className="notice" role="status">{status}</p>}<form className="stack" onSubmit={createInstitution}><label>Nom<input name="name" required /></label><label>Pays<input name="country" defaultValue="FR" minLength="2" maxLength="2" required /></label><button>Ajouter l’établissement</button></form><hr /><form className="stack" onSubmit={createAccount}><h3>Ajouter un compte</h3><label>Nom<input name="name" required /></label><label>Type<select name="type"><option value="BANK">Compte bancaire</option><option value="LIVRET_A">Livret A</option><option value="OTHER">Autre</option></select></label><label>Établissement<select name="institutionId"><option value="">Comptes manuels (automatique)</option>{institutions.map(institution => <option key={institution.id} value={institution.id}>{institution.name}</option>)}</select></label><button>Ajouter le compte</button></form>{accounts.length > 0 && <><hr /><form className="stack" onSubmit={importPdf}><h3>Importer des relevés PDF</h3><p className="muted">Associez chaque compte présent sur les relevés. La même correspondance sera utilisée pour tous les fichiers.</p><label>Relevés PDF<input name="pdf" type="file" accept="application/pdf,.pdf" multiple required /></label>{pdfAccountKeys.map(([key, label]) => <label key={key}>{label}<select name={key} defaultValue=""><option value="">Non présent sur ces relevés</option>{accounts.map(account => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>)}<button>Importer les relevés</button></form>{pdfResults.length > 0 && <ul aria-live="polite" aria-label="Compte rendu de l’import">{pdfResults.map(result => <li key={result.name} className={result.error ? "error" : undefined}><strong>{result.name}</strong> — {result.error ?? `${result.imported} transaction(s) importée(s), ${result.balancesImported} solde(s), ${result.reviewNeeded} à vérifier`}</li>)}</ul>}</>}</>;
 }
 
 function Onboarding({ onConnected, onChanged }) {
