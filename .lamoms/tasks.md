@@ -262,7 +262,9 @@ la dérivation du nom pendant la synchro — ancre `const name = optionalApiStri
 
 ---
 
-## T18 — Les trois portes manquantes
+## ~~T18 — Les trois portes manquantes~~
+
+> **FERMÉE le 2026-08-08** — issue #27, VERT.
 
 **Problème** : P40.
 
