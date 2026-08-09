@@ -6,6 +6,7 @@ import {
   missingUpdatedAtCount,
   oldestUpdatedAt,
   reviewGroups,
+  transactionNatureLabel,
   visibleTransactionLabel,
   type UiAccount,
   type UiTransaction
@@ -54,4 +55,10 @@ test("distinguishes otherwise identical unlabeled transactions", () => {
   assert.equal(visibleTransactionLabel(second), "Sans libellé n°42");
   assert.notEqual(visibleTransactionLabel(first), visibleTransactionLabel(second));
   assert.equal(visibleTransactionLabel({ id: 43, label: "Salaire" }), "Salaire");
+});
+
+test("makes transfer qualification visible", () => {
+  assert.equal(transactionNatureLabel("virement_intercompte"), "Virement interne");
+  assert.equal(transactionNatureLabel("virement_externe"), "Virement externe");
+  assert.equal(transactionNatureLabel("virement_a_verifier"), "Virement à vérifier");
 });

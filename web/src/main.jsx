@@ -6,6 +6,7 @@ import {
   missingUpdatedAtCount,
   oldestUpdatedAt,
   reviewGroups,
+  transactionNatureLabel,
   visibleTransactionLabel
 } from "../../src/ui-logic.ts";
 import "./styles.css";
@@ -164,7 +165,8 @@ function Transactions({ accounts, transactions, offline, onChanged }) {
 }
 
 function TransactionLine({ transaction, accountName }) {
-  return <div className="transaction"><div className="row"><span>{visibleTransactionLabel(transaction)}</span><strong className={transaction.amountCents >= 0 ? "positive" : "negative"}>{money(transaction.amountCents)}</strong></div><small className="muted">{formatDate(transaction.transactionDate)} · {accountName ?? "Compte inconnu"}</small></div>;
+  const nature = transactionNatureLabel(transaction.nature);
+  return <div className="transaction"><div className="row"><span>{visibleTransactionLabel(transaction)}</span><strong className={transaction.amountCents >= 0 ? "positive" : "negative"}>{money(transaction.amountCents)}</strong></div><small className="muted">{formatDate(transaction.transactionDate)} · {accountName ?? "Compte inconnu"}{nature && ` · ${nature}`}</small></div>;
 }
 
 function TransactionActions({ accounts, onChanged }) {

@@ -9,6 +9,7 @@ import { accounts, accountTypes, institutions, transactions, transactionSources,
 import { openDatabase, type AppDatabase } from "./db.js";
 import { deduplicateTransactions, normalizeTransactionLabel } from "./deduplication.js";
 import { parsePdfStatement, PdfStatementError } from "./pdf-import.js";
+import { normalizeIban, requalifyTransactions } from "./qualification.js";
 import { reviewGroups, type UiTransaction } from "./ui-logic.js";
 import {
   EnableBankingError,
@@ -34,6 +35,7 @@ const PUBLIC_PATHS = new Set(["/", "/auth/state", "/auth/setup", "/auth/login", 
 
 export function buildApp(options: BuildAppOptions = {}) {
   const database = options.database ?? openDatabase();
+  requalifyTransactions(database);
   let enableBanking = options.enableBanking;
   const bankApi = () => enableBanking ??= enableBankingFromEnvironment();
   const logger = options.logger ?? process.env.NODE_ENV !== "test";
@@ -215,7 +217,8 @@ export function buildApp(options: BuildAppOptions = {}) {
       .onConflictDoNothing({ target: [transactions.fingerprint, transactions.occurrence] })
       .returning()
       .get();
-    const transaction = inserted ?? database.orm.select().from(transactions)
+    if (inserted) requalifyTransactions(database);
+    const transaction = database.orm.select().from(transactions)
       .where(eq(transactions.fingerprint, input.fingerprint))
       .get();
     return reply.code(inserted ? 201 : 200).send(transaction);
@@ -243,7 +246,7 @@ export function buildApp(options: BuildAppOptions = {}) {
     const rows = database.sqlite.prepare(`
       SELECT id, account_id AS accountId, transaction_date AS transactionDate,
              transaction_at AS transactionAt, label, amount_cents AS amountCents,
-             source, needs_review AS needsReview, resolved_at AS resolvedAt, created_at AS createdAt
+             source, needs_review AS needsReview, resolved_at AS resolvedAt, nature, created_at AS createdAt
       FROM transactions
       ${where}
       ORDER BY transaction_date DESC, id DESC
@@ -353,12 +356,13 @@ export function buildApp(options: BuildAppOptions = {}) {
 
         database.sqlite.prepare(`
           UPDATE accounts
-          SET known_since = CASE
+          SET iban = COALESCE(?, iban),
+              known_since = CASE
             WHEN known_since IS NULL OR ? < known_since THEN ?
             ELSE known_since
           END
           WHERE id = ?
-        `).run(statement.periodStart, statement.periodStart, accountId);
+        `).run(statementAccount.iban ?? null, statement.periodStart, statement.periodStart, accountId);
         balancesImported += database.sqlite.prepare(`
           UPDATE accounts
           SET balance_cents = ?, currency = 'EUR', last_synced_at = ?
@@ -375,6 +379,7 @@ export function buildApp(options: BuildAppOptions = {}) {
         ).changes;
       }
     })();
+    requalifyTransactions(database);
 
     const total = statement.accounts.reduce((count, account) => count + account.transactions.length, 0);
     return reply.code(200).send({
@@ -514,7 +519,8 @@ function readAccountInput(body: unknown) {
   const name = requiredString(data.name, "name");
   const type = oneOf(data.type, accountTypes, "type");
   const institutionId = data.institutionId === undefined ? undefined : requiredInteger(data.institutionId, "institutionId");
-  return { name, type, institutionId };
+  const iban = data.iban === undefined ? undefined : normalizeIban(requiredString(data.iban, "iban"));
+  return { name, type, institutionId, iban };
 }
 
 function readInstitutionInput(body: unknown) {
@@ -734,16 +740,21 @@ async function syncBankConnection(
   for (const [index, { externalUid, externalHash, account }] of syncedAccounts.entries()) {
     const name = names[index];
     const type: AccountType = account.cash_account_type === "CACC" ? "BANK" : "OTHER";
+    const accountIdentifier = account.account_id;
+    const iban = accountIdentifier && typeof accountIdentifier === "object" && !Array.isArray(accountIdentifier)
+      ? normalizeIban(optionalApiString((accountIdentifier as Record<string, unknown>).iban))
+      : null;
     const storedAccount = database.sqlite.prepare(`
-      INSERT INTO accounts (institution_id, name, type, external_uid, external_hash)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO accounts (institution_id, name, type, external_uid, external_hash, iban)
+      VALUES (?, ?, ?, ?, ?, ?)
       ON CONFLICT(external_hash) DO UPDATE SET
         institution_id = excluded.institution_id,
         name = excluded.name,
         type = excluded.type,
-        external_uid = excluded.external_uid
+        external_uid = excluded.external_uid,
+        iban = COALESCE(excluded.iban, accounts.iban)
       RETURNING id
-    `).get(connection.institutionId, name, type, externalUid, externalHash) as { id: number };
+    `).get(connection.institutionId, name, type, externalUid, externalHash, iban) as { id: number };
 
     const existing = database.sqlite.prepare(`
       SELECT id, transaction_date AS transactionDate, amount_cents AS amountCents,
@@ -797,6 +808,7 @@ async function syncBankConnection(
           ).run(id);
         }
       })();
+      if (written) requalifyTransactions(database);
 
       totalWritten += written;
       totalPages += 1;

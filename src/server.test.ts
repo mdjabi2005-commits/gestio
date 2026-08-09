@@ -6,6 +6,7 @@ import test from "node:test";
 import Database from "better-sqlite3-multiple-ciphers";
 import { buildApp } from "./server.js";
 import { openDatabase } from "./db.js";
+import { requalifyTransactions } from "./qualification.js";
 
 test("creates an account, records transactions, and returns exact balances", async (t) => {
   const dir = mkdtempSync(join(tmpdir(), "gestio-"));
@@ -259,10 +260,46 @@ test("migrates existing accounts into an institution without changing the aggreg
   try {
     const after = migrated.sqlite.prepare("SELECT SUM(amount_cents) FROM transactions").pluck().get();
     assert.equal(after, before);
+    assert.ok((migrated.sqlite.pragma("table_info(accounts)") as Array<{ name: string }>).some(column => column.name === "iban"));
+    assert.ok((migrated.sqlite.pragma("table_info(transactions)") as Array<{ name: string }>).some(column => column.name === "nature"));
     assert.equal(migrated.sqlite.prepare("SELECT COUNT(*) FROM accounts WHERE institution_id IS NULL").pluck().get(), 0);
     assert.equal(migrated.sqlite.prepare("SELECT COUNT(*) FROM institutions").pluck().get(), 1);
   } finally {
     migrated.close();
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("qualifies transfers without deleting or changing transactions", async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "gestio-qualification-"));
+  const database = openDatabase({ path: join(dir, "gestio.db"), key: "test-db-key-32-random-characters" });
+  const app = buildApp({ database, logger: false });
+  t.after(async () => {
+    await app.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+  const setup = await app.inject({ method: "POST", url: "/auth/setup", payload: { password: "correct horse battery staple" } });
+  const cookie = (setup.headers["set-cookie"] as string).split(";", 1)[0];
+  const institution = async (name: string) => (await app.inject({
+    method: "POST", url: "/institutions", headers: { cookie }, payload: { name, country: "FR" }
+  })).json().id as number;
+  const account = async (name: string, institutionId: number, iban: string) => (await app.inject({
+    method: "POST", url: "/accounts", headers: { cookie }, payload: { name, institutionId, iban, type: "BANK" }
+  })).json().id as number;
+  const postalIban = "FR7611111111111111111111111";
+  const tradeIban = "FR7622222222222222222222222";
+  const postal = await account("Compte postal", await institution("La Banque Postale"), postalIban);
+  const trade = await account("Compte Trade Republic", await institution("Trade Republic"), tradeIban);
+  for (const payload of [
+    { accountId: postal, transactionDate: "2026-06-15", label: `Virement vers ${tradeIban}`, amountCents: -4_000 },
+    { accountId: trade, transactionDate: "2026-06-16", label: `Incoming transfer from holder (${postalIban})`, amountCents: 4_000 },
+    { accountId: postal, transactionDate: "2026-06-17", label: "Virement vers Trade Republic", amountCents: -3_000 }
+  ]) assert.equal((await app.inject({ method: "POST", url: "/transactions", headers: { cookie }, payload })).statusCode, 201);
+
+  const before = database.sqlite.prepare("SELECT COUNT(*) AS count, SUM(amount_cents) AS sum FROM transactions").get();
+  database.sqlite.prepare("UPDATE transactions SET nature = NULL").run();
+  requalifyTransactions(database);
+  assert.deepEqual(database.sqlite.prepare("SELECT COUNT(*) AS count, SUM(amount_cents) AS sum FROM transactions").get(), before);
+  const listed = (await app.inject({ method: "GET", url: "/transactions", headers: { cookie } })).json().transactions as Array<{ amountCents: number; nature: string }>;
+  assert.deepEqual(listed.map(transaction => transaction.nature), ["virement_a_verifier", "virement_intercompte", "virement_intercompte"]);
 });

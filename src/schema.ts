@@ -3,9 +3,11 @@ import { integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core
 
 export const accountTypes = ["BANK", "LIVRET_A", "OTHER"] as const;
 export const transactionSources = ["MANUEL", "ENABLE_BANKING", "CSV_IMPORT", "PDF_RELEVE"] as const;
+export const transactionNatures = ["virement_intercompte", "virement_externe", "virement_a_verifier", "retrait_especes", "frais_retrait", "depot_especes"] as const;
 
 export type AccountType = (typeof accountTypes)[number];
 export type TransactionSource = (typeof transactionSources)[number];
+export type TransactionNature = (typeof transactionNatures)[number];
 
 export const institutions = sqliteTable("institutions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -23,6 +25,7 @@ export const accounts = sqliteTable("accounts", {
   type: text("type", { enum: accountTypes }).notNull(),
   externalUid: text("external_uid"),
   externalHash: text("external_hash"),
+  iban: text("iban"),
   balanceCents: integer("balance_cents"),
   currency: text("currency"),
   lastSyncedAt: text("last_synced_at"),
@@ -45,6 +48,7 @@ export const transactions = sqliteTable("transactions", {
   externalReference: text("external_reference"),
   needsReview: integer("needs_review", { mode: "boolean" }).notNull().default(false),
   resolvedAt: text("resolved_at"),
+  nature: text("nature", { enum: transactionNatures }),
 
   createdAt: text("created_at").notNull().default(sql`CURRENT_TIMESTAMP`)
 }, (table) => [
