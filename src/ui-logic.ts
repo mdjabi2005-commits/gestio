@@ -1,3 +1,5 @@
+import type { TransactionNature } from "./schema.js";
+
 export type UiAccount = {
   id: number;
   institutionId: number;
@@ -22,6 +24,7 @@ export type UiTransaction = {
   transactionAt?: string | null;
   source?: string;
   createdAt?: string;
+  nature?: TransactionNature | null;
 };
 
 export function groupAccountsByInstitution(accounts: readonly UiAccount[]) {
@@ -84,6 +87,17 @@ export function reviewGroups(transactions: readonly UiTransaction[]) {
 
 export function visibleTransactionLabel(transaction: Pick<UiTransaction, "id" | "label">) {
   return transaction.label || `Sans libellé n°${transaction.id}`;
+}
+
+export function transactionNatureLabel(nature: TransactionNature | null | undefined) {
+  return nature && ({
+    virement_intercompte: "Virement interne",
+    virement_externe: "Virement externe",
+    virement_a_verifier: "Virement à vérifier",
+    retrait_especes: "Retrait d’espèces",
+    frais_retrait: "Frais de retrait",
+    depot_especes: "Dépôt d’espèces"
+  } satisfies Record<TransactionNature, string>)[nature];
 }
 
 function dateValue(value: string) {
