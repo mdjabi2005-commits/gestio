@@ -1,6 +1,6 @@
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 
-export type PdfAccountKey = "CCP" | "LIVRET_A" | "LIVRET_JEUNE" | "NICKEL";
+export type PdfAccountKey = "CCP" | "LIVRET_A" | "LIVRET_JEUNE" | "NICKEL" | "TRADE_REPUBLIC";
 
 export type PdfTransaction = {
   transactionDate: string;
@@ -18,10 +18,11 @@ export type PdfStatementAccount = {
 };
 
 export type PdfStatement = {
-  institution: "LA_BANQUE_POSTALE" | "NICKEL";
+  institution: "LA_BANQUE_POSTALE" | "NICKEL" | "TRADE_REPUBLIC";
   periodStart: string;
   periodEnd: string;
   accounts: PdfStatementAccount[];
+  excludedProducts?: string[];
 };
 
 type Item = { text: string; x: number };
@@ -78,8 +79,11 @@ export async function parsePdfStatement(input: Uint8Array): Promise<PdfStatement
     if (header.includes("NICKEL") && header.includes("PAIEMENTS ELECTRONIQUES")) {
       return parseNickel(pages);
     }
+    if (header.includes("TRADE REPUBLIC BANK GMBH") && header.includes("SYNTHESE DU RELEVE DE COMPTE")) {
+      return parseTradeRepublic(pages);
+    }
     throw new PdfStatementError(
-      "Format PDF non reconnu. Seuls les relevés La Banque Postale et Nickel sont pris en charge."
+      "Format PDF non reconnu. Seuls les relevés La Banque Postale, Nickel et Trade Republic sont pris en charge."
     );
   } catch (error) {
     if (error instanceof PdfStatementError) throw error;
@@ -183,6 +187,126 @@ function parseNickel(pages: Page[]): PdfStatement {
   return { institution: "NICKEL", periodStart, periodEnd, accounts: [account] };
 }
 
+const tradeRepublicMonths: Record<string, string> = {
+  "janv.": "01", "févr.": "02", mars: "03", "avr.": "04", mai: "05", juin: "06",
+  "juil.": "07", août: "08", "sept.": "09", "oct.": "10", "nov.": "11", "déc.": "12"
+};
+const tradeRepublicDatePattern = String.raw`\d{2}\s+(?:janv\.|févr\.|mars|avr\.|mai|juin|juil\.|août|sept\.|oct\.|nov\.|déc\.)\s+\d{4}`;
+
+function parseTradeRepublic(pages: Page[]): PdfStatement {
+  const starts = pages.flatMap((page, index) =>
+    page.lines.some(line => comparable(line.text).includes("SYNTHESE DU RELEVE DE COMPTE")) ? [index] : []
+  );
+  const segments = starts.map((start, index) => tradeRepublicSegment(pages.slice(start, starts[index + 1])));
+  const currentAccounts = segments.filter(segment => comparable(segment.product) === "COMPTE COURANT");
+  if (currentAccounts.length !== 1) {
+    throw new PdfStatementError("Le compte courant Trade Republic est absent ou ambigu dans le relevé.");
+  }
+
+  const current = currentAccounts[0];
+  const text = current.pages.map(page => page.text).join("\n");
+  const period = text.match(new RegExp(`(${tradeRepublicDatePattern})\\s*[-–]\\s*(${tradeRepublicDatePattern})`, "i"));
+  if (!period) throw new PdfStatementError("Période introuvable dans le relevé Trade Republic.");
+  const periodStart = tradeRepublicIsoDate(period[1]);
+  const periodEnd = tradeRepublicIsoDate(period[2]);
+  const [openingBalanceCents, totalCredit, totalDebit, closingBalanceCents] = current.amounts;
+  const account: PdfStatementAccount = {
+    key: "TRADE_REPUBLIC",
+    name: current.product,
+    balanceDate: periodEnd,
+    openingBalanceCents,
+    closingBalanceCents,
+    transactions: tradeRepublicTransactions(current.pages, openingBalanceCents)
+  };
+  verifyTradeRepublicTotals(account, totalCredit, totalDebit);
+  return {
+    institution: "TRADE_REPUBLIC",
+    periodStart,
+    periodEnd,
+    accounts: [account],
+    excludedProducts: segments.filter(segment => segment !== current).map(segment => segment.product)
+  };
+}
+
+function tradeRepublicSegment(pages: Page[]) {
+  const lines = pages.flatMap(page => page.lines);
+  const header = lines.findIndex(line => comparable(line.text).startsWith("PRODUIT SOLDE DEBUT DE PERIODE"));
+  const summary = lines.slice(header + 1).find(line => line.items.filter(item => parseAmount(item.text) !== undefined).length === 4);
+  if (header < 0 || !summary) throw new PdfStatementError("Synthèse de produit introuvable dans le relevé Trade Republic.");
+  const product = summary.items.slice(0, summary.items.findIndex(item => parseAmount(item.text) !== undefined)).map(item => item.text).join(" ").trim();
+  const amounts = summary.items.flatMap(item => {
+    const amount = parseAmount(item.text);
+    return amount === undefined ? [] : [amount];
+  });
+  if (!product || amounts.length !== 4) throw new PdfStatementError("Synthèse de produit Trade Republic incomplète.");
+  return { pages, product, amounts: amounts as [number, number, number, number] };
+}
+
+function tradeRepublicTransactions(pages: Page[], openingBalanceCents: number) {
+  const lines = pages.flatMap(page => page.lines);
+  const start = lines.findIndex(line => comparable(line.text) === "TRANSACTIONS");
+  const end = lines.findIndex((line, index) => index > start && comparable(line.text).startsWith("APERCU DU SOLDE"));
+  if (start < 0) throw new PdfStatementError("Transactions introuvables dans le relevé Trade Republic.");
+  const body = lines.slice(start + 1, end < 0 ? undefined : end);
+  const anchors = body.flatMap((line, index) => {
+    const date = line.items.find(item => item.x >= 70 && item.x < 80 && /^\d{2}\s+(?:janv\.|févr\.|mars|avr\.|mai|juin|juil\.|août|sept\.|oct\.|nov\.|déc\.)$/i.test(item.text));
+    return date ? [{ index, date }] : [];
+  });
+
+  let previousBalanceCents = openingBalanceCents;
+  return anchors.map((anchor, index): PdfTransaction => {
+    const group = body.slice(anchor.index, anchors[index + 1]?.index);
+    const yearIndex = group.findIndex(line => line.items.some(item => Math.abs(item.x - anchor.date.x) < 2 && /^\d{4}$/.test(item.text)));
+    if (yearIndex < 0) throw new PdfStatementError(`Année manquante pour une transaction Trade Republic du ${anchor.date.text}.`);
+    const transactionLines = group.slice(0, yearIndex + 1);
+    const items = transactionLines.flatMap(line => line.items);
+    const monetaryValues = items.flatMap((item, itemIndex) =>
+      tradeRepublicAmounts(item.text).map((amountCents, valueIndex) => ({ amountCents, item, itemIndex, valueIndex }))
+    ).sort((left, right) => left.item.x - right.item.x || left.itemIndex - right.itemIndex || left.valueIndex - right.valueIndex);
+    const balance = monetaryValues.at(-1);
+    const amount = monetaryValues.find(value => value !== balance && value.item.x >= 410 && value.item.x <= 460) ??
+      monetaryValues.find(value => value !== balance);
+    const year = transactionLines[yearIndex].items.find(item => Math.abs(item.x - anchor.date.x) < 2 && /^\d{4}$/.test(item.text))!;
+    if (!amount || !balance) throw new PdfStatementError(`Montant ou solde manquant pour une transaction Trade Republic du ${anchor.date.text}.`);
+    const absoluteAmountCents = Math.abs(amount.amountCents);
+    const balanceDelta = balance.amountCents - previousBalanceCents;
+    const amountCents = amount.item.x >= 410 ? (amount.item.x < 434.5 ? absoluteAmountCents : -absoluteAmountCents) : balanceDelta;
+    if (Math.abs(amountCents) !== absoluteAmountCents || previousBalanceCents + amountCents !== balance.amountCents) {
+      throw new PdfStatementError(`Le solde courant est incohérent pour une transaction Trade Republic du ${anchor.date.text}.`);
+    }
+    previousBalanceCents = balance.amountCents;
+    const label = items.filter(item => item.x >= 147 && item.x < 410)
+      .map(item => item.text.replace(/[+-]?\s*[\d ]+,\d{2}(?=\s*€)/g, ""))
+      .join(" ").replace(/\s+/g, " ").trim();
+    return {
+      transactionDate: tradeRepublicIsoDate(`${anchor.date.text} ${year.text}`),
+      label: label || "Opération Trade Republic",
+      amountCents
+    };
+  });
+}
+
+function tradeRepublicAmounts(value: string) {
+  return [...value.matchAll(/[+-]?\s*[\d ]+,\d{2}(?=\s*€)/g)].map(match => parseAmount(`${match[0]} €`)!).filter(Number.isSafeInteger);
+}
+
+export function verifyTradeRepublicTotals(account: PdfStatementAccount, totalCredit: number, totalDebit: number) {
+  if (account.openingBalanceCents! + totalCredit - totalDebit !== account.closingBalanceCents) {
+    throw new PdfStatementError("La synthèse du compte courant Trade Republic est incohérente.");
+  }
+  if (sum(account.transactions.filter(transaction => transaction.amountCents > 0)) !== totalCredit ||
+      -sum(account.transactions.filter(transaction => transaction.amountCents < 0)) !== totalDebit) {
+    throw new PdfStatementError("Les totaux des opérations Trade Republic ne correspondent pas au relevé.");
+  }
+}
+
+function tradeRepublicIsoDate(value: string) {
+  const match = value.trim().toLowerCase().match(/^(\d{2})\s+([^ ]+)\s+(\d{4})$/);
+  const month = match && tradeRepublicMonths[match[2]];
+  if (!match || !month) throw new PdfStatementError(`Date Trade Republic non reconnue : ${value}.`);
+  return `${match[3]}-${month}-${match[1]}`;
+}
+
 function lbpTransactions(lines: Line[], debit: number, credit: number, periodStart: string, periodEnd: string) {
   const anchors = lines.filter(line =>
     /^\d{2}\/\d{2}\b/.test(line.items[0]?.text ?? "") && amountItem(line, debit) !== undefined
@@ -247,7 +371,7 @@ function accountKey(text: string): PdfAccountKey | undefined {
 }
 
 function accountName(text: string, key: PdfAccountKey) {
-  const fallback = { CCP: "Compte Courant Postal", LIVRET_A: "Livret A", LIVRET_JEUNE: "Livret Jeune Swing", NICKEL: "Compte Nickel" }[key];
+  const fallback = { CCP: "Compte Courant Postal", LIVRET_A: "Livret A", LIVRET_JEUNE: "Livret Jeune Swing", NICKEL: "Compte Nickel", TRADE_REPUBLIC: "Compte courant Trade Republic" }[key];
   return text.split(/[+-]\s*[\d ]+,\d{2}/, 1)[0].replace(/\s+/g, " ").trim() || fallback;
 }
 

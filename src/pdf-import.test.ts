@@ -1,4 +1,4 @@
-// Requiert les arborescences bp/ et nickel/ de 21 relevés réels (246 Mo).
+// Requiert les arborescences bp/, nickel/ et trade republic/ sous GESTIO_PDF_CORPUS.
 // Le corpus n'est pas versé car il contient IBAN, adresse et titulaire dans un dépôt public.
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
@@ -6,12 +6,13 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
 import { openDatabase } from "./db.js";
-import { parsePdfStatement, PdfStatementError } from "./pdf-import.js";
+import { parsePdfStatement, PdfStatementError, verifyTradeRepublicTotals } from "./pdf-import.js";
 import { buildApp } from "./server.js";
 
 const corpus = process.env.GESTIO_PDF_CORPUS ?? "/mnt/c/Users/djabi/Documents/relevé pdf";
 const bpDirectory = join(corpus, "bp");
 const nickelDirectory = join(corpus, "nickel");
+const tradeRepublicDirectory = join(corpus, "trade republic");
 const bpFiles = existsSync(bpDirectory)
   ? readdirSync(bpDirectory).filter(name => name.startsWith("releve_")).sort()
   : [];
@@ -48,6 +49,13 @@ test("refuses a PDF without a text layer and proposes manual entry", async () =>
   );
 });
 
+test("refuses another bank and names the three supported formats", async () => {
+  await assert.rejects(
+    parsePdfStatement(textPdf("AUTRE BANQUE")),
+    (error: unknown) => error instanceof PdfStatementError && /La Banque Postale, Nickel et Trade Republic/.test(error.message)
+  );
+});
+
 test("parses and balances every real La Banque Postale and Nickel statement", async () => {
   assert.ok(existsSync(bpDirectory), `Corpus PDF La Banque Postale absent : ${bpDirectory}`);
   assert.ok(existsSync(nickelDirectory), `Corpus PDF Nickel absent : ${nickelDirectory}`);
@@ -78,6 +86,36 @@ test("parses and balances every real La Banque Postale and Nickel statement", as
   const nickelReferenceStatements = nickelReferenceFiles.map(name => nickelStatements[nickelFiles.indexOf(name)]);
   assert.equal(nickelReferenceStatements.length, 9);
   assert.equal(totalTransactions(nickelReferenceStatements, "NICKEL"), 54);
+});
+
+test("parses and balances both real Trade Republic statements", async () => {
+  const interfaceSource = readFileSync(new URL("../web/src/main.jsx", import.meta.url), "utf8");
+  assert.match(interfaceSource, /\["TRADE_REPUBLIC", "Trade Republic"\]/);
+  assert.match(interfaceSource, /excludedProducts/);
+  const expectedPeriods = new Map([
+    ["Relevé de compte.pdf", ["2025-09-01", "2026-06-13"]],
+    ["statement.pdf", ["2025-12-01", "2026-05-31"]]
+  ]);
+  assert.ok(existsSync(tradeRepublicDirectory), `Corpus PDF Trade Republic absent : ${tradeRepublicDirectory}`);
+  for (const [name, period] of expectedPeriods) {
+    const statement = await parsePdfStatement(new Uint8Array(readFileSync(join(tradeRepublicDirectory, name))));
+    assert.equal(statement.institution, "TRADE_REPUBLIC");
+    assert.deepEqual([statement.periodStart, statement.periodEnd], period);
+    assert.deepEqual(statement.accounts.map(account => account.key), ["TRADE_REPUBLIC"]);
+    assert.deepEqual(statement.excludedProducts, ["Compte PEA", "Compte PEA"]);
+    const account = statement.accounts[0];
+    assert.ok(account.transactions.length > 0);
+    assert.ok(account.transactions.some(transaction => /Incoming transfer/i.test(transaction.label) && transaction.amountCents > 0));
+    assert.ok(account.transactions.some(transaction => /Outgoing transfer/i.test(transaction.label) && transaction.amountCents < 0));
+
+    const totalCredit = total(account.transactions.filter(transaction => transaction.amountCents > 0));
+    const totalDebit = -total(account.transactions.filter(transaction => transaction.amountCents < 0));
+    assert.doesNotThrow(() => verifyTradeRepublicTotals(account, totalCredit, totalDebit));
+    assert.throws(
+      () => verifyTradeRepublicTotals({ ...account, transactions: account.transactions.slice(1) }, totalCredit, totalDebit),
+      PdfStatementError
+    );
+  }
 });
 
 test("imports a multi-account statement atomically and remains idempotent", async (t) => {
@@ -199,6 +237,28 @@ test("imports a multi-account statement atomically and remains idempotent", asyn
     lastSyncedAt: `${account.balanceDate}T23:59:59.999Z`,
     knownSince: parsed.periodStart
   })));
+
+  const tradeRepublicInstitution = (await app.inject({
+    method: "POST",
+    url: "/institutions",
+    headers: { cookie },
+    payload: { name: "Trade Republic", country: "FR" }
+  })).json() as { id: number };
+  const tradeRepublicAccount = (await app.inject({
+    method: "POST",
+    url: "/accounts",
+    headers: { cookie },
+    payload: { name: "Compte courant Trade Republic", type: "BANK", institutionId: tradeRepublicInstitution.id }
+  })).json() as { id: number };
+  const tradeRepublicPdf = readFileSync(join(tradeRepublicDirectory, "statement.pdf"));
+  const tradeRepublicImport = await app.inject({
+    method: "POST",
+    url: "/imports/pdf",
+    headers: { cookie },
+    payload: { pdfBase64: tradeRepublicPdf.toString("base64"), accountIds: { TRADE_REPUBLIC: tradeRepublicAccount.id } }
+  });
+  assert.equal(tradeRepublicImport.statusCode, 200);
+  assert.deepEqual(tradeRepublicImport.json().excludedProducts, ["Compte PEA", "Compte PEA"]);
 });
 
 function totalTransactions(statements: Awaited<ReturnType<typeof parsePdfStatement>>[], key: string) {
@@ -207,12 +267,30 @@ function totalTransactions(statements: Awaited<ReturnType<typeof parsePdfStateme
     .reduce((total, account) => total + account.transactions.length, 0);
 }
 
+function total(transactions: Array<{ amountCents: number }>) {
+  return transactions.reduce((sum, transaction) => sum + transaction.amountCents, 0);
+}
+
 function blankPdf() {
-  const objects = [
+  return pdf([
     "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
     "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
     "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] >>\nendobj\n"
-  ];
+  ]);
+}
+
+function textPdf(text: string) {
+  const stream = `BT /F1 12 Tf 72 720 Td (${text}) Tj ET`;
+  return pdf([
+    "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n",
+    "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n",
+    "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n",
+    "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n",
+    `5 0 obj\n<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}\nendstream\nendobj\n`
+  ]);
+}
+
+function pdf(objects: string[]) {
   let pdf = "%PDF-1.4\n";
   const offsets = objects.map(object => {
     const offset = Buffer.byteLength(pdf);
@@ -220,7 +298,7 @@ function blankPdf() {
     return offset;
   });
   const xref = Buffer.byteLength(pdf);
-  pdf += `xref\n0 4\n0000000000 65535 f \n${offsets.map(offset => `${String(offset).padStart(10, "0")} 00000 n `).join("\n")}\n`;
-  pdf += `trailer\n<< /Size 4 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map(offset => `${String(offset).padStart(10, "0")} 00000 n `).join("\n")}\n`;
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
   return new Uint8Array(Buffer.from(pdf));
 }
