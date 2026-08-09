@@ -382,7 +382,8 @@ export function buildApp(options: BuildAppOptions = {}) {
       imported,
       duplicates: total - imported,
       balancesImported,
-      reviewNeeded
+      reviewNeeded,
+      ...(statement.excludedProducts ? { excludedProducts: statement.excludedProducts } : {})
     });
   });
 
