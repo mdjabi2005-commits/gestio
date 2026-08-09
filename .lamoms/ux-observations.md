@@ -89,3 +89,15 @@ Tout point devenu bloquant doit sortir de ce registre et être traité comme pro
 - Constat : le message global d’import ne nomme pas le ou les fichiers en échec
 - Gravité : faible
 - Recommandation : mentionner les échecs dans la notice globale, en complément de la liste détaillée
+
+### T26 — C1 (reporté vers T27)
+- Issue : T26 / #35
+- Constat : les libellés Trade Republic peuvent contenir le nom du titulaire et des IBAN en clair
+- Gravité : moyenne
+- Recommandation : arbitrer dans T27 entre masquage à l’affichage et qualification du libellé ; ne pas exposer des coordonnées bancaires personnelles dans l’UI
+
+### T26 — C2 à C7 consolidés dans T27
+- Issue : T26 / #35
+- Constat : C2 segmentation par page, C3 jours de date à deux chiffres, C4 libellé partiel, C5 normalisation mois, C6 couplage test/UI, C7 excludedProducts vide
+- Gravité : faible
+- Recommandation : ces points sont intégrés au plan de T27 comme consolidation du parseur PDF Trade Republic

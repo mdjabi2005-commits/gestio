@@ -792,7 +792,14 @@ Et `grep -niE "iban" src/pdf-import.ts src/schema.ts src/enable-banking.ts` **ne
 - [ ] ⚠️ **Porter aussi la règle du candidat unique** : `_apparier` ne retient un candidat que s'il est **seul** ou **strictement meilleur** que le suivant. En cas d'égalité, **aucun appariement**. C'est ce qui empêche d'apparier au hasard deux virements identiques du même jour — cas réel du 17/06/2025, deux virements de 22,00 €.
 - [ ] Poser la nature à l'entrée des mouvements dans `src/server.ts`, et **rejouer la qualification sur l'existant** — le libellé brut est en base, l'IBAN devient disponible, rien n'est perdu.
 - [ ] Rendre la nature **visible** dans l'interface, et `virement_a_verifier` **distinguable** des deux autres.
-- [ ] **Vérification** : rejouer le corpus réel et **retrouver les 214**, avec la même répartition des niveaux de confiance.
+- [ ] **Consolidation du parseur Trade Republic issue de la reviewT de T26** :
+  - segmenter par ligne `SYNTHÈSE DU RELEVÉ DE COMPTE` et non par page, pour éviter la fusion de deux produits sur une même page ;
+  - autoriser `\d{1,2}` pour le jour de date, au lieu de `\d{2}` ;
+  - élargir la plage de lecture du libellé au-delà de `x∈[147,410)` ou documenter explicitement la limitation ;
+  - normaliser la table des mois en NFD comme le reste du code, pour homogénéiser le traitement des accents ;
+  - ne renvoyer `excludedProducts` que quand la liste est non vide.
+- [ ] **Découpler le test parseur de `web/src/main.jsx`** : le test PDF ne doit pas dépendre d'un fichier UI, pour éviter un échec sans régression métier.
+- [ ] **Vérification** : rejouer le corpus réel et retrouver les 214, avec la même répartition des niveaux de confiance.
 - [ ] `npm test` (décompte non nul, `skipped 0`), puis `npm run lint && npm run typecheck && npm run build`.
 
 ### Critères d'acceptation
