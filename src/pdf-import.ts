@@ -1,16 +1,19 @@
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
+import { extractIbans } from "./qualification.js";
 
-export type PdfAccountKey = "CCP" | "LIVRET_A" | "LIVRET_JEUNE" | "NICKEL" | "TRADE_REPUBLIC";
+export type PdfAccountKey = "CCP" | "LIVRET_A" | "LIVRET_JEUNE" | "NICKEL" | "TRADE_REPUBLIC" | "TRADE_REPUBLIC_PEA" | "TRADE_REPUBLIC_PEA_2";
 
 export type PdfTransaction = {
   transactionDate: string;
   label: string;
+  qualificationLabel?: string;
   amountCents: number;
 };
 
 export type PdfStatementAccount = {
   key: PdfAccountKey;
   name: string;
+  iban?: string;
   balanceDate: string;
   closingBalanceCents: number;
   openingBalanceCents?: number;
@@ -26,7 +29,7 @@ export type PdfStatement = {
 };
 
 type Item = { text: string; x: number };
-type Line = { top: number; items: Item[]; text: string };
+type Line = { page: number; top: number; items: Item[]; text: string };
 type Page = { height: number; lines: Line[]; text: string };
 
 export class PdfStatementError extends Error {}
@@ -61,7 +64,7 @@ export async function parsePdfStatement(input: Uint8Array): Promise<PdfStatement
         .sort((left, right) => left.top - right.top)
         .map(line => {
           line.items.sort((left, right) => left.x - right.x);
-          return { ...line, text: line.items.map(item => item.text).join(" ") };
+          return { ...line, page: number, text: line.items.map(item => item.text).join(" ") };
         });
       pages.push({ height, lines: completed, text: completed.map(line => line.text).join("\n") });
     }
@@ -138,6 +141,7 @@ function parseBanquePostale(pages: Page[]): PdfStatement {
       const end = titles[index + 1]?.line.top ?? page.height;
       const lines = page.lines.filter(line => line.top >= title.top && line.top < end);
       const account = accounts.get(key)!;
+      account.iban ??= ibanFromLines(lines);
       const opening = balanceLine(lines, "ANCIEN SOLDE AU");
       const closing = balanceLine(lines, "NOUVEAU SOLDE AU");
       if (opening) account.openingBalanceCents = opening.amountCents;
@@ -174,6 +178,7 @@ function parseNickel(pages: Page[]): PdfStatement {
   const account: PdfStatementAccount = {
     key: "NICKEL",
     name: "Compte Nickel",
+    iban: [...extractIbans(text)][0],
     balanceDate: periodEnd,
     openingBalanceCents: closingBalanceCents - credit + debit,
     closingBalanceCents,
@@ -188,48 +193,67 @@ function parseNickel(pages: Page[]): PdfStatement {
 }
 
 const tradeRepublicMonths: Record<string, string> = {
-  "janv.": "01", "févr.": "02", mars: "03", "avr.": "04", mai: "05", juin: "06",
-  "juil.": "07", août: "08", "sept.": "09", "oct.": "10", "nov.": "11", "déc.": "12"
+  "JANV.": "01", "FEVR.": "02", MARS: "03", "AVR.": "04", MAI: "05", JUIN: "06",
+  "JUIL.": "07", AOUT: "08", "SEPT.": "09", "OCT.": "10", "NOV.": "11", "DEC.": "12"
 };
-const tradeRepublicDatePattern = String.raw`\d{2}\s+(?:janv\.|févr\.|mars|avr\.|mai|juin|juil\.|août|sept\.|oct\.|nov\.|déc\.)\s+\d{4}`;
+const tradeRepublicDatePattern = String.raw`\d{1,2}\s+[A-Za-zÀ-ÿ]+\.?\s+\d{4}`;
 
 function parseTradeRepublic(pages: Page[]): PdfStatement {
-  const starts = pages.flatMap((page, index) =>
-    page.lines.some(line => comparable(line.text).includes("SYNTHESE DU RELEVE DE COMPTE")) ? [index] : []
-  );
-  const segments = starts.map((start, index) => tradeRepublicSegment(pages.slice(start, starts[index + 1])));
+  const lines = pages.flatMap(page => page.lines);
+  const starts = lines.flatMap((line, index) => comparable(line.text).includes("SYNTHESE DU RELEVE DE COMPTE") ? [index] : []);
+  const accountIban = ibanFromLines(lines.slice(0, starts[0]));
+  const segments = starts.map((start, index) => tradeRepublicSegment(lines.slice(start, starts[index + 1])));
   const currentAccounts = segments.filter(segment => comparable(segment.product) === "COMPTE COURANT");
   if (currentAccounts.length !== 1) {
     throw new PdfStatementError("Le compte courant Trade Republic est absent ou ambigu dans le relevé.");
   }
+  const peaSegments = segments.filter(segment => comparable(segment.product) === "COMPTE PEA");
+  if (currentAccounts.length + peaSegments.length !== segments.length) {
+    throw new PdfStatementError("Un produit Trade Republic n'est pas pris en charge.");
+  }
 
   const current = currentAccounts[0];
-  const text = current.pages.map(page => page.text).join("\n");
+  const text = current.lines.map(line => line.text).join("\n");
   const period = text.match(new RegExp(`(${tradeRepublicDatePattern})\\s*[-–]\\s*(${tradeRepublicDatePattern})`, "i"));
   if (!period) throw new PdfStatementError("Période introuvable dans le relevé Trade Republic.");
   const periodStart = tradeRepublicIsoDate(period[1]);
   const periodEnd = tradeRepublicIsoDate(period[2]);
-  const [openingBalanceCents, totalCredit, totalDebit, closingBalanceCents] = current.amounts;
-  const account: PdfStatementAccount = {
-    key: "TRADE_REPUBLIC",
-    name: current.product,
-    balanceDate: periodEnd,
-    openingBalanceCents,
-    closingBalanceCents,
-    transactions: tradeRepublicTransactions(current.pages, openingBalanceCents)
-  };
-  verifyTradeRepublicTotals(account, totalCredit, totalDebit);
+  const accounts = [tradeRepublicAccount(current, "TRADE_REPUBLIC", current.product, accountIban, periodEnd)];
+  if (peaSegments[0]) accounts.push(tradeRepublicAccount(peaSegments[0], "TRADE_REPUBLIC_PEA", "Compte PEA", accountIban, periodEnd));
+  if (peaSegments[1]) accounts.push(tradeRepublicAccount(peaSegments[1], "TRADE_REPUBLIC_PEA_2", "Compte PEA 2", accountIban, periodEnd));
+  if (peaSegments.length > 2) throw new PdfStatementError("Plus de deux comptes PEA ont été trouvés dans le relevé.");
   return {
     institution: "TRADE_REPUBLIC",
     periodStart,
     periodEnd,
-    accounts: [account],
-    excludedProducts: segments.filter(segment => segment !== current).map(segment => segment.product)
+    accounts
   };
 }
 
-function tradeRepublicSegment(pages: Page[]) {
-  const lines = pages.flatMap(page => page.lines);
+function tradeRepublicAccount(
+  segment: ReturnType<typeof tradeRepublicSegment>,
+  key: Extract<PdfAccountKey, "TRADE_REPUBLIC" | "TRADE_REPUBLIC_PEA" | "TRADE_REPUBLIC_PEA_2">,
+  name: string,
+  iban: string | undefined,
+  balanceDate: string
+) {
+  const [openingBalanceCents, totalCredit, totalDebit, closingBalanceCents] = segment.amounts;
+  const account: PdfStatementAccount = {
+    key,
+    name,
+    iban,
+    balanceDate,
+    openingBalanceCents,
+    closingBalanceCents,
+    transactions: key === "TRADE_REPUBLIC"
+      ? tradeRepublicTransactions(segment.lines, openingBalanceCents)
+      : tradeRepublicPeaTransactions(segment.lines)
+  };
+  verifyTradeRepublicTotals(account, totalCredit, totalDebit);
+  return account;
+}
+
+function tradeRepublicSegment(lines: Line[]) {
   const header = lines.findIndex(line => comparable(line.text).startsWith("PRODUIT SOLDE DEBUT DE PERIODE"));
   const summary = lines.slice(header + 1).find(line => line.items.filter(item => parseAmount(item.text) !== undefined).length === 4);
   if (header < 0 || !summary) throw new PdfStatementError("Synthèse de produit introuvable dans le relevé Trade Republic.");
@@ -239,17 +263,16 @@ function tradeRepublicSegment(pages: Page[]) {
     return amount === undefined ? [] : [amount];
   });
   if (!product || amounts.length !== 4) throw new PdfStatementError("Synthèse de produit Trade Republic incomplète.");
-  return { pages, product, amounts: amounts as [number, number, number, number] };
+  return { lines, product, amounts: amounts as [number, number, number, number] };
 }
 
-function tradeRepublicTransactions(pages: Page[], openingBalanceCents: number) {
-  const lines = pages.flatMap(page => page.lines);
+function tradeRepublicTransactions(lines: Line[], openingBalanceCents: number) {
   const start = lines.findIndex(line => comparable(line.text) === "TRANSACTIONS");
   const end = lines.findIndex((line, index) => index > start && comparable(line.text).startsWith("APERCU DU SOLDE"));
   if (start < 0) throw new PdfStatementError("Transactions introuvables dans le relevé Trade Republic.");
   const body = lines.slice(start + 1, end < 0 ? undefined : end);
   const anchors = body.flatMap((line, index) => {
-    const date = line.items.find(item => item.x >= 70 && item.x < 80 && /^\d{2}\s+(?:janv\.|févr\.|mars|avr\.|mai|juin|juil\.|août|sept\.|oct\.|nov\.|déc\.)$/i.test(item.text));
+    const date = line.items.find(item => item.x >= 70 && item.x < 80 && /^\d{1,2}\s+[A-Za-zÀ-ÿ]+\.?$/i.test(item.text));
     return date ? [{ index, date }] : [];
   });
 
@@ -275,7 +298,7 @@ function tradeRepublicTransactions(pages: Page[], openingBalanceCents: number) {
       throw new PdfStatementError(`Le solde courant est incohérent pour une transaction Trade Republic du ${anchor.date.text}.`);
     }
     previousBalanceCents = balance.amountCents;
-    const label = items.filter(item => item.x >= 147 && item.x < 410)
+    const label = items.filter(item => item.x >= 100 && item.x < 410)
       .map(item => item.text.replace(/[+-]?\s*[\d ]+,\d{2}(?=\s*€)/g, ""))
       .join(" ").replace(/\s+/g, " ").trim();
     return {
@@ -284,6 +307,70 @@ function tradeRepublicTransactions(pages: Page[], openingBalanceCents: number) {
       amountCents
     };
   });
+}
+
+function tradeRepublicPeaTransactions(lines: Line[]) {
+  const pages = new Map<number, Line[]>();
+  for (const line of lines) pages.set(line.page, [...(pages.get(line.page) ?? []), line]);
+  return [...pages.values()].flatMap(pageLines => {
+    const columns = tradeRepublicColumns(pageLines);
+    const anchors = pageLines.filter(line => {
+      const first = line.items[0];
+      return first && first.x >= 65 && first.x < 100
+        && /^\d{1,2}(?:\s+[A-Za-zÀ-ÿ]+\.?(?:\s+20\d{2})?)?$/.test(first.text);
+    });
+    return anchors.flatMap((anchor, index): PdfTransaction[] => {
+      const end = Math.min(anchors[index + 1]?.top ?? 735, anchor.top + 45);
+      const block = pageLines.filter(line => line.top >= anchor.top && line.top < end);
+      const dateText = anchor.items[0].text;
+      const month = block.flatMap(line => line.items).find(item => item.x < 105 && /^[A-Za-zÀ-ÿ]{3,5}\.?$/.test(item.text));
+      const year = block.flatMap(line => line.items).find(item => item.x < 105 && /^20\d{2}$/.test(item.text));
+      const incoming = columnAmount(block, columns.incoming, columns.outgoing);
+      const outgoing = columnAmount(block, columns.outgoing, columns.balance);
+      const completeDate = /^\d{1,2}\s+[A-Za-zÀ-ÿ]+\.?\s+20\d{2}$/.test(dateText)
+        ? dateText
+        : /[A-Za-zÀ-ÿ]/.test(dateText) && year
+          ? `${dateText} ${year.text}`
+          : month && year
+            ? `${dateText} ${month.text} ${year.text}`
+            : undefined;
+      if (!completeDate || (incoming === undefined && outgoing === undefined)) return [];
+      const operationType = columnText(block, columns.type, columns.description);
+      const label = columnText(block, columns.description, columns.incoming) || operationType;
+      return [{
+        transactionDate: tradeRepublicIsoDate(completeDate),
+        label,
+        qualificationLabel: `${operationType} ${label}`.replace(/\s+/g, " ").trim(),
+        amountCents: incoming ?? -outgoing!
+      }];
+    });
+  });
+}
+
+function tradeRepublicColumns(lines: Line[]) {
+  const defaults = { type: 100, description: 141, incoming: 410, outgoing: 447, balance: 485 };
+  const header = lines.find(line => line.items[0]?.text === "DATE");
+  if (!header) return defaults;
+  const nearby = lines.filter(line => Math.abs(line.top - header.top) < 8).flatMap(line => line.items);
+  const type = header.items.find(item => item.text === "TYPE")?.x ?? defaults.type;
+  const description = header.items.find(item => item.text === "DESCRIPTION")?.x ?? defaults.description;
+  const incoming = nearby.find(item => comparable(item.text).startsWith("ENTR"))?.x ?? defaults.incoming;
+  const outgoing = nearby.find(item => comparable(item.text).startsWith("SORT"))?.x ?? defaults.outgoing;
+  const balance = Math.min((header.items.find(item => item.text === "SOLDE")?.x ?? 502) - 17, 489);
+  return { type, description, incoming, outgoing, balance };
+}
+
+function columnAmount(lines: Line[], start: number, end: number) {
+  for (const item of lines.flatMap(line => line.items)) {
+    const amount = parseAmount(item.text);
+    if (item.x >= start && item.x < end && amount !== undefined) return Math.abs(amount);
+  }
+  return undefined;
+}
+
+function columnText(lines: Line[], start: number, end: number) {
+  return lines.flatMap(line => line.items.filter(item => item.x >= start && item.x < end).map(item => item.text))
+    .join(" ").replace(/\s+/g, " ").trim();
 }
 
 function tradeRepublicAmounts(value: string) {
@@ -300,11 +387,11 @@ export function verifyTradeRepublicTotals(account: PdfStatementAccount, totalCre
   }
 }
 
-function tradeRepublicIsoDate(value: string) {
-  const match = value.trim().toLowerCase().match(/^(\d{2})\s+([^ ]+)\s+(\d{4})$/);
-  const month = match && tradeRepublicMonths[match[2]];
+export function tradeRepublicIsoDate(value: string) {
+  const match = value.trim().match(/^(\d{1,2})\s+([^ ]+)\s+(\d{4})$/);
+  const month = match && tradeRepublicMonths[comparable(match[2])];
   if (!match || !month) throw new PdfStatementError(`Date Trade Republic non reconnue : ${value}.`);
-  return `${match[3]}-${month}-${match[1]}`;
+  return `${match[3]}-${month}-${match[1].padStart(2, "0")}`;
 }
 
 function lbpTransactions(lines: Line[], debit: number, credit: number, periodStart: string, periodEnd: string) {
@@ -333,7 +420,13 @@ function nickelTransactions(lines: Line[]) {
     const date = line.items.find(item => /^\d{2}\/\d{2}\/\d{4}$/.test(item.text));
     const amount = [...line.items].reverse().find(item => item.x >= 480 && parseAmount(item.text) !== undefined);
     if (!/^\d+$/.test(line.items[0]?.text ?? "") || !date || !amount) return undefined;
-    return { line, date: date.text, amountCents: parseAmount(amount.text)!, labels: line.items.filter(item => item.x >= 250 && item.x < 480).map(item => item.text) };
+    return {
+      line,
+      date: date.text,
+      amountCents: parseAmount(amount.text)!,
+      operationType: line.items.filter(item => item.x >= 125 && item.x < 250).map(item => item.text).join(" "),
+      labels: line.items.filter(item => item.x >= 250 && item.x < 480).map(item => item.text)
+    };
   }).filter((anchor): anchor is NonNullable<typeof anchor> => anchor !== undefined);
 
   for (const line of lines) {
@@ -346,11 +439,15 @@ function nickelTransactions(lines: Line[]) {
     if (nearest.distance <= 15) anchors[nearest.index].labels.push(...labels);
   }
 
-  return anchors.map(anchor => ({
-    transactionDate: isoDate(anchor.date),
-    label: anchor.labels.join(" ").replace(/\s+/g, " ").trim() || "Opération Nickel",
-    amountCents: anchor.amountCents
-  }));
+  return anchors.map(anchor => {
+    const label = anchor.labels.join(" ").replace(/\s+/g, " ").trim() || "Opération Nickel";
+    return {
+      transactionDate: isoDate(anchor.date),
+      label,
+      qualificationLabel: `${anchor.operationType} ${label}`.replace(/\s+/g, " ").trim(),
+      amountCents: anchor.amountCents
+    };
+  });
 }
 
 function operationColumns(lines: Line[]) {
@@ -371,7 +468,7 @@ function accountKey(text: string): PdfAccountKey | undefined {
 }
 
 function accountName(text: string, key: PdfAccountKey) {
-  const fallback = { CCP: "Compte Courant Postal", LIVRET_A: "Livret A", LIVRET_JEUNE: "Livret Jeune Swing", NICKEL: "Compte Nickel", TRADE_REPUBLIC: "Compte courant Trade Republic" }[key];
+  const fallback = { CCP: "Compte Courant Postal", LIVRET_A: "Livret A", LIVRET_JEUNE: "Livret Jeune Swing", NICKEL: "Compte Nickel", TRADE_REPUBLIC: "Compte courant Trade Republic", TRADE_REPUBLIC_PEA: "Compte PEA", TRADE_REPUBLIC_PEA_2: "Compte PEA 2" }[key];
   return text.split(/[+-]\s*[\d ]+,\d{2}/, 1)[0].replace(/\s+/g, " ").trim() || fallback;
 }
 
@@ -399,6 +496,10 @@ function lineAmount(line: Line) {
     if (amount !== undefined) return amount;
   }
   return undefined;
+}
+
+function ibanFromLines(lines: Line[]) {
+  return lines.flatMap(line => [...extractIbans(line.text)])[0];
 }
 
 function parseAmount(text: string) {

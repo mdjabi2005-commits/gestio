@@ -6,10 +6,10 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
 import { openDatabase } from "./db.js";
-import { parsePdfStatement, PdfStatementError, verifyTradeRepublicTotals } from "./pdf-import.js";
+import { parsePdfStatement, PdfStatementError, tradeRepublicIsoDate, verifyTradeRepublicTotals } from "./pdf-import.js";
 import { buildApp } from "./server.js";
 
-const corpus = process.env.GESTIO_PDF_CORPUS ?? "/mnt/c/Users/djabi/Documents/relevé pdf";
+const corpus = process.env.GESTIO_PDF_CORPUS ?? join("/mnt/c/Users", process.env.USER ?? "", "Documents/relevé pdf");
 const bpDirectory = join(corpus, "bp");
 const nickelDirectory = join(corpus, "nickel");
 const tradeRepublicDirectory = join(corpus, "trade republic");
@@ -56,6 +56,10 @@ test("refuses another bank and names the three supported formats", async () => {
   );
 });
 
+test("accepts one-digit Trade Republic days and normalizes accented months", () => {
+  assert.equal(tradeRepublicIsoDate("1 déc. 2025"), "2025-12-01");
+});
+
 test("parses and balances every real La Banque Postale and Nickel statement", async () => {
   assert.ok(existsSync(bpDirectory), `Corpus PDF La Banque Postale absent : ${bpDirectory}`);
   assert.ok(existsSync(nickelDirectory), `Corpus PDF Nickel absent : ${nickelDirectory}`);
@@ -73,6 +77,10 @@ test("parses and balances every real La Banque Postale and Nickel statement", as
   assert.equal(totalTransactions(bpReferenceStatements, "CCP"), 299);
   assert.equal(totalTransactions(bpReferenceStatements, "LIVRET_A"), 45);
   assert.equal(totalTransactions(bpReferenceStatements, "LIVRET_JEUNE"), 6);
+  const ibanCounts = bpReferenceStatements.flatMap(statement => statement.accounts)
+    .filter(account => /^(?:FR[A-Z0-9]{25}|DE[A-Z0-9]{20})$/.test(account.iban ?? ""))
+    .reduce<Record<string, number>>((counts, account) => ({ ...counts, [account.key]: (counts[account.key] ?? 0) + 1 }), {});
+  assert.deepEqual(ibanCounts, { CCP: 12, LIVRET_A: 11, LIVRET_JEUNE: 2 });
   assert.ok(bpStatements.every(statement => statement.accounts.map(account => account.key).join() === "CCP,LIVRET_A,LIVRET_JEUNE"));
 
   const nickelFiles = readdirSync(nickelDirectory).filter(name => /RM.*\.pdf$/.test(name)).sort();
@@ -86,12 +94,10 @@ test("parses and balances every real La Banque Postale and Nickel statement", as
   const nickelReferenceStatements = nickelReferenceFiles.map(name => nickelStatements[nickelFiles.indexOf(name)]);
   assert.equal(nickelReferenceStatements.length, 9);
   assert.equal(totalTransactions(nickelReferenceStatements, "NICKEL"), 54);
+  assert.ok(nickelReferenceStatements.every(statement => /^(?:FR[A-Z0-9]{25}|DE[A-Z0-9]{20})$/.test(statement.accounts[0].iban ?? "")));
 });
 
 test("parses and balances both real Trade Republic statements", async () => {
-  const interfaceSource = readFileSync(new URL("../web/src/main.jsx", import.meta.url), "utf8");
-  assert.match(interfaceSource, /\["TRADE_REPUBLIC", "Trade Republic"\]/);
-  assert.match(interfaceSource, /excludedProducts/);
   const expectedPeriods = new Map([
     ["Relevé de compte.pdf", ["2025-09-01", "2026-06-13"]],
     ["statement.pdf", ["2025-12-01", "2026-05-31"]]
@@ -101,20 +107,21 @@ test("parses and balances both real Trade Republic statements", async () => {
     const statement = await parsePdfStatement(new Uint8Array(readFileSync(join(tradeRepublicDirectory, name))));
     assert.equal(statement.institution, "TRADE_REPUBLIC");
     assert.deepEqual([statement.periodStart, statement.periodEnd], period);
-    assert.deepEqual(statement.accounts.map(account => account.key), ["TRADE_REPUBLIC"]);
-    assert.deepEqual(statement.excludedProducts, ["Compte PEA", "Compte PEA"]);
-    const account = statement.accounts[0];
-    assert.ok(account.transactions.length > 0);
-    assert.ok(account.transactions.some(transaction => /Incoming transfer/i.test(transaction.label) && transaction.amountCents > 0));
-    assert.ok(account.transactions.some(transaction => /Outgoing transfer/i.test(transaction.label) && transaction.amountCents < 0));
-
-    const totalCredit = total(account.transactions.filter(transaction => transaction.amountCents > 0));
-    const totalDebit = -total(account.transactions.filter(transaction => transaction.amountCents < 0));
-    assert.doesNotThrow(() => verifyTradeRepublicTotals(account, totalCredit, totalDebit));
-    assert.throws(
-      () => verifyTradeRepublicTotals({ ...account, transactions: account.transactions.slice(1) }, totalCredit, totalDebit),
-      PdfStatementError
-    );
+    assert.deepEqual(statement.accounts.map(account => account.key), ["TRADE_REPUBLIC", "TRADE_REPUBLIC_PEA", "TRADE_REPUBLIC_PEA_2"]);
+    assert.equal(statement.excludedProducts, undefined);
+    for (const account of statement.accounts) {
+      assert.match(account.iban!, /^(?:FR[A-Z0-9]{25}|DE[A-Z0-9]{20})$/);
+      assert.ok(account.transactions.length > 0);
+      const totalCredit = total(account.transactions.filter(transaction => transaction.amountCents > 0));
+      const totalDebit = -total(account.transactions.filter(transaction => transaction.amountCents < 0));
+      assert.doesNotThrow(() => verifyTradeRepublicTotals(account, totalCredit, totalDebit));
+      assert.throws(
+        () => verifyTradeRepublicTotals({ ...account, transactions: account.transactions.slice(1) }, totalCredit, totalDebit),
+        PdfStatementError
+      );
+    }
+    assert.ok(statement.accounts.flatMap(account => account.transactions).some(transaction => /Incoming transfer/i.test(transaction.label) && transaction.amountCents > 0));
+    assert.ok(statement.accounts.flatMap(account => account.transactions).some(transaction => /Outgoing transfer/i.test(transaction.label) && transaction.amountCents < 0));
   }
 });
 
@@ -250,15 +257,35 @@ test("imports a multi-account statement atomically and remains idempotent", asyn
     headers: { cookie },
     payload: { name: "Compte courant Trade Republic", type: "BANK", institutionId: tradeRepublicInstitution.id }
   })).json() as { id: number };
+  const tradeRepublicPea = (await app.inject({
+    method: "POST",
+    url: "/accounts",
+    headers: { cookie },
+    payload: { name: "Compte PEA", type: "OTHER", institutionId: tradeRepublicInstitution.id }
+  })).json() as { id: number };
+  const tradeRepublicPea2 = (await app.inject({
+    method: "POST",
+    url: "/accounts",
+    headers: { cookie },
+    payload: { name: "Compte PEA 2", type: "OTHER", institutionId: tradeRepublicInstitution.id }
+  })).json() as { id: number };
   const tradeRepublicPdf = readFileSync(join(tradeRepublicDirectory, "statement.pdf"));
   const tradeRepublicImport = await app.inject({
     method: "POST",
     url: "/imports/pdf",
     headers: { cookie },
-    payload: { pdfBase64: tradeRepublicPdf.toString("base64"), accountIds: { TRADE_REPUBLIC: tradeRepublicAccount.id } }
+    payload: {
+      pdfBase64: tradeRepublicPdf.toString("base64"),
+      accountIds: {
+        TRADE_REPUBLIC: tradeRepublicAccount.id,
+        TRADE_REPUBLIC_PEA: tradeRepublicPea.id,
+        TRADE_REPUBLIC_PEA_2: tradeRepublicPea2.id
+      }
+    }
   });
   assert.equal(tradeRepublicImport.statusCode, 200);
-  assert.deepEqual(tradeRepublicImport.json().excludedProducts, ["Compte PEA", "Compte PEA"]);
+  assert.equal(tradeRepublicImport.json().balancesImported, 3);
+  assert.equal(tradeRepublicImport.json().excludedProducts, undefined);
 });
 
 function totalTransactions(statements: Awaited<ReturnType<typeof parsePdfStatement>>[], key: string) {

@@ -8,8 +8,9 @@ import { deduplicateTransactions, type TransactionForDeduplication } from "./ded
 import { parseBankTransaction } from "./enable-banking.js";
 import { parsePdfStatement } from "./pdf-import.js";
 
-const lab = process.env.GESTIO_LAB_CORPUS ?? "/mnt/c/Users/djabi/gestio/.lamoms/lab/agy";
-const statements = process.env.GESTIO_PDF_CORPUS ?? "/mnt/c/Users/djabi/Documents/relevé pdf";
+const windowsHome = join("/mnt/c/Users", process.env.USER ?? "");
+const lab = process.env.GESTIO_LAB_CORPUS ?? join(windowsHome, "gestio/.lamoms/lab/agy");
+const statements = process.env.GESTIO_PDF_CORPUS ?? join(windowsHome, "Documents/relevé pdf");
 
 test("replays the real PDF and API corpus in both channel orders", async () => {
   const apiPath = join(lab, "enable_banking_transactions_reelles.json");

@@ -58,6 +58,7 @@ function migrate(sqlite: RawDatabase) {
       type TEXT NOT NULL CHECK (type IN ('BANK', 'LIVRET_A', 'OTHER')),
       external_uid TEXT,
       external_hash TEXT,
+      iban TEXT,
       balance_cents INTEGER,
       currency TEXT,
       last_synced_at TEXT,
@@ -71,6 +72,7 @@ function migrate(sqlite: RawDatabase) {
       transaction_date TEXT NOT NULL,
       transaction_at TEXT,
       label TEXT NOT NULL,
+      qualification_label TEXT,
       amount_cents INTEGER NOT NULL,
       source TEXT NOT NULL CHECK (source IN ('MANUEL', 'ENABLE_BANKING', 'CSV_IMPORT', 'PDF_RELEVE')),
       fingerprint TEXT NOT NULL,
@@ -78,6 +80,7 @@ function migrate(sqlite: RawDatabase) {
       external_reference TEXT,
       needs_review INTEGER NOT NULL DEFAULT 0,
       resolved_at TEXT,
+      nature TEXT CHECK (nature IS NULL OR nature IN ('virement_intercompte', 'virement_externe', 'virement_a_verifier', 'retrait_especes', 'frais_retrait', 'depot_especes')),
 
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -134,13 +137,16 @@ function migrate(sqlite: RawDatabase) {
   addColumn(sqlite, "accounts", "institution_id", "INTEGER REFERENCES institutions(id)");
   addColumn(sqlite, "accounts", "external_uid", "TEXT");
   addColumn(sqlite, "accounts", "external_hash", "TEXT");
+  addColumn(sqlite, "accounts", "iban", "TEXT");
   addColumn(sqlite, "accounts", "balance_cents", "INTEGER");
   addColumn(sqlite, "accounts", "currency", "TEXT");
   addColumn(sqlite, "accounts", "last_synced_at", "TEXT");
   addColumn(sqlite, "accounts", "known_since", "TEXT");
   addColumn(sqlite, "transactions", "external_reference", "TEXT");
+  addColumn(sqlite, "transactions", "qualification_label", "TEXT");
   addColumn(sqlite, "transactions", "needs_review", "INTEGER NOT NULL DEFAULT 0");
   addColumn(sqlite, "transactions", "resolved_at", "TEXT");
+  addColumn(sqlite, "transactions", "nature", "TEXT");
   sqlite.exec("CREATE UNIQUE INDEX IF NOT EXISTS accounts_external_hash_unique_idx ON accounts(external_hash)");
 
   if (sqlite.prepare("SELECT 1 FROM accounts WHERE institution_id IS NULL LIMIT 1").get()) {
