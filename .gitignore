@@ -27,3 +27,7 @@ backups/
 .lamoms/handoff.json
 .lamoms/task-state.json
 .lamoms/waiting.json
+.lamoms/expected-final.json
+.lamoms/review-candidate.csv
+.lamoms/rapport_T27_consolidation.md
+.lamoms/regles_reconnaissance_gestio.md

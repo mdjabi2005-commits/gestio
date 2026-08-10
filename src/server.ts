@@ -326,7 +326,7 @@ export function buildApp(options: BuildAppOptions = {}) {
           const input = readTransactionInput({ ...transaction, accountId, source: "PDF_RELEVE" });
           const occurrence = occurrences.get(input.fingerprint) ?? 0;
           occurrences.set(input.fingerprint, occurrence + 1);
-          return { ...input, transactionAt: null, occurrence };
+          return { ...input, transactionAt: null, qualificationLabel: transaction.qualificationLabel ?? null, occurrence };
         });
         const candidateSet = new Set(candidates);
         const deduplicated = deduplicateTransactions([existing, candidates]);
@@ -336,8 +336,8 @@ export function buildApp(options: BuildAppOptions = {}) {
         const review = new Set(deduplicated.toReview);
         const insert = database.sqlite.prepare(`
           INSERT OR IGNORE INTO transactions
-            (account_id, transaction_date, transaction_at, label, amount_cents, source, fingerprint, occurrence, needs_review)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (account_id, transaction_date, transaction_at, label, qualification_label, amount_cents, source, fingerprint, occurrence, needs_review)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `);
         for (const transaction of pending) {
           imported += insert.run(
@@ -345,6 +345,7 @@ export function buildApp(options: BuildAppOptions = {}) {
             transaction.transactionDate,
             transaction.transactionAt,
             transaction.label,
+            transaction.qualificationLabel,
             transaction.amountCents,
             transaction.source,
             transaction.fingerprint,

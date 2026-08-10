@@ -49,7 +49,7 @@ test("classifies cash movements and flags configured personal transfers without 
     movement(1, 1, 1, "Banque A", -5_000, "Retrait DAB"),
     movement(2, 1, 1, "Banque A", -150, "Frais retrait DAB"),
     movement(3, 1, 1, "Banque A", 10_000, "Dépôt d'espèces"),
-    movement(4, 1, 1, "Banque A", -3_000, "Virement à Titulaire Unique")
+    movement(4, 1, 1, "Banque A", -3_000, "Virement à Unique pour Titulaire")
   ].map(item => ({ ...item, accountIban: null }));
   assert.deepEqual(qualifyTransactions(rows, ["Titulaire Unique"]).map(item => item.nature), [
     "retrait_especes", "frais_retrait", "depot_especes", "virement_a_verifier"

@@ -107,19 +107,21 @@ export function requalifyTransactions(database: AppDatabase) {
   const rows = database.sqlite.prepare(`
     SELECT t.id, t.account_id AS accountId, a.institution_id AS institutionId,
            i.name AS institutionName, a.iban AS accountIban,
-           t.transaction_date AS transactionDate, t.amount_cents AS amountCents, t.label
+           t.transaction_date AS transactionDate, t.amount_cents AS amountCents,
+           COALESCE(t.qualification_label, t.label) AS label
     FROM transactions t
     JOIN accounts a ON a.id = t.account_id
     JOIN institutions i ON i.id = a.institution_id
   `).all() as TransactionForQualification[];
   const names = (process.env.GESTIO_PERSONAL_NAMES ?? "").split(",").map(value => value.trim()).filter(Boolean);
-  const byId = new Map(qualifyTransactions(rows, names).map(qualification => [qualification.id, qualification.nature]));
+  const qualifications = qualifyTransactions(rows, names);
+  const byId = new Map(qualifications.map(qualification => [qualification.id, qualification.nature]));
   // ponytail: full rewrite is enough for one user; make it incremental only if transaction volume makes this measurable.
   database.sqlite.transaction(() => {
     const update = database.sqlite.prepare("UPDATE transactions SET nature = ? WHERE id = ? AND nature IS NOT ?");
     for (const row of rows) update.run(byId.get(row.id) ?? null, row.id, byId.get(row.id) ?? null);
   })();
-  return byId;
+  return qualifications;
 }
 
 function qualifyAlone(
@@ -243,7 +245,7 @@ function hasPersonalHint(text: string, personalNames: readonly string[]) {
 }
 
 function hasConfiguredPersonalName(text: string, personalNames: readonly string[]) {
-  return personalNames.map(normalizedText).filter(Boolean).some(name => text.includes(name));
+  return personalNames.map(normalizedText).filter(Boolean).some(name => name.split(" ").every(part => text.includes(part)));
 }
 
 function aliases(institution: string) {
