@@ -41,6 +41,7 @@ export const transactions = sqliteTable("transactions", {
   transactionDate: text("transaction_date").notNull(),
   transactionAt: text("transaction_at"),
   label: text("label").notNull(),
+  qualificationLabel: text("qualification_label"),
   amountCents: integer("amount_cents").notNull(),
   source: text("source", { enum: transactionSources }).notNull(),
   fingerprint: text("fingerprint").notNull(),

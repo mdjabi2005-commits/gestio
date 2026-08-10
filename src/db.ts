@@ -72,6 +72,7 @@ function migrate(sqlite: RawDatabase) {
       transaction_date TEXT NOT NULL,
       transaction_at TEXT,
       label TEXT NOT NULL,
+      qualification_label TEXT,
       amount_cents INTEGER NOT NULL,
       source TEXT NOT NULL CHECK (source IN ('MANUEL', 'ENABLE_BANKING', 'CSV_IMPORT', 'PDF_RELEVE')),
       fingerprint TEXT NOT NULL,
@@ -142,6 +143,7 @@ function migrate(sqlite: RawDatabase) {
   addColumn(sqlite, "accounts", "last_synced_at", "TEXT");
   addColumn(sqlite, "accounts", "known_since", "TEXT");
   addColumn(sqlite, "transactions", "external_reference", "TEXT");
+  addColumn(sqlite, "transactions", "qualification_label", "TEXT");
   addColumn(sqlite, "transactions", "needs_review", "INTEGER NOT NULL DEFAULT 0");
   addColumn(sqlite, "transactions", "resolved_at", "TEXT");
   addColumn(sqlite, "transactions", "nature", "TEXT");

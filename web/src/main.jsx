@@ -13,7 +13,7 @@ import "./styles.css";
 
 const cacheKey = "gestio.last-balance";
 const authorizationKey = "gestio.authorization-id";
-const pdfAccountKeys = [["CCP", "Compte courant (CCP)"], ["LIVRET_A", "Livret A"], ["LIVRET_JEUNE", "Livret Jeune"], ["NICKEL", "Nickel"], ["TRADE_REPUBLIC", "Trade Republic"]];
+const pdfAccountKeys = [["CCP", "Compte courant (CCP)"], ["LIVRET_A", "Livret A"], ["LIVRET_JEUNE", "Livret Jeune"], ["NICKEL", "Nickel"], ["TRADE_REPUBLIC", "Trade Republic"], ["TRADE_REPUBLIC_PEA", "Trade Republic PEA"], ["TRADE_REPUBLIC_PEA_2", "Trade Republic PEA 2"]];
 
 function App() {
   const [screen, setScreen] = useState({ name: "loading" });
