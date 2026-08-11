@@ -6,27 +6,9 @@ Ce document est une **source de vérité statique** sur ce qui est implémenté,
 
 ### Endpoints Fastify
 
-| Endpoint | Rôle implémenté | Fichier:ligne |
-|----------|-----------------|---------------|
-| `GET /` | Page d’accueil | `src/server.ts:96` |
-| `GET /auth/state` | Vérifie si le mot de passe local est configuré | `src/server.ts:141` |
-| `POST /auth/setup` | Crée le mot de passe local | `src/server.ts:145` |
-| `POST /auth/login` | Connexion par mot de passe local | `src/server.ts:163` |
-| `POST /auth/logout` | Déconnexion | `src/server.ts:176` |
-| `GET /institutions` | Liste des établissements | `src/server.ts:202` |
-| `POST /institutions` | Création d’un établissement | `src/server.ts:195` |
-| `GET /accounts` | Liste des comptes avec établissement | `src/server.ts:204` |
-| `POST /accounts` | Création d’un compte | `src/server.ts:185` |
-| `GET /balance` | Tréso agrégée + par compte | `src/server.ts:396` |
-| `GET /transactions` | Liste transactions avec filtres (`needsReview`, pagination) | `src/server.ts:227` |
-| `POST /transactions` | Saisie manuelle | `src/server.ts:208` |
-| `DELETE /transactions/:id` | Suppression transaction | `src/server.ts:227` |
-| `POST /transactions/resolve` | Résout un groupe de doublons | `src/server.ts:258` |
-| `POST /imports/pdf` | Import PDF multi-comptes | `src/server.ts:286` |
-| `POST /enable-banking/connect` | Démarre connexion bancaire | `src/server.ts:457` |
-| `POST /enable-banking/sync/:authorizationId` | Lance synchronisation | `src/server.ts:457` |
-| `GET /enable-banking/status/:authorizationId` | Statut connexion bancaire | `src/server.ts:457` |
-| `GET /sw.js` | Service worker offline | `src/server.ts:...` |
+> La table qui figurait ici a été RETIRÉE le 2026-08-11 : elle repérait par numéro de ligne, contre la convention du 2026-08-06, et se trompait sur cinq entrées — `DELETE /transactions/:id` (272 et non 227), `POST /enable-banking/sync/:id` (501), `GET /enable-banking/status/:id` (488), et `GET /sw.js`, qui n'est pas une route déclarée mais un fichier servi par `fastify-static` depuis `dist/web`.
+>
+> L'inventaire complet et vérifié des 18 routes, des 7 endpoints Enable Banking appelés, des 34 fonctions exportées et des 15 points d'appel du navigateur vit désormais dans **`.lamoms/inventaire-methodes.md`**, repéré par symboles.
 
 ### Modules métier
 
