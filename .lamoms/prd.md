@@ -103,3 +103,13 @@ Chaque critère dit aussi **ce qu'il préserve**, sans quoi une régression le s
 ## 9. La cinquième tâche
 
 Il n'y en a pas aujourd'hui, et il ne faut pas en inventer une. **Elle est réservée au premier blocage dur que T30 rencontrera** : le protocole dit qu'un blocage arrête le parcours et devient la tâche suivante. Cette tâche-là n'appartiendra pas au PRD suivant — elle appartiendra ici, parce qu'elle empêchera de finir la mesure.
+
+## 10. Ce que ce lot prépare
+
+**Direction posée par Lamoms le 2026-08-11 : le PRD suivant construira l'algorithme de connaissance de l'utilisateur.** Ce n'est pas une fonctionnalité de plus, c'est ce qui manque sous toutes les autres.
+
+Aujourd'hui l'application ne sait qu'une seule chose déclarée de son utilisateur — son nom, par `GESTIO_PERSONAL_NAMES` (T29). Tout le reste est dérivé des données : les IBAN viennent des relevés, les établissements de la connexion, `known_since` de l'import. Et rien de tout cela n'est saisissable ni corrigeable depuis l'interface : il n'existe ni `PUT` ni `PATCH` dans toute l'API. La machine décide, l'utilisateur regarde.
+
+**T29 reste donc trois lignes de configuration, et c'est délibéré.** Son rôle est de rendre T30 mesurable, pas de préfigurer le modèle. P58 nomme le défaut de son emplacement — hors base chiffrée, hors sauvegarde — sans le corriger ici : déplacer la connaissance avant d'avoir mesuré ce qu'elle doit contenir, ce serait bâtir sur une supposition.
+
+**Ce que T30 en récolte** : à son étape 8, pour chaque mouvement « à vérifier », l'information qui aurait permis de trancher. Au bout du parcours, la liste n'est pas celle des doutes — c'est celle de ce que l'application aurait dû savoir. C'est le cahier des charges du PRD suivant, écrit par les vraies données.
