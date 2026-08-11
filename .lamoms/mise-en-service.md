@@ -33,8 +33,15 @@ npm start              # ou npm run dev
 Avant la mesure de qualification, remplacer dans le `.env` réel l'exemple de
 `GESTIO_PERSONAL_NAMES` par les noms ou alias privés du titulaire, séparés par des virgules,
 puis relancer Gestio, qui charge ce fichier avec `dotenv`. Sans cette variable, un virement
-personnel sans jambe miroir redevient « externe probable » et l'oracle privé est ignoré. Ne
-pas sourcer le `.env` complet pour lancer le test : il peut contenir des secrets multilignes.
+personnel sans jambe miroir redevient « externe probable » et l'oracle privé est ignoré. Le
+serveur charge `.env` lui-même (`dotenv`) — le test, non : `npm test` lit l'environnement du
+shell. Pour rejouer l'oracle, exporter la SEULE variable, sans sourcer le fichier complet (il
+peut contenir des secrets multilignes) :
+
+```bash
+export GESTIO_PERSONAL_NAMES="$(grep '^GESTIO_PERSONAL_NAMES=' .env | cut -d= -f2- | tr -d '\"')"
+npm test
+```
 
 - [ ] `npm test` rejoue l'oracle de qualification sans différence et sans test ignoré.
 
@@ -112,6 +119,9 @@ Revolut (12 champs, 3727 j), Trade Republic (4 champs, 90 j, **aucun libellé** 
   `scripts/backup.sh:4-8` le source lui-même : deux chemins de chargement incohérents.
   (3) Deux lignes `GESTIO_DB_KEY` se sont retrouvées dans le fichier ; `. ./.env` prend la
   dernière, l'autre était morte — doublon supprimé, sauvegarde dans `.env.bak-doublon`.
+
+Construit historique : depuis le 2026-08-11, le serveur charge `.env` lui-même (`dotenv`,
+ajouté dans `d5c054a`) — les deux premières puces de ce bloc sont périmées.
 - **Environnement, hors dépôt** — `node_modules` s'est vidé tout seul après une installation
   saine : 82 paquets sur 134 sans `package.json`, code disparu, `LICENSE`/`docs`/`test`
   conservés. Réinstallation → 0 cassé sur 124. Corruption ASYNCHRONE de `/mnt/c` (antivirus
