@@ -1,3 +1,5 @@
+import dotenv from "dotenv";
+dotenv.config();
 import { buildApp } from "./server.js";
 import { localHttpsOptions } from "./tls.js";
 

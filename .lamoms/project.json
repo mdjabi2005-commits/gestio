@@ -6,7 +6,7 @@
   "features": [
     "tréso disponible agrégée + par compte",
     "synchro bancaire Enable Banking (43 transactions réelles validées)",
-    "import CSV/PDF (état des lieux + bilan mensuel)",
+    "import PDF/PDF uniquement pour l'état des lieux et le bilan mensuel ; CSV abandonné pour le MVP",
     "saisie manuelle fallback",
     "UI unique, identique sur mobile et desktop, sur même frontend"
   ],
@@ -46,6 +46,8 @@
     "Les validations du projet passent",
     "La livraison est relue avant le verdict"
   ],
-  "cycleId": "T2+T3 autorisés après intégration issue-7 sur main",
-  "updatedAt": "2026-08-02T00:00:00.000Z"
+  "cycleId": "cycle 2 remise en état clos",
+  "closedAt": "2026-08-10T00:00:00.000Z",
+  "closure": "PRD (2) clos par verdict Hermès VERT sur la 3e livraison de T27. Livraison intégrée dans main (93dea7d) puis master (780c479). Tests verts, non-régression confirmée, oracle revalidé. Deux issues annexes créées pour les constats MOYENNE/FAIBLE : #38 (corrections M1/M2/M3/F5/F6/F7) et #39 (nettoyage/alignement F1-F4).",
+  "updatedAt": "2026-08-10T00:00:00.000Z"
 }

@@ -1,5 +1,22 @@
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { extractIbans } from "./qualification.js";
+
+const isNode = typeof window === "undefined";
+if (isNode) {
+  // @ts-ignore
+  globalThis.DOMMatrix ??= class DOMMatrix {
+    a = 1;
+    b = 0;
+    c = 0;
+    d = 1;
+    e = 0;
+    f = 0;
+    isIdentity() { return true; }
+    setTransform() {}
+    multiply() { return this; }
+  };
+  // @ts-ignore
+  globalThis.Path2D ??= class Path2D {};
+}
 
 export type PdfAccountKey = "CCP" | "LIVRET_A" | "LIVRET_JEUNE" | "NICKEL" | "TRADE_REPUBLIC" | "TRADE_REPUBLIC_PEA" | "TRADE_REPUBLIC_PEA_2";
 
@@ -39,6 +56,7 @@ export async function parsePdfStatement(input: Uint8Array): Promise<PdfStatement
     throw new PdfStatementError("Le fichier fourni n'est pas un PDF valide.");
   }
 
+  const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const loadingTask = getDocument({ data: Uint8Array.from(input), useSystemFonts: true });
   try {
     const document = await loadingTask.promise;
