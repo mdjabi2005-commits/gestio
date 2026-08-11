@@ -22,15 +22,21 @@ CONSTATÉ LE 2026-08-04, avant tout lancement, en lisant le dépôt :
   `.env` réel n'a pas.
 - Aucune base n'existe (`data/gestio.db` absent) : c'est bien une première installation.
 
-À faire : exporter les variables dans le shell avant de lancer, ou charger `.env` à la main.
-Commandes :
+Le serveur charge lui-même `.env` avec `dotenv`. Commandes :
 
 ```bash
 npm ci
 npm run build          # tsc + vite build → dist/ et dist/web/
-set -a; . ./.env; set +a
 npm start              # ou npm run dev
 ```
+
+Avant la mesure de qualification, remplacer dans le `.env` réel l'exemple de
+`GESTIO_PERSONAL_NAMES` par les noms ou alias privés du titulaire, séparés par des virgules,
+puis relancer Gestio, qui charge ce fichier avec `dotenv`. Sans cette variable, un virement
+personnel sans jambe miroir redevient « externe probable » et l'oracle privé est ignoré. Ne
+pas sourcer le `.env` complet pour lancer le test : il peut contenir des secrets multilignes.
+
+- [ ] `npm test` rejoue l'oracle de qualification sans différence et sans test ignoré.
 
 - [ ] Le serveur écoute sur https://localhost:3443/ et la page se charge (certificat auto-signé
       à accepter dans le navigateur — c'est attendu).
