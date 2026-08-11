@@ -78,4 +78,4 @@ Les 7 clés de relevé de l'interface (`pdfAccountKeys`) correspondent exactemen
 
 Aucun `PUT`, aucun `PATCH`, un seul `DELETE`. **L'API est en création et lecture seule.** On ne peut ni renommer ou corriger un compte, ni supprimer un compte ou un établissement, ni corriger la `nature` posée par la machine, ni lister ou révoquer une connexion bancaire, ni filtrer les transactions par période. Le seul geste correctif offert porte sur un doublon ambigu, et jamais sur un groupe entièrement issu de l'API.
 
-Les 605 décisions de qualification n'ont **aucune méthode HTTP** qui permette d'en contester une seule. `GET /accounts` est la seule route sans consommateur.
+Les 606 décisions de qualification n'ont **aucune méthode HTTP** qui permette d'en contester une seule. `GET /accounts` est la seule route sans consommateur.

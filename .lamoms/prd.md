@@ -15,7 +15,7 @@ Ce lot n'ajoute aucune fonctionnalité. Il ferme ce que le cycle 2 a laissé ouv
 
 ## 2. Ce qui est acquis et ne se rouvre pas
 
-- La qualification de T27 rejoue à l'identique sur l'oracle : 191 paires, 605 décisions.
+- La qualification de T27 rejoue à l'identique sur l'oracle : 191 paires, 606 décisions.
 - Le cycle 2 est clos par verdict VERT, fusion vérifiée par `git merge-base --is-ancestor issue-36 main`.
 - La suite est verte : 40 tests, 39 pass, 1 skip explicite, 0 fail ; lint, typecheck, build à 0.
 - Les huit soldes justes sur neuf du 2026-08-04 restent la seule mesure d'usage réel qui existe.
@@ -81,7 +81,7 @@ T32 (#39)  ── F1 à F4, à tout moment, aucune dépendance
 Chaque critère dit aussi **ce qu'il préserve**, sans quoi une régression le satisfait.
 
 1. **T29** — le `.env` réel porte `GESTIO_PERSONAL_NAMES` renseignée, `.env.example` explique à quoi elle sert et ce qui se dégrade sans elle. *Préserve* : la variable ne se code jamais en dur, elle reste de la configuration.
-2. **M3** — après rattrapage, un virement Nickel importé avant T27 est reconnu comme les nouveaux. *Préserve* : aucune transaction supprimée, aucun `fingerprint` modifié, l'oracle rejoue à l'identique (191 paires, 605 décisions).
+2. **M3** — après rattrapage, un virement Nickel importé avant T27 est reconnu comme les nouveaux. *Préserve* : aucune transaction supprimée, aucun `fingerprint` modifié, l'oracle rejoue à l'identique (191 paires, 606 décisions).
 3. **M1** — un relevé Trade Republic portant un produit inconnu s'importe, et le produit non importé est **compté et nommé** dans le compte rendu. *Préserve* : le compte courant et les PEA entrent exactement comme aujourd'hui.
 4. **M2** — l'IBAN lu pour un PEA est celui de son segment. *Préserve* : l'IBAN du compte courant ne change pas, et le pays n'est jamais codé en dur.
 5. **T30** — le parcours est allé aussi loin que possible, chaque étape porte un fait ou un constat, et **aucune correction n'a été faite en cours de route**. Un parcours interrompu par un blocage dur est un succès s'il nomme le blocage.
@@ -97,7 +97,7 @@ Chaque critère dit aussi **ce qu'il préserve**, sans quoi une régression le s
 
 - **Le parcours T30 se bloque tôt** — c'est un résultat, pas un échec ; le blocage devient la tâche suivante. C'est exactement ce qui s'est passé le 2026-08-04 et c'est ce qui a donné sa valeur au cycle 2.
 - **M3 se révèle plus large que Nickel** — le rattrapage toucherait alors d'autres sources. À mesurer avant d'écrire quoi que ce soit.
-- **F2 et F3 rouvrent l'oracle** — changer la tolérance ou l'échelle de score oblige à le rejouer et à revalider les 605 décisions. C'est pourquoi ce sont des arbitrages, pas des corrections.
+- **F2 et F3 rouvrent l'oracle** — changer la tolérance ou l'échelle de score oblige à le rejouer et à revalider les 606 décisions. C'est pourquoi ce sont des arbitrages, pas des corrections.
 - **Le corpus glisse** — le plancher de l'API avance d'un jour par jour (P35). Un relevé non téléchargé pendant que le lot se déroule ouvre un trou définitif.
 
 ## 9. La cinquième tâche
