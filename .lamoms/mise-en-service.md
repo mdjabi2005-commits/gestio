@@ -1,190 +1,132 @@
-# Mise en service réelle — protocole de test (2026-08-04)
+# Mise en service réelle — le protocole, et les deux parcours déjà faits
 
-Décidé par Lamoms le 2026-08-04 : **tester l'app avant de régler les problèmes un par un.**
-Ce fichier n'est pas un PRD. C'est la liste des points où l'app peut casser, dans l'ordre
-où on les rencontre. Chaque case cochée est un fait ; chaque case barrée devient une issue.
+**Ce fichier est la référence unique du protocole.** Il fusionne, le 2026-08-12, le protocole à 8 étapes du 2026-08-04 et le protocole à 12 étapes de l'issue #40 — qui vivaient dans deux endroits différents et divergeaient. **Le protocole à 12 étapes ci-dessous fait foi**, et c'est celui que T37 déroule.
 
-Règle du protocole : **on ne corrige rien en cours de route.** On note et on continue aussi
-loin que possible. Un blocage dur arrête le parcours — on le note et c'est lui, l'issue suivante.
+Ce fichier n'est pas un PRD. C'est la liste des points où l'application peut casser, dans l'ordre où on les rencontre. Chaque case cochée est un fait ; chaque case barrée devient un constat daté.
+
+> **Règle du protocole, inchangée depuis le 2026-08-04 : on ne corrige rien en cours de route.**
+> On note et on continue aussi loin que possible. Un blocage dur arrête le parcours — on le note, et c'est lui la tâche suivante. C'est cette règle qui a donné sa valeur au cycle 2.
+
+> **Le parcours est fait à la main, par l'utilisateur.** R1 : une livraison n'est prouvée que par un usage, et un usage a un utilisateur. Aucun agent ne le remplace.
 
 ---
 
-## Étape 0 — Démarrer (le premier mur est déjà connu)
+## Avant de commencer
 
-CONSTATÉ LE 2026-08-04, avant tout lancement, en lisant le dépôt :
+- [ ] **`GESTIO_PERSONAL_NAMES` est renseignée** dans le `.env` réel. Sans elle, un virement vers soi retombe en « externe probable » au lieu de « à vérifier », et l'étape 8 ne prouve rien. *(T29/#41, clos le 2026-08-11.)*
+- [ ] **Le corpus de relevés est à jour**, relevé La Banque Postale du mois compris. Le plancher de l'API avance d'un jour par jour et le PDF est la seule mémoire longue.
+- [ ] **Noter d'où l'on part** : base réelle ou copie. Les deux se défendent, mais le résultat ne se lit pas pareil. Si c'est la base réelle, relever l'empreinte de `data/gestio.db` **avant et après**.
+- [ ] **Établir la liste des comptes**, et ne la reprendre d'aucun document. Elle a déjà bougé deux fois et Sumeria n'y est pas encore.
 
-- `.env` contient les six clés `ENABLE_BANKING_*` mais **PAS `GESTIO_DB_KEY`**, alors que
-  `src/db.ts:22-25` refuse d'ouvrir la base sans elle (« GESTIO_DB_KEY is required »).
-- Le serveur **ne lit pas `.env`** : aucune dépendance dotenv, aucun `--env-file` dans
-  `package.json`. `scripts/backup.sh:4-8` sourcre `.env` lui-même — le serveur, non.
-  Les deux ne se chargent donc pas de la même façon.
-- `.env.example` liste `GESTIO_DB_KEY` et `ENABLE_BANKING_REDIRECT_URL` — deux clés que le
-  `.env` réel n'a pas.
-- Aucune base n'existe (`data/gestio.db` absent) : c'est bien une première installation.
+## Quel appareil fait quoi
 
-Le serveur charge lui-même `.env` avec `dotenv`. Commandes :
+| | Téléphone | PC (machine serveur) |
+|---|---|---|
+| Consulter soldes, fraîcheur, mouvements | **oui** | oui |
+| Relancer la synchro d'une connexion autorisée | **oui** | oui |
+| Établir une **nouvelle** connexion bancaire | **non** en MVP | **oui** |
+| Importer les relevés PDF | non | **oui** |
 
-```bash
-npm ci
-npm run build          # tsc + vite build → dist/ et dist/web/
-npm start              # ou npm run dev
-```
+Un échec sur les deux dernières lignes depuis le téléphone est une **limite connue** — la `redirect_url` est `https://localhost:3443/`, qui ne résout que sur la machine serveur — **pas un constat à remonter.**
 
-Avant la mesure de qualification, remplacer dans le `.env` réel l'exemple de
-`GESTIO_PERSONAL_NAMES` par les noms ou alias privés du titulaire, séparés par des virgules,
-puis relancer Gestio, qui charge ce fichier avec `dotenv`. Sans cette variable, un virement
-personnel sans jambe miroir redevient « externe probable » et l'oracle privé est ignoré. Le
-serveur charge `.env` lui-même (`dotenv`) — le test, non : `npm test` lit l'environnement du
-shell. Pour rejouer l'oracle, exporter la SEULE variable, sans sourcer le fichier complet (il
-peut contenir des secrets multilignes) :
+---
 
-```bash
-export GESTIO_PERSONAL_NAMES="$(grep '^GESTIO_PERSONAL_NAMES=' .env | cut -d= -f2- | tr -d '\"')"
-npm test
-```
+## Le parcours — 12 étapes
 
-- [ ] `npm test` rejoue l'oracle de qualification sans différence et sans test ignoré.
+### Étape 0 — Démarrer
+- [ ] `npm ci`, `npm run build`, `npm start` avec le `.env` seul. Le serveur lit `.env` par `dotenv` depuis `d5c054a` : c'est précisément l'étape qui avait échoué le 2026-08-04 et elle n'a jamais été rejouée proprement.
+- [ ] Noter tout ce qu'il a fallu faire **en plus** de ces trois commandes. Ce delta bloque le portage sur le Raspberry Pi.
 
-- [ ] Le serveur écoute sur https://localhost:3443/ et la page se charge (certificat auto-signé
-      à accepter dans le navigateur — c'est attendu).
-- [ ] Noter ici tout ce qu'il a fallu faire **en plus** de ces commandes. Ce delta est la
-      première issue candidate : une app qui ne démarre pas sans savoir-faire implicite n'est
-      pas installable sur le RPi.
-
-## Étape 1 — Entrer
-
+### Étape 1 — Entrer
 - [ ] Créer le mot de passe local, se déconnecter, se reconnecter.
-- [ ] Une mauvaise réponse est refusée.
+- [ ] Un mauvais mot de passe est refusé.
 
-## Étape 2 — Les comptes sans API (le seul chemin, pas un repli)
+### Étape 2 — Créer les comptes **par l'interface**
+- [ ] Établissement puis comptes créés depuis l'écran, sans terminal. Le 2026-08-04, le Livret A et le Livret Jeune ont été créés par `curl`.
+- [ ] Le compte accepte son **IBAN** à la saisie.
 
-Livret A, Livret Jeune Swing, Nickel : saisie manuelle du solde réel.
+### Étape 3 — La Banque Postale par API
+- [ ] Les transactions descendent, le solde s'affiche avec sa date de fraîcheur.
+- [ ] Relancer : aucune ligne dupliquée.
 
-- [ ] Les trois comptes existent, rattachés au bon établissement.
-- [ ] Livret A et Livret Jeune apparaissent **à côté** du CCP sous La Banque Postale, jamais
-      dessous (modèle à deux niveaux, P28).
-- [ ] Le solde de l'établissement La Banque Postale = somme de ses comptes, et le CCP n'est
-      compté qu'une fois.
+### Étape 4 — Trade Republic par API
+- [ ] Les transactions entrent en base et s'affichent.
+- [ ] Le solde entre malgré son `balance_type` hors liste.
+- [ ] Les transactions sans libellé sont distinguables à l'écran — Trade Republic ne fournit que quatre champs (C7).
 
-## Étape 3 — La Banque Postale par API
+### Étape 5 — Revolut par API
+- [ ] Les comptes portent des noms **qui les distinguent**, pas celui du titulaire répété.
 
-- [ ] Le parcours d'authentification forte va jusqu'au bout et revient sur
-      https://localhost:3443/ (P18 : l'URL de redirection enregistrée, pas celle du lab).
-- [ ] Les transactions descendent et le solde s'affiche avec sa **date de fraîcheur**.
-- [ ] Relancer la synchro : aucune ligne dupliquée (empreinte d'identité, T1/T2).
+### Étape 6 — Plusieurs banques connectées en même temps
+- [ ] Les connexions coexistent sans qu'une écrase l'autre, **et l'écran les liste** avec leur statut, leur dernière synchro et leur erreur.
+- [ ] Chacune se relance séparément, **depuis le téléphone aussi**.
 
-## Étape 4 — Les autres banques par API
+### Étape 7 — Les imports PDF en lot *(sur le PC)*
+- [ ] Tous les relevés La Banque Postale, Nickel **et Trade Republic** en une seule fois, avec une seule correspondance de comptes.
+- [ ] Le mapping se fait **par IBAN** quand le relevé en porte un — les comptes homonymes ne sont plus indiscernables.
+- [ ] Le compte rendu nomme chaque fichier, ses transactions importées, ses doublons, ses soldes, ses lignes à vérifier.
+- [ ] Un fichier en échec au milieu du lot ne fait pas perdre les autres, et il est nommé.
+- [ ] Réimporter le même lot ne crée rien.
 
-Revolut (12 champs, 3727 j), Trade Republic (4 champs, 90 j, **aucun libellé** — P25).
+### Étape 8 — La qualification — l'étape neuve
+- [ ] Combien de mouvements portent `virement_intercompte`, combien `virement_a_verifier`, combien `virement_externe`. **Ce chiffre n'a jamais été vu.**
+- [ ] Ce que l'écran en montre, et ce qu'on peut en faire.
+- [ ] Prendre trois paires au hasard et vérifier à la main que ce sont bien deux jambes du même virement.
+- [ ] Chercher un faux positif : un virement vers un tiers portant un mot du nom du titulaire.
+- [ ] **Pour chaque mouvement « à vérifier », noter l'information qui aurait permis de trancher** — un IBAN, un libellé récurrent, un tiers déjà rencontré, une habitude. Au bout, on n'a pas une liste de doutes : on a la liste de ce que l'application aurait dû savoir. **Ne rien construire ici — récolter.**
+- [ ] Les transactions Nickel importées avant T27 : mesurer l'ampleur du rattrapage.
 
-- [ ] Une **deuxième** connexion bancaire coexiste avec la première sans écraser la LBP.
-- [ ] Trade Republic descend malgré l'absence de libellé — c'est le cas où le rapprochement
-      par Jaccard est structurellement inapplicable. Noter ce que fait l'app, sans juger.
-- [ ] Les pockets Revolut apparaissent comme des comptes de l'établissement Revolut.
+### Étape 9 — Le moment de vérité
+- [ ] **Chaque compte déclaré** porte un solde. Aucun nombre attendu : la liste est celle de l'étape « avant de commencer ».
+- [ ] Le total affiché = la somme des comptes réels, jamais des groupes.
+- [ ] Comparer chaque solde à son application bancaire, un par un. Un écart = un fait noté avec le compte, le montant attendu et le montant affiché.
+- [ ] Noter par quel chemin **Sumeria** entrerait : API, relevé ou saisie.
 
-## Étape 5 — Les imports
+### Étape 10 — Les deux appareils
+- [ ] Depuis le téléphone via Tailscale, PC allumé : consulter et relancer une synchro. Noter ce qui est utilisable et ce qui ne l'est pas.
+- [ ] Réseau coupé : la coque se charge et le dernier solde connu s'affiche **avec sa date**, jamais un chiffre périmé présenté comme actuel.
 
-- [ ] CSV Revolut (254 lignes réelles, 2025-09-01 → 2026-06-14) : importé, sans doublon avec
-      ce que l'API a déjà descendu.
-- [ ] CSV inconnu : refusé explicitement, pas parsé au hasard (T12).
-- [ ] PDF La Banque Postale : les 12 relevés, dont le Livret A qu'ils contiennent (P32).
-- [ ] PDF Nickel : les 9 relevés.
-- [ ] Réimporter le même fichier deux fois ne crée rien.
+### Étape 11 — La sauvegarde, jusqu'au bout
+- [ ] `npm run backup` produit un fichier qui se relit.
+- [ ] **Repartir de cette sauvegarde dans une base vide et retrouver l'application dans son état.** On sait relire une sauvegarde ; on n'a jamais restauré.
 
-## Étape 6 — Le moment de vérité
-
-- [ ] Les **six** comptes ont un solde.
-- [ ] Le total affiché = somme des six comptes réels, jamais des groupes.
-- [ ] Comparer chaque solde à son relevé, un par un. Un écart = un fait à noter avec le compte,
-      le montant attendu et le montant affiché. **C'est cette comparaison qui ferme P28.**
-
-## Étape 7 — Les deux appareils
-
-- [ ] Depuis le téléphone via Tailscale, PC allumé : même parcours, même écran.
-- [ ] PC éteint (ou réseau coupé) : le dernier solde connu s'affiche **avec sa date de
-      fraîcheur**, jamais un chiffre périmé présenté comme actuel (P16, T7).
-
-## Étape 8 — La sauvegarde
-
-- [ ] `npm run backup` produit un fichier, et ce fichier se **rouvre** avec la même clé
-      (lecture réelle, pas seulement existence — T8).
+### Étape 12 — L'état des 18 méthodes
+- [ ] Chacune des 18 routes reçoit un état : exercée et conforme, exercée et cassée, ou jamais atteignable depuis l'interface.
+- [ ] Les trois qui n'ont **jamais été appelées par personne** le sont : `GET /accounts`, `POST /transactions` (saisie manuelle), `POST /transactions/resolve`.
+- [ ] `POST /auth/logout` est repris : réparé, ou toujours silencieux.
+- [ ] La vue de couverture ne montre aucun trou — en distinguant « pas de relevé importé » de « relevé importé, aucun mouvement », et sans réclamer un relevé à Revolut, qui n'en a pas.
 
 ---
 
-## Journal du parcours (2026-08-04)
+## Journal du parcours n°1 — 2026-08-04
 
-- **Étape 0 — ÉCHOUÉE, trois causes distinctes.** (1) `GESTIO_DB_KEY` absente du `.env`, qui
-  était celui du lab AGY (six clés `ENABLE_BANKING_*`, dont trois — `SESSION_ID`, `ACCOUNT_UID`,
-  `IBAN` — que le code de l'app ne lit jamais). (2) Le serveur ne charge pas `.env`, alors que
-  `scripts/backup.sh:4-8` le source lui-même : deux chemins de chargement incohérents.
-  (3) Deux lignes `GESTIO_DB_KEY` se sont retrouvées dans le fichier ; `. ./.env` prend la
-  dernière, l'autre était morte — doublon supprimé, sauvegarde dans `.env.bak-doublon`.
+- **Étape 0 — ÉCHOUÉE, trois causes.** `GESTIO_DB_KEY` absente du `.env` (qui était celui du lab AGY) ; le serveur ne chargeait pas `.env` alors que `scripts/backup.sh` le sourçait ; deux lignes `GESTIO_DB_KEY` en doublon. *Depuis `d5c054a`, le serveur charge `.env` lui-même — les deux premières causes sont périmées.*
+- **Environnement, hors dépôt** — `node_modules` s'est vidé seul après une installation saine. Corruption **asynchrone** de `/mnt/c` (antivirus Windows ou couche 9p), pas un défaut du projet. Rejoint le fait que `chmod` est inopérant sur `/mnt/c`.
+- **Étape 3 — RÉUSSIE.** La Banque Postale : 5 pages, 42 transactions, plancher 2026-05-11. Les pages 1 à 4 sont revenues **vides avec `continued:true`** et le code ne s'y est pas arrêté — C3 confirmé en direct.
+- **Étape 4 (Trade Republic) — ÉCHOUÉE, cause nommée le jour même.** Connexion OK, `SYNC_FAILED`. Deux gardes maison empilées rejetaient les 43 transactions que la banque avait livrées. **Enable Banking n'avait rien refusé.**
+- **Étape 4 (Revolut) — RÉUSSIE, et instructive.** 4 comptes (le compte et ses trois pockets), 8 pages, **314 transactions**, plancher **2025-03-02** — dix-sept mois, contre 90 jours chez LBP. Le modèle à deux niveaux a accueilli les pockets sans rien changer. Les quatre comptes portaient tous le nom du titulaire.
+- **Étape 5 — RÉUSSIE pour les PDF, ÉCHOUÉE pour le CSV.** Relevé BP : `imported 1, duplicates 16, balancesImported 2` — **la déduplication inter-canaux reconnaît 16 doublons sur données réelles**, et les livrets se remplissent depuis le relevé (Livret A 49,18 €, Livret Jeune 16,12 €). CSV Revolut : deux échecs successifs, versé sans refus dans un compte La Banque Postale, puis 121 doublons non détectés. Les deux imports fautifs ont été supprimés ; la base est revenue à un état prouvé sain.
+- **Étape 6 — PARTIELLEMENT RÉUSSIE, et c'est le meilleur résultat du parcours.** Soldes comparés aux applis bancaires : **tous justes** — LBP 4,57 € et les quatre Revolut. Seul faux, le 0,00 € de Trade Republic. **Preuve croisée obtenue au passage** : sur les quatre comptes Revolut, le solde de `GET /balances` tombe **au centime** sur la somme des 314 transactions — deux sources indépendantes. Le contraste avec LBP (4,57 € affichés contre −537,74 € de somme, fenêtre de 90 jours) démontre en une ligne que **le solde d'un compte synchronisé n'est pas la somme de ses transactions**. Ne ferme pas P28 : 5 comptes sur 9.
+- **Étape 7 — 7a RÉUSSIE, 7b ÉCHOUÉE.** Depuis le téléphone via Tailscale, avec un vrai certificat Let's Encrypt, l'écran est identique à celui du PC : **la contrainte d'UI unique tient sur un vrai mobile.** Réseau coupé, la page ne se chargeait pas du tout.
+- **Étape 8 — RÉUSSIE.** `npm run backup` produit un fichier dont l'en-tête n'est pas du SQLite en clair et qui se relit avec la clé : **609 transactions lues dans la sauvegarde.**
 
-Construit historique : depuis le 2026-08-11, le serveur charge `.env` lui-même (`dotenv`,
-ajouté dans `d5c054a`) — les deux premières puces de ce bloc sont périmées.
-- **Environnement, hors dépôt** — `node_modules` s'est vidé tout seul après une installation
-  saine : 82 paquets sur 134 sans `package.json`, code disparu, `LICENSE`/`docs`/`test`
-  conservés. Réinstallation → 0 cassé sur 124. Corruption ASYNCHRONE de `/mnt/c` (antivirus
-  Windows ou couche 9p), pas un défaut du projet. Rejoint `chmod` inopérant sur `/mnt/c`.
-  Remède si récidive : sortir le projet vers le système de fichiers natif WSL — décision de
-  Lamoms, pas la mienne.
-- **Étape 3 — RÉUSSIE.** La Banque Postale : 5 pages, 42 transactions, plancher 2026-05-11,
-  `continuation_exhausted`. **P33 confirmé en direct** — les pages 1 à 4 sont revenues vides
-  avec `continued:true` et le code ne s'y est pas arrêté.
-- **Étape 4 — ÉCHOUÉE.** Trade Republic : connexion OK, synchronisation `SYNC_FAILED`.
-  Voir **P38** — la chaîne de trois défauts qui rend l'échec invisible, plus l'absence de
-  trace qui rend la cause innommable. C'est le blocage dur du parcours.
-- **Étape 4 (Trade Republic) — CAUSE NOMMÉE LE 2026-08-04**, après un spike de lecture
-  (`.lamoms/demande-recherche-agy-2.md`) et une contre-vérification sur `dist/`. Deux gardes
-  maison rejettent, empilés : `enable-banking.ts:94` (`remittance_information: null`, 43/43) puis
-  `enable-banking.ts:124` (montants à six décimales et signés). **Enable Banking n'a rien refusé** —
-  la banque a livré 43 transactions valides et un solde. Assouplir est sans perte : zéro montant
-  sur 43 porte un chiffre non nul sous le centime, et les 43 passent une fois les deux gardes
-  levés. Détail complet en **P38** ; le solde `OTHR` devient **P44**, le nommage se réduit en
-  **P39**, et l'incident `tasks.yaml` du run devient **P45**.
-- **Étape 4 (Revolut) — RÉUSSIE, et instructive.** 4 comptes rendus (le compte et ses trois
-  pockets, `accountId` 3 à 6), 8 pages, **314 transactions**, plancher **2025-03-02** — dix-sept
-  mois, à comparer aux 90 jours de LBP. Le modèle à deux niveaux a accueilli les pockets sans
-  rien changer, comme P28 l'avait prévu. Deux conséquences : **P38 est confirmé chiffre en
-  main** (total affiché 42,16 EUR dont 0,00 EUR pour Trade Republic qui n'a jamais chargé), et
-  **P39 apparaît** — les quatre comptes Revolut portent tous le même nom, celui du titulaire.
+## Journal du parcours n°2 — 2026-08-11 · verdict ROUGE
 
-- **Étape 6 — PARTIELLEMENT RÉUSSIE, et c'est le meilleur résultat du parcours.** Lamoms a
-  comparé les soldes affichés à ses applis bancaires le 2026-08-04 : **tous justes**, La Banque
-  Postale (4,57 EUR) comme les quatre Revolut (1,04 / 1,00 / 2,25 / 33,30 EUR). Seul faux —
-  le 0,00 EUR de Trade Republic (P38). PREUVE CROISÉE OBTENUE AU PASSAGE — sur les quatre
-  comptes Revolut, le solde lu sur `GET /accounts/{uid}/balances` tombe AU CENTIME sur la somme
-  des 314 transactions ingérées, deux sources indépendantes. Revolut rend donc l'historique
-  complet depuis l'ouverture du compte, et l'ingestion n'a ni perdu ni dupliqué. Le contraste
-  avec La Banque Postale (4,57 EUR affichés contre −537,74 EUR de somme, fenêtre de 90 jours)
-  démontre en une ligne que le solde d'un compte synchronisé n'est pas la somme de ses
-  transactions. NE FERME PAS P28 — le périmètre testé est de 5 comptes sur 9, l'étape 2 ayant
-  été sautée faute de porte (P40).
-- **Étape 2 — contournée par l'API.** Livret A (#7) et Livret Jeune Swing (#8) créés par curl,
-  rattachés à La Banque Postale. Nickel a échoué, sortie non recueillie.
+*Verdict et preuves : `.lamoms/verdict-t30.md`. Le parcours n'a jamais dépassé l'étape 2 en autonomie.*
 
-- **Étape 5 — RÉUSSIE pour les PDF, ÉCHOUÉE pour le CSV.** Relevé BP : `imported 1,
-  duplicates 16, balancesImported 2` — la déduplication inter-canaux PDF/API reconnaît 16
-  doublons sur données réelles, et les livrets se remplissent depuis le relevé (Livret A
-  49,18 EUR, Livret Jeune 16,12 EUR), P32 exploitable. Relevé Nickel : `imported 2,
-  balancesImported 1` (10,50 EUR). CSV Revolut : deux échecs successifs, **P41** (versé sans
-  refus dans un compte La Banque Postale) puis **P42** (121 doublons non détectés, 898 EUR de
-  mouvements fantômes). Les deux imports fautifs ont été supprimés après sauvegarde ; la base
-  est revenue à un état prouvé sain (compte #5 : 219 tx, somme 2,25 EUR = solde API).
-- **Étape 7 — 7a RÉUSSIE, 7b ÉCHOUÉE.** Depuis le téléphone via Tailscale, avec un vrai
-  certificat Let's Encrypt émis par `tailscale cert`, l'écran est identique à celui du PC : la
-  contrainte d'UI unique tient sur un vrai mobile. Réseau coupé, en revanche, la page ne se
-  charge pas du tout — voir **P43**.
-- **Étape 8 — RÉUSSIE.** `npm run backup` produit un fichier dont l'en-tête n'est pas du SQLite
-  en clair et qui se relit avec la clé (609 transactions lues dans la sauvegarde). Le critère
-  de T8 est tenu sur données réelles.
+- **Étape 0 — RÉUSSIE, delta réel.** Le worktree n'avait ni `.env` ni `data/` : il a fallu refaire le lien vers ceux du workspace. C'est le delta qui bloque le portage RPi.
+- **Étape 1 — PARTIELLE.** Mauvais mot de passe : `401 invalid_credentials`, correct. Mais **`/auth/logout` est hors `PUBLIC_PATHS`** : sans session valide il répond `401`, et `logout().then(refresh)` avale l'échec sans notice. **Un logout qui échoue est silencieux.**
+- **Étape 2 — PARTIELLE.** Le formulaire de compte n'envoie que `name`, `type`, `institutionId` — **aucun IBAN**, alors que `POST /accounts` l'accepte. En base, **aucun des 9 comptes ne porte d'IBAN** : la meilleure preuve d'appariement des virements est structurellement indisponible. **Noms ambigus confirmés en base** : les neuf comptes portent des variantes du nom du titulaire — trois orthographes différentes, dont une répétée à l'identique sur les quatre comptes Revolut. Aucun ne porte le nom du produit. *(Les valeurs exactes ne sont pas recopiées ici : ce dépôt est public.)*
+- **Étapes 3, 4, 5 — NON EXÉCUTÉES.** Pas échouées : **jamais lancées.** `SyncButton` rend `null` sans `localStorage["gestio.authorization-id"]`. État en base : compte LBP #1, 42 transactions, solde 457 centimes, dernière synchro `2026-08-04`. Trade Republic toujours `SYNC_FAILED`.
+- **Étape 6 — CONSTAT CONFIRMÉ.** Trois connexions `AUTHORIZED` en base, et **l'interface ne les lit jamais** — aucune requête vers `bank_connections`. Clé `localStorage` unique : une deuxième banque écrase la première.
+- **Étape 7 — BLOCAGE DUR.** (a) Corpus LBP arrêté à `releve_CCP0984209Z024_20260708`, **pas de relevé d'août** — le prérequis n'était pas tenu. (b) Le mapping n'affiche que `account.name` : avec quatre Revolut homonymes, associer sûrement est impossible, et `each statement account must map to a different accountId` bloque. Aucun essai n'a pu écrire : le refus précède la transaction SQL.
+- **Étapes 8 à 11 — NON ATTEINTES.** **La récolte de l'étape 8 n'existe donc pas** — c'est la matière première qui manque au lot C du PRD.
+- **Incident de sécurité, hors code.** Un diagnostic de variables a fait apparaître des **fragments de clé PEM dans une sortie de session**. Aucun secret dans un fichier versionné (`git grep "BEGIN .*PRIVATE KEY"` : rien ; `.env` et `data/` ignorés). **Rotation de la clé Enable Banking recommandée** avant la prochaine opération bancaire.
+
+---
 
 ## Ce que ce protocole ne teste pas, et pourquoi
 
-- **P30** (les virements internes comptés comme dépenses, 44 % des débits) — ne devient
-  observable qu'à partir de l'étape 4, quand deux comptes réels ont des données. Avant, la
-  détection par paire ne peut structurellement rien trouver. Et il ne fausse **pas** le solde,
-  seulement la lecture des dépenses.
-- **P29** (poser une référence, voir l'écart) — se rouvre une fois l'étape 6 passée, sur des
-  chiffres justes.
-- **P37** (sauvegarde hors machine) — hors parcours, post-MVP.
+- **La sauvegarde hors machine** (C10) — hors parcours, post-MVP.
+- **Le mobile PC éteint** (C8) — limite assumée et annoncée du MVP, pas un défaut. Le Raspberry Pi la lèvera sans réécriture.
+- **La règle « 0 vs inconnu »** pour un compte sans solde déclaré (D5) — non tranchée. Le parcours dira si le cas se présente.
