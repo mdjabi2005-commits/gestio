@@ -14,7 +14,9 @@ Ce fichier n'est pas un PRD. C'est la liste des points où l'application peut ca
 ## Avant de commencer
 
 - [ ] **`GESTIO_PERSONAL_NAMES` est renseignée** dans le `.env` réel. Sans elle, un virement vers soi retombe en « externe probable » au lieu de « à vérifier », et l'étape 8 ne prouve rien. *(T29/#41, clos le 2026-08-11.)*
-- [ ] **Le corpus de relevés est à jour**, relevé La Banque Postale du mois compris. Le plancher de l'API avance d'un jour par jour et le PDF est la seule mémoire longue.
+- [ ] **Le corpus de relevés est à jour**, relevé La Banque Postale du mois compris. Le plancher de l'API avance d'un jour par jour et le PDF est la seule mémoire longue. **Au 2026-08-13** : le corpus couvre jusqu'au relevé émis le 2026-07-08 ; **celui du 2026-08-08 est disponible et manquant**, le suivant paraîtra vers le 2026-09-07, et l'échéance dure est le **2026-10-06**. Nickel est à jour au 2026-08-02.
+- [ ] **Savoir où sont les fichiers.** Les relevés : `/mnt/c/Users/djabi/Documents/relevé pdf/` — accent et espace, variable `GESTIO_PDF_CORPUS`. L'oracle T27 : `/mnt/c/Users/djabi/Documents/releves-pdf/`, variable `GESTIO_T27_ORACLE_REPO`. **Deux dossiers voisins, deux rôles.**
+- [ ] **Lire le décompte de skip de `npm test`, pas seulement le vert.** Tant que T31 n'a pas ajouté `--env-file=.env`, un `40 tests · 39 pass · 1 skipped` signifie que le rejeu des 606 décisions **ne s'est pas exécuté**.
 - [ ] **Noter d'où l'on part** : base réelle ou copie. Les deux se défendent, mais le résultat ne se lit pas pareil. Si c'est la base réelle, relever l'empreinte de `data/gestio.db` **avant et après**.
 - [ ] **Établir la liste des comptes**, et ne la reprendre d'aucun document. Elle a déjà bougé deux fois et Sumeria n'y est pas encore.
 
@@ -62,8 +64,12 @@ Un échec sur les deux dernières lignes depuis le téléphone est une **limite 
 - [ ] Chacune se relance séparément, **depuis le téléphone aussi**.
 
 ### Étape 7 — Les imports PDF en lot *(sur le PC)*
-- [ ] Tous les relevés La Banque Postale, Nickel **et Trade Republic** en une seule fois, avec une seule correspondance de comptes.
-- [ ] Le mapping se fait **par IBAN** quand le relevé en porte un — les comptes homonymes ne sont plus indiscernables.
+- [ ] **Les 25 fichiers en une seule fois** — 13 La Banque Postale, 11 Nickel, et `Relevé de compte.pdf` pour Trade Republic — avec une seule correspondance de comptes. *(Précisé le 2026-08-13.)*
+  - ⚠️ **`statement.pdf` est exclu de la sélection** : il recouvre `Relevé de compte.pdf` (2025-12-01 → 2026-05-31 contre 2025-09-01 → 2026-06-13) et n'apporte aucun mouvement. **Il ne se supprime pas** — `src/pdf-import.test.ts` le lit en dur pour comparer deux relevés d'une même période.
+  - ⚠️ **Les 13 relevés LBP n'ont aucune extension de fichier.** Tant que T43b n'a pas retiré le filtre `accept="application/pdf,.pdf"`, le sélecteur les masque par défaut : basculer sur « Tous les fichiers ».
+  - Le 26ᵉ document du corpus est le **CSV Revolut** : il n'entre par aucune route, Revolut passe par l'API seule.
+- [ ] Le mapping se fait **par IBAN quand il discrimine, sinon par nom imprimé** — les comptes homonymes ne sont plus indiscernables. *(Corrigé le 2026-08-13 : l'IBAN seul ne suffit pas, les trois segments Trade Republic en partagent un.)*
+- [ ] **L'arithmétique se referme sur chaque segment** : `ouverture + Σ mouvements = clôture`. Plancher mesuré le 2026-08-13 : 25 segments sur 25, sans un centime d'écart.
 - [ ] Le compte rendu nomme chaque fichier, ses transactions importées, ses doublons, ses soldes, ses lignes à vérifier.
 - [ ] Un fichier en échec au milieu du lot ne fait pas perdre les autres, et il est nommé.
 - [ ] Réimporter le même lot ne crée rien.
@@ -129,4 +135,4 @@ Un échec sur les deux dernières lignes depuis le téléphone est une **limite 
 
 - **La sauvegarde hors machine** (C10) — hors parcours, post-MVP.
 - **Le mobile PC éteint** (C8) — limite assumée et annoncée du MVP, pas un défaut. Le Raspberry Pi la lèvera sans réécriture.
-- **La règle « 0 vs inconnu »** pour un compte sans solde déclaré (D5) — non tranchée. Le parcours dira si le cas se présente.
+- ~~**La règle « 0 vs inconnu »** pour un compte sans solde déclaré (D5) — non tranchée.~~ **Tranchée le 2026-08-12 : inconnu, jamais zéro.** D5 est devenue une tâche du lot A le 2026-08-13 et se livre avant l'onboarding. Le parcours la constate au lieu de la poser.

@@ -60,7 +60,8 @@ Ce document est une **source de vérité statique** sur ce qui est implémenté,
 
 - 1 établissement → N comptes
 - Seul le compte porte un solde ; l’établissement affiche la somme
-- 6 comptes cibles : LBP CCP, Livret A, Livret Jeune Swing, Revolut, Trade Republic, Nickel
+- ~~6 comptes cibles~~ **Aucun nombre de comptes ne s'écrit** *(corrigé le 2026-08-13)*. Le six a déjà bougé deux fois — Revolut rend le compte et ses trois pockets, l'interface prévoit deux clés de relevé PEA, la base en porte neuf, Sumeria n'y est pas. Un critère qui nommerait un chiffre serait satisfait en oubliant le dernier compte ajouté : c'est le mode de panne du projet, et le §1 du PRD final l'interdit. La liste s'établit au parcours.
+- **L'IBAN ne distingue pas tous les comptes** *(mesuré le 2026-08-13)* : les trois segments Trade Republic en partagent un, les trois pockets Revolut n'en ont aucun. Voir la décision 28 du PRD et l'acquis A4 de `contraintes.md`.
 
 ## 4. Ce qui est manquant pour tester les vraies contraintes
 
@@ -129,18 +130,20 @@ Ce document est une **source de vérité statique** sur ce qui est implémenté,
 - **Virements internes** : le backend les qualifie (`nature = virement_intercompte`, `linkedTransactionId`) mais ne les retire **jamais** d'un solde. Un virement interne est un mouvement réel pour chacun des deux comptes ; l'exclure fausserait les soldes par compte et pourrait afficher `0,00 €` pour un compte dont tous les mouvements sont internes — interdit par `DESIGN.md`. L'agrégat est correct sans exclusion, les deux jambes s'annulant. L'exclusion a sa place dans les **dépenses / le bilan**, pas dans `GET /balance` : arbitré par Lamoms le 2026-08-11, à traiter dans le PRD 3.
 - **PRD 3** : portera sur l’algorithme de prise de connaissance de l’utilisateur et la révision UI des contraintes métier
 
-## 7. Prochaines étapes proposées pour le PRD 3
+## 7. Prochaines étapes proposées pour le PRD 3 — *toutes arbitrées le 2026-08-13*
 
-1. **Review UI des virements internes** : section “À vérifier” avec paires liées, actions confirmer interne/externe/distinct
-2. **Workflow “Premier import”** : checklist guidée par banque, PDF seulement, détection des trous d’historique
-3. **Filtre période** sur transactions pour bilan mensuel
-4. **Gestion des connexions Enable Banking** : liste, statut, relance
-5. **Amélioration affichage comptes** : source, fraîcheur, indicateur solde importé/calculé
-6. **Amélioration offline** : avertissement plus visible, date de fraîcheur en évidence
+Cette liste datait du 2026-08-11 et n'avait jamais été confrontée au PRD final. Chacune a désormais un propriétaire ou une raison d'être dehors.
+
+1. **Review UI des virements internes** : section “À vérifier” avec paires liées, actions confirmer interne/externe/distinct → **T35**
+2. **Workflow “Premier import”** : checklist guidée par banque, PDF seulement, détection des trous d’historique → **T45a/T45b** pour le guidage, **T42** pour les trous
+3. **Filtre période** sur transactions pour bilan mensuel → **T47**
+4. **Gestion des connexions Enable Banking** : liste, statut, relance → **T34**
+5. **Amélioration affichage comptes** : source, fraîcheur, indicateur solde importé/calculé → **D5**, une ligne de périmètre ajoutée le 2026-08-13. La fraîcheur est déjà au §1 du PRD, l'inconnu est le cœur de D5 ; ce qui manquait est *importé vs calculé*, et c'est exactement l'écart mesuré le 2026-08-04 — 4,57 € affichés pour −537,74 € de somme sur La Banque Postale, parce qu'un solde synchronisé n'est pas la somme de ses transactions
+6. **Amélioration offline** : avertissement plus visible, date de fraîcheur en évidence → **écartée**, §9 du PRD. L'étape 10 du protocole l'éprouve ; si le parcours montre qu'elle gêne, elle devient une tâche. Écartée par décision, pas par oubli.
 
 ## 8. Preuves de l’existant
 
-- Tests : 39 pass, 0 fail, 1 skip explicite (`npm test`)
+- Tests : 39 pass, 0 fail, **1 skip** (`npm test`) — chiffre revérifié le 2026-08-13, inchangé, **et c'est le problème** : le test sauté est le rejeu des 606 décisions, et il se saute parce que `node --test` ne lit pas `.env`, même ici où la clé existe. Ce n'est pas « un skip explicite », c'est la preuve la plus citée du projet qui ne s'exécute jamais. T31 le corrige ; le critère devient **0 skip**.
 - Build : OK (`npm run build`)
 - Backend lancé sur Windows PowerShell Node 20 : OK
 - Binaire SQLCipher local : `/home/djabi/.local/bin/sqlcipher`

@@ -22,9 +22,13 @@ Pas de vue fiable sur la trésorerie disponible → décisions d'argent à l'ave
 Affichage de la trésorerie disponible à l'instant T, agrégée et par compte.
 
 ## Fonctionnement
-- **État des lieux** : import CSV/PDF de toutes les transactions depuis la création des comptes.
-- **Suivi courant** : synchro via Enable Banking API (90 jours d'historique). Comptes non disponibles → import CSV/PDF mensuel ou saisie manuelle. Le **Livret A n'est pas exposé par l'API** (vérifié : la session ne renvoie que le compte courant, `CACC`/`PRIV`) — il passe par la saisie manuelle, ce n'est pas un repli mais le seul chemin.
-- **Bilan mensuel** : import des transactions du mois pour chaque compte.
+- **État des lieux** : import des relevés PDF de toutes les transactions depuis la création des comptes.
+- **Suivi courant** : synchro via Enable Banking API (90 jours d'historique chez La Banque Postale). Comptes non disponibles par l'API → **relevés PDF mensuels**. Le **Livret A n'est pas exposé par l'API** (vérifié : la session ne renvoie que le compte courant, `CACC`/`PRIV`) — il passe par le **relevé PDF**, qui le contient en entier : solde daté, IBAN, mouvements ligne à ligne (acquis A1). Ce n'est pas un repli, c'est le seul chemin.
+- **Bilan mensuel** : import des relevés du mois écoulé, en une fois, le 8 de chaque mois.
+
+> **Deux chemins d'entrée, et deux seulement : l'API Enable Banking, sinon les relevés.**
+> La **saisie manuelle d'un solde est hors produit** — un chiffre tapé sans donnée derrière est ce que l'application est censée remplacer. Unique exception, décidée par Lamoms le 2026-08-12 : le **compte Espèces** (T48), seul cas où aucun canal n'existe.
+> Le **CSV n'est pas un canal du produit** : aucune route ne l'implémente, et l'essai du 2026-08-04 a versé 121 doublons non détectés dans le mauvais compte.
 
 ## Stack active
 Fullstack TypeScript : Node.js / Fastify + React Vite PWA + Drizzle + `better-sqlite3-multiple-ciphers`.
@@ -32,14 +36,14 @@ Fullstack TypeScript : Node.js / Fastify + React Vite PWA + Drizzle + `better-sq
 ## Fonctionnalités
 - tréso disponible agrégée + par compte
 - synchro bancaire Enable Banking (43 transactions réelles validées)
-- import CSV/PDF (état des lieux + bilan mensuel)
-- saisie manuelle fallback
-- UI différente mobile/desktop sur même frontend
+- import des relevés PDF (état des lieux + bilan mensuel)
+- saisie manuelle réservée au seul compte Espèces (T48)
+- **UI unique et identique** sur mobile et desktop, depuis une base de code unique *(corrigé le 2026-08-13 : cette ligne disait « UI différente », contre la requalification de Lamoms du 2026-08-03 et contre la contrainte ci-dessous. La différenciation viendra après le MVP, dans `src/ui-logic.ts`, sans réécriture.)*
 
 ## Contraintes
-- frontend et backend unifiés, UI différenciée mobile/desktop depuis une base de code unique
+- frontend et backend unifiés, **une seule UI identique sur mobile et desktop** depuis une base de code unique (requalifié par Lamoms le 2026-08-03 : le besoin du MVP est de vérifier que le même parcours tient sur les deux appareils, pas d'avoir deux mises en page)
 - Enable Banking API : historique limité à 90 jours en arrière **sur La Banque Postale** ; consentement plafonné par `maximum_consent_validity` de la banque (180 j pour la plupart) et **lu** dans `access.valid_until` — voir « trois durées » plus bas
-- fallback CSV puis PDF si compte non disponible sur API
+- relevés PDF si le compte n'est pas disponible par l'API ; aucun canal CSV
 - 1 utilisateur, mot de passe local, maintenance minimale
 - backend et données sur RPi : portabilité PC→RPi sans réécriture
 
@@ -56,7 +60,7 @@ Fullstack TypeScript : Node.js / Fastify + React Vite PWA + Drizzle + `better-sq
   1. **Jeton d'accès ASPSP** : courte durée, **rafraîchi automatiquement par Enable Banking**. Le client n'a rien à gérer, rien à stocker, rien à faire expirer.
   2. **Consentement / session** : durée **demandée** par le client dans `valid_until` du `POST /auth`, **plafonnée** par `maximum_consent_validity` (en secondes) que renvoie `GET /aspsps` pour chaque banque — **180 jours pour la majorité des ASPSP**, plafond qui vient de l'amendement EBA RTS de 2022 portant le renouvellement de SCA de 90 à 180 jours pour l'accès AIS. La valeur **accordée** se lit dans `access.valid_until` de `GET /sessions/{id}` ; la session réelle du lab porte `2027-01-01`. Donc : les 180 jours existent bel et bien, mais comme **plafond par banque**, pas comme durée à coder en dur — on lit le plafond, puis la valeur accordée.
   3. **Profondeur d'historique : 90 jours en arrière — constaté sur La Banque Postale**, qui refuse au-delà (`HTTP 422 / WRONG_TRANSACTIONS_PERIOD`, vérifié en direct). ⚠️ Ce n'est **pas** une constante Enable Banking : leur documentation indique que la plupart des ASPSP donnent au moins un an. Toute autre banque ajoutée exige de re-constater sa fenêtre.
-- Fallback : CSV (BP validé), puis PDF si CSV indisponible.
+- Second chemin : **les relevés PDF**. Le CSV est écarté du produit — aucune route ne l'implémente, et l'essai du 2026-08-04 a versé 121 doublons non détectés dans le mauvais compte.
 - Moteur de déduplication : clé (date, centimes) + FIFO + Jaccard tokens — validé 27/27, 98.6% moyen.
 
 ### Stack technique
@@ -87,6 +91,20 @@ Tout est local, donc **tout agent peut et doit s'y rendre par chemin absolu** qu
 - `enable_banking_transactions_reelles.json` et les deux CSV La Banque Postale — jeu de test réel.
 
 **Interdits** : recopier un fichier du lab dans le dépôt, y écrire des identifiants, versionner quoi que ce soit de ce dossier.
+
+### Un worktree « prêt à coder » — geste de Copilot
+*Ajouté le 2026-08-13, après la revue du PRD final.*
+
+Un worktree neuf n'a **ni `.env` ni `data/`** : les deux sont dans `.gitignore`. Conséquence mesurée : `qualification-oracle.test.ts` **se saute en silence** faute de `GESTIO_PERSONAL_NAMES`, et `npm test` ressort vert sans avoir rejoué les 606 décisions — la preuve la plus citée du projet ne s'exécute jamais chez Codex. C'est la panne que R1 condamne, reproduite dans l'outillage.
+
+**À la création de chaque worktree, Copilot pose un lien symbolique vers le `.env` du workspace** (`ln -s /mnt/c/Users/djabi/gestio/.env <worktree>/.env`). Un worktree sans ce lien n'est pas prêt à coder.
+
+- **La base reste locale au worktree.** `GESTIO_DB_PATH` n'est pas dans `.env`, donc `openDatabase` retombe sur le chemin **relatif** `data/gestio.db` : le worktree fabrique sa propre base vide et **ne touche jamais** aux données réelles. Ne pas lier `data/`.
+- **Le corpus de relevés reste atteignable par chemin absolu**, depuis un worktree comme depuis le workspace — même règle que le lab AGY. **Deux dossiers voisins, deux rôles, à ne jamais confondre** *(corrigé le 2026-08-13 : cette ligne n'en nommait qu'un, et c'était le mauvais)* :
+  - **`/mnt/c/Users/djabi/Documents/relevé pdf/`** — **les relevés eux-mêmes**, 25 PDF (13 La Banque Postale, 11 Nickel, 2 Trade Republic) et 1 CSV Revolut. Le nom du dossier porte un **accent et un espace** : à mettre entre guillemets en shell. Le code le connaît déjà sous la variable **`GESTIO_PDF_CORPUS`** (`src/pdf-import.test.ts`), qui retombe sur ce chemin — **c'est elle qu'on cite, pas un chemin en dur**. Les 13 relevés LBP n'ont **aucune extension de fichier**.
+  - **`/mnt/c/Users/djabi/Documents/releves-pdf/`** — **le dépôt de l'oracle T27**, un projet Python distinct : `oracle/expected-final.json`, `corpus-manifest.json`, `local-paths.json`. Lu par `src/qualification-oracle.test.ts` via **`GESTIO_T27_ORACLE_REPO`**. Il n'a **aucun remote git** : rien n'en sort de la machine.
+- **`npm test` ne lit pas `.env`.** `dotenv.config()` ne vit que dans `src/index.ts`, l'entrée du serveur. Mesuré le 2026-08-13 dans le workspace maître, `.env` complet : `40 tests · 39 pass · 1 skipped`, le test sauté étant le rejeu des 606 décisions. Le lien symbolique ci-dessus est **nécessaire et insuffisant** : T31 ajoute `--env-file=.env` au script `test`. Jusque-là, **un `npm test` vert ne prouve pas que l'oracle a rejoué** — lire le décompte de skip, toujours.
+- **Aucun secret ne sort de la machine** : le lien ne copie rien, ne se versionne pas, et `.env` reste ignoré par git.
 
 ### Exclusions actées
 - Cloudflare Tunnel : exclu (terminaison TLS côté Cloudflare = données bancaires lisibles par un tiers).

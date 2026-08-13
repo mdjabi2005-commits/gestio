@@ -6,30 +6,30 @@
   "features": [
     "tréso disponible agrégée + par compte",
     "synchro bancaire Enable Banking (43 transactions réelles validées)",
-    "import PDF/PDF uniquement pour l'état des lieux et le bilan mensuel ; CSV abandonné pour le MVP",
-    "saisie manuelle fallback",
+    "import des relevés PDF pour l'état des lieux et le bilan mensuel ; le CSV n'est pas un canal du produit",
+    "saisie manuelle réservée au seul compte Espèces (T48) — un solde tapé sans donnée derrière est hors produit",
     "UI unique, identique sur mobile et desktop, sur même frontend"
   ],
   "stack": "Fullstack TypeScript (Node.js/Fastify + React Vite PWA + Drizzle + better-sqlite3-multiple-ciphers)",
   "infrastructure": {
     "hebergement": "Raspberry Pi (always-on, cible finale) → PC hôte (phase MVP)",
     "acces_mobile": "Tailscale (WireGuard mesh VPN, 0 port ouvert, 0€/mois, E2EE)",
-    "redirect_url_enablebanking": "https://<machine>.tailnet.ts.net (Tailscale Funnel, certificat auto Let's Encrypt)",
+    "redirect_url_enablebanking": "Trois URL enregistrées, et trois seulement : https://localhost:3443/ (MVP, fait foi — le port 3000 est occupé en permanence par le serveur Lamoms), https://localhost:3000/ (enregistrée mais inutilisable) et https://gestio.software/auth/callback (phase RPi). Tailscale Funnel est ÉCARTÉ : aucune exposition publique n'est nécessaire. Corrigé le 2026-08-13 — cette entrée portait encore l'URL Funnel, contredite par AGENTS.md et par C4.",
     "sauvegarde": "sqlcipher_export() en cron journalier, rotation 30 jours (PAS sqlite3 .backup : impossible sur base SQLCipher — voir P20)"
   },
   "constraints": [
     "frontend et backend unifiés, UNE SEULE UI IDENTIQUE SUR MOBILE ET DESKTOP depuis une base de code unique. Requalifié par Lamoms le 2026-08-03 — la consigne exigeait des layouts différenciés par breakpoints. Le besoin du MVP est de vérifier que le backend et le frontend fonctionnent ensemble, sur les deux appareils, avec le MÊME parcours. La logique métier vit hors du DOM (src/ui-logic.ts), donc la différenciation ultérieure se fera sans réécriture.",
-    "Enable Banking — trois durées distinctes. (1) Historique : 90 jours GLISSANTS chez La Banque Postale, MESURÉ TROIS FOIS le 2026-08-01 — une aspiration hors fenêtre, une trente secondes après une authentification forte neuve, une deux heures plus tard ; les trois rendent le même jeu de 43 transactions, identique ligne à ligne, remontant au 2026-05-04. La fenêtre d'environ une heure annoncée par la documentation n'apporte donc RIEN chez cette banque (P23), et le plancher est une troncature, pas l'âge du compte. Ce n'est PAS une constante Enable Banking — Revolut rend 3727 jours, Trade Republic 90 ; toute banque exige de re-constater sa fenêtre. CONSÉQUENCE DATÉE — le plancher avance d'un jour par jour et les relevés PDF s'arrêtent au 2026-06-08 ; sans téléchargement des relevés de juin à août 2026, un trou définitif s'ouvre le 2026-09-06 (P35). (2) Consentement : durée demandée dans valid_until du POST /auth, PLAFONNÉE par maximum_consent_validity (en secondes) renvoyé par GET /aspsps pour la banque visée — 180 jours pour la majorité des ASPSP, plafond issu de l'amendement EBA RTS de 2022 (renouvellement de SCA porté de 90 à 180 jours pour l'accès AIS) ; la valeur accordée se lit dans access.valid_until de GET /sessions/{id}, la session réelle porte 2027-01-01. Les 180 jours sont donc un vrai plafond par banque, jamais une durée à coder en dur. (3) Jeton d'accès ASPSP : courte durée, rafraîchi automatiquement par Enable Banking, rien à gérer côté client. Libellé corrigé le 2026-08-01, voir P2 et P22",
-    "fallback CSV puis PDF si compte non disponible sur API",
+    "Enable Banking — trois durées distinctes. (1) Historique : 90 jours GLISSANTS chez La Banque Postale, MESURÉ TROIS FOIS le 2026-08-01 — une aspiration hors fenêtre, une trente secondes après une authentification forte neuve, une deux heures plus tard ; les trois rendent le même jeu de 43 transactions, identique ligne à ligne, remontant au 2026-05-04. La fenêtre d'environ une heure annoncée par la documentation n'apporte donc RIEN chez cette banque (P23), et le plancher est une troncature, pas l'âge du compte. Ce n'est PAS une constante Enable Banking — Revolut rend 3727 jours, Trade Republic 90 ; toute banque exige de re-constater sa fenêtre. CONSÉQUENCE DATÉE — le plancher avance d'un jour par jour ; recalculé le 2026-08-13 sur le corpus réel (décision 37 du PRD final) : le corpus va jusqu'au relevé émis le 2026-07-08, il n'y a AUCUN trou en ce moment, et il s'ouvrirait le 2026-10-06. Le relevé qui manque est celui émis le 2026-08-08. La date de 2026-09-06 qui figurait ici venait du verdict T30, qui croyait le corpus arrêté un mois plus tôt (P35). (2) Consentement : durée demandée dans valid_until du POST /auth, PLAFONNÉE par maximum_consent_validity (en secondes) renvoyé par GET /aspsps pour la banque visée — 180 jours pour la majorité des ASPSP, plafond issu de l'amendement EBA RTS de 2022 (renouvellement de SCA porté de 90 à 180 jours pour l'accès AIS) ; la valeur accordée se lit dans access.valid_until de GET /sessions/{id}, la session réelle porte 2027-01-01. Les 180 jours sont donc un vrai plafond par banque, jamais une durée à coder en dur. (3) Jeton d'accès ASPSP : courte durée, rafraîchi automatiquement par Enable Banking, rien à gérer côté client. Libellé corrigé le 2026-08-01, voir P2 et P22",
+    "relevés PDF si le compte n'est pas disponible par l'API — deux chemins d'entrée et deux seulement ; AUCUN canal CSV, aucune route ne l'implémente et l'essai du 2026-08-04 a versé 121 doublons non détectés dans le mauvais compte. Corrigé le 2026-08-13, l'entrée disait « fallback CSV puis PDF »",
     "1 utilisateur, mot de passe local, maintenance minimale",
     "backend et données sur RPi : portabilité PC→RPi sans réécriture"
   ],
   "approvedDecisions": [
     "Problème : pas de vue fiable sur la tréso disponible",
     "Core Feature : affichage tréso disponible agrégée + par compte",
-    "Périmètre des comptes, tranché par Lamoms le 2026-08-01 (P28) — SIX comptes, tous utilisés, tous dans l'agrégat. La Banque Postale CCP, Livret A, Livret Jeune Swing, Revolut, Trade Republic, Nickel. MODÈLE À DEUX NIVEAUX — un ÉTABLISSEMENT groupe des COMPTES, et seul un compte porte un solde ; l'établissement n'a pas de solde stocké, il affiche la somme des siens. Livret A et Livret Jeune sont des comptes de l'établissement La Banque Postale, pas des attributs du CCP. Remplace « bancaire + Livret A », qui rendait l'agrégat faux par construction.",
-    "État des lieux par import CSV/PDF complet",
-    "Fonctionnement mensuel par import CSV/PDF + synchro Enable Banking",
+    "Périmètre des comptes, tranché par Lamoms le 2026-08-01 (P28) — tous utilisés, tous dans l'agrégat. LE NOMBRE NE S'ÉCRIT PLUS, corrigé le 2026-08-13 : le six de P28 a déjà bougé deux fois (Revolut rend le compte et ses trois pockets, l'interface prévoit deux clés de relevé PEA), la base en porte neuf et Sumeria n'y est pas encore. Un critère qui nommerait un chiffre serait satisfait en oubliant le dernier compte ajouté — c'est le mode de panne du projet. La liste des comptes s'établit au parcours, elle ne se reprend d'aucun document (§1 du PRD final). MODÈLE À DEUX NIVEAUX — un ÉTABLISSEMENT groupe des COMPTES, et seul un compte porte un solde ; l'établissement n'a pas de solde stocké, il affiche la somme des siens. Livret A et Livret Jeune sont des comptes de l'établissement La Banque Postale, pas des attributs du CCP. Remplace « bancaire + Livret A », qui rendait l'agrégat faux par construction.",
+    "État des lieux par import complet des relevés PDF",
+    "Fonctionnement mensuel : import des relevés du mois écoulé le 8, plus la synchro Enable Banking",
     "Backend unique, frontend partagé, UI unique et identique sur mobile et desktop (requalifié le 2026-08-03, voir la contrainte correspondante)",
     "Stack technique — Fullstack TypeScript (Fastify + React Vite PWA + Drizzle + SQLCipher)",
     "Accès réseau — Tailscale. LIMITE ASSUMÉE EN PHASE MVP, tranchée par Lamoms le 2026-07-31 (P16) — le MVP tourne sur le PC hôte, donc le mobile ne fonctionne QUE lorsque le PC est allumé. La promesse « savoir sa situation à tout moment » n'est pas tenue sur mobile hors domicile en phase 1, et le Verdict doit juger sur ce périmètre annoncé. Le mode hors connexion n'est donc PAS sans objet — il affiche le dernier solde connu avec sa date de fraîcheur. Le Raspberry Pi lèvera la limite sans réécriture.",
@@ -46,8 +46,9 @@
     "Les validations du projet passent",
     "La livraison est relue avant le verdict"
   ],
+  "activePrd": ".lamoms/prd.md — PRD final « Finir Gestio », émis le 2026-08-12, amendé le 2026-08-13. Il remplace et absorbe le lot annexe (#38 → T31, #39 → T32). Le carnet .lamoms/problems.json a été remis à zéro le 2026-08-12 ; ce qui sert encore vit dans .lamoms/contraintes.md, qui se lit avant de coder et n'est jamais un backlog.",
   "cycleId": "cycle 2 remise en état clos",
   "closedAt": "2026-08-10T00:00:00.000Z",
   "closure": "PRD (2) clos par verdict Hermès VERT sur la 3e livraison de T27. Livraison intégrée dans main (93dea7d) puis master (780c479). Tests verts, non-régression confirmée, oracle revalidé. Deux issues annexes créées pour les constats MOYENNE/FAIBLE : #38 (corrections M1/M2/M3/F5/F6/F7) et #39 (nettoyage/alignement F1-F4).",
-  "updatedAt": "2026-08-10T00:00:00.000Z"
+  "updatedAt": "2026-08-13T00:00:00.000Z"
 }
