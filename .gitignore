@@ -25,6 +25,7 @@ backups/
 .lamoms/journey.json
 .lamoms/usage.json
 .lamoms/handoff.json
+.lamoms/handoff.jsonl
 .lamoms/task-state.json
 .lamoms/waiting.json
 .lamoms/expected-final.json
