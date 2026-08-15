@@ -221,13 +221,14 @@ function parseTradeRepublic(pages: Page[]): PdfStatement {
   const starts = lines.flatMap((line, index) => comparable(line.text).includes("SYNTHESE DU RELEVE DE COMPTE") ? [index] : []);
   const accountIban = ibanFromLines(lines.slice(0, starts[0]));
   const segments = starts.map((start, index) => tradeRepublicSegment(lines.slice(start, starts[index + 1])));
+  const products = segments.map(segment => segment.product).join(", ") || "aucun";
   const currentAccounts = segments.filter(segment => comparable(segment.product) === "COMPTE COURANT");
   if (currentAccounts.length !== 1) {
-    throw new PdfStatementError("Le compte courant Trade Republic est absent ou ambigu dans le relevé.");
+    throw new PdfStatementError(`Le compte courant Trade Republic est absent ou ambigu dans le relevé. Produits lus : ${products}.`);
   }
   const peaSegments = segments.filter(segment => comparable(segment.product) === "COMPTE PEA");
   if (currentAccounts.length + peaSegments.length !== segments.length) {
-    throw new PdfStatementError("Un produit Trade Republic n'est pas pris en charge.");
+    throw new PdfStatementError(`Un produit Trade Republic n'est pas pris en charge. Produits lus : ${products}.`);
   }
 
   const current = currentAccounts[0];
@@ -418,9 +419,14 @@ function lbpTransactions(lines: Line[], debit: number, credit: number, periodSta
   );
   return anchors.map((anchor, index): PdfTransaction => {
     const amount = amountItem(anchor, debit)!;
-    const nextTop = anchors[index + 1]?.top ?? anchor.top + 35;
+    const closingIndex = lines.findIndex(line =>
+      line.top > anchor.top && /\d{2}\/\d{2}\/\d{4}/.test(line.text) && amountItem(line, debit) !== undefined
+    );
+    const nextTop = anchors[index + 1]?.top ?? lines.find(line =>
+      line.top > anchor.top && !/\d{2}\/\d{2}\/\d{4}/.test(line.text) && amountItem(line, debit) !== undefined
+    )?.top ?? (closingIndex >= 0 ? lines[closingIndex + 1]?.top : lines.at(-1)?.top);
     const label = lines
-      .filter(line => line.top >= anchor.top && line.top < nextTop)
+      .filter(line => line.top >= anchor.top && (nextTop === undefined || line.top < nextTop))
       .flatMap(line => line.items.filter(item => item.x >= 80 && item.x < debit - 10).map(item => item.text))
       .join(" ")
       .replace(/\s+/g, " ")
