@@ -1,0 +1,68 @@
+CREATE TABLE accounts (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+CREATE TABLE categories (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL
+);
+
+CREATE TABLE transactions (
+    id TEXT NOT NULL PRIMARY KEY,
+    account_id TEXT NOT NULL REFERENCES accounts(id),
+    external_reference TEXT,
+    booking_date TEXT NOT NULL,
+    transaction_date TEXT,
+    amount_cents INTEGER NOT NULL,
+    currency TEXT NOT NULL,
+    balance_after_cents INTEGER,
+    raw_description TEXT NOT NULL,
+    clean_description TEXT NOT NULL,
+    counterparty_name TEXT,
+    counterparty_iban TEXT,
+    status TEXT NOT NULL,
+    source_type TEXT NOT NULL,
+    source_provider TEXT NOT NULL,
+    source_file_name TEXT,
+    source_page_number INTEGER,
+    source_raw_payload TEXT,
+    reconciliation_id TEXT,
+    category_id TEXT REFERENCES categories(id)
+);
+
+selectAll:
+SELECT id, account_id, external_reference, booking_date, transaction_date,
+       amount_cents, currency, balance_after_cents, raw_description,
+       clean_description, counterparty_name, counterparty_iban, status,
+       source_type, source_provider, source_file_name, source_page_number,
+       source_raw_payload, reconciliation_id, category_id
+FROM transactions
+ORDER BY booking_date, account_id, id;
+
+findById:
+SELECT id FROM transactions WHERE id = ?;
+
+insertAccount:
+INSERT OR IGNORE INTO accounts(id, name) VALUES (?, ?);
+
+insertCategory:
+INSERT OR IGNORE INTO categories(id, name) VALUES (?, ?);
+
+insertTransaction:
+INSERT INTO transactions(
+    id, account_id, external_reference, booking_date, transaction_date,
+    amount_cents, currency, balance_after_cents, raw_description,
+    clean_description, counterparty_name, counterparty_iban, status,
+    source_type, source_provider, source_file_name, source_page_number,
+    source_raw_payload, reconciliation_id
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+updateCategory:
+UPDATE transactions SET category_id = ? WHERE id = ?;
+
+selectCategories:
+SELECT transactions.id, categories.name
+FROM transactions
+LEFT JOIN categories ON categories.id = transactions.category_id
+ORDER BY transactions.booking_date, transactions.id;

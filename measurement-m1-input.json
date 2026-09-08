@@ -1,0 +1,22 @@
+[
+  {
+    "id": "m1-income",
+    "account_id": "checking",
+    "booking_date": "2026-08-30",
+    "amount_cents": 100000,
+    "balance_after_cents": 100000,
+    "raw_description": "MESURE M1 ENTREE",
+    "clean_description": "MESURE M1 ENTREE",
+    "source": {"source_type": "PDF", "provider": "measurement"}
+  },
+  {
+    "id": "m1-expense",
+    "account_id": "checking",
+    "booking_date": "2026-08-31",
+    "amount_cents": -1234,
+    "balance_after_cents": 98766,
+    "raw_description": "MESURE M1 SORTIE",
+    "clean_description": "MESURE M1 SORTIE",
+    "source": {"source_type": "PDF", "provider": "measurement"}
+  }
+]

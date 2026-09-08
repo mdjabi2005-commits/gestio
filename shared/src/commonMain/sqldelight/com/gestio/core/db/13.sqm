@@ -1,0 +1,9 @@
+CREATE TABLE account_balances (
+    account_id TEXT NOT NULL REFERENCES accounts(id),
+    balance_type TEXT NOT NULL,
+    amount_cents INTEGER NOT NULL,
+    as_of TEXT NOT NULL,
+    source TEXT NOT NULL,
+    fetched_at TEXT NOT NULL,
+    PRIMARY KEY(account_id, balance_type, as_of)
+);

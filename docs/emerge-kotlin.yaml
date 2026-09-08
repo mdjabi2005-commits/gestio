@@ -1,0 +1,36 @@
+project_name: gestio_kotlin
+loglevel: error
+analyses:
+- analysis_name: kotlin_production
+  source_directory: .
+  only_permit_languages:
+  - kotlin
+  only_permit_file_extensions:
+  - .kt
+  ignore_directories_containing:
+  - .git
+  - .idea
+  - .worktrees
+  - .gradle
+  - .graphify
+  - .venv
+  - node_modules
+  - build
+  - maquette
+  - jvmTest
+  - androidTest
+  file_scan:
+  - dependency_graph
+  - number_of_methods
+  - source_lines_of_code
+  - fan_in_out
+  entity_scan:
+  - dependency_graph
+  - number_of_methods
+  - source_lines_of_code
+  - fan_in_out
+  export:
+  - directory: .lamoms/lab/emerge-kotlin
+  - graphml
+  - json
+  - d3

@@ -1,0 +1,15 @@
+# Gradle
+.gradle/
+build/
+**/build/
+.kotlin/
+.idea/
+*.iml
+
+# Données et artefacts locaux
+recovery/
+*.local.json
+
+# Secrets
+.env
+.env.*
