@@ -13,3 +13,6 @@ recovery/
 # Secrets
 .env
 .env.*
+
+# Artefacts d'analyse locaux
+.lamoms/
