@@ -18,7 +18,8 @@ analyses:
   - build
   - maquette
   - jvmTest
-  - androidTest`r`n  - recovery
+  - androidTest
+  - recovery
   file_scan:
   - dependency_graph
   - number_of_methods
