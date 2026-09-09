@@ -1,0 +1,26 @@
+flowchart LR
+    %% Parcours : Usage courant
+    %% Source cible : docs/AUDIT_SERVICES_PARCOURS_CHECKPOINT.md
+
+    EB[Enable Banking]
+    LOCAL[(Données locales SQLDelight)]
+
+    LB[LectureBancaire]
+    LDL[LectureDonneesLocales]
+    BL[BudgetLibre]
+    LIQ[Liquidite]
+    DM[DepensesDuMois]
+    PU[PresentationUsageCourant]
+    UI[Écrans Compose usage courant]
+
+    EB -->|transactions + soldes datés| LB
+    LOCAL -->|récurrences, dépenses prévues, historique| LDL
+    LB -->|données bancaires actualisées| BL
+    LDL -->|engagements + données persistées| BL
+    BL -->|budget libre + prochaines échéances| LIQ
+    LDL -->|données du mois| DM
+    DM -->|courbes + dépenses réalisées| PU
+    LIQ -->|alertes de liquidité| PU
+    BL -->|budget + dépenses prévues| PU
+    LB -->|fraîcheur + soldes API distincts| PU
+    PU -->|UiState + actions autorisées| UI
