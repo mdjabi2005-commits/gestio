@@ -125,11 +125,18 @@ Par exemple, Gestio peut constater qu'un objectif atteignable en 20 mois au ryth
 
 ### 5.5 Simuler des scénarios
 
-Gestio doit permettre d'explorer différents futurs possibles en faisant varier les paramètres d'un objectif ou de la situation sans modifier réellement les finances de l'utilisateur.
+Gestio doit permettre d'explorer différents futurs possibles sans modifier réellement les finances de l'utilisateur.
 
-L'utilisateur peut par exemple tester une autre échéance, un autre montant d'objectif, un autre effort mensuel ou une somme déjà disponible. Gestio recalcule alors les conséquences de chaque hypothèse.
+Cette capacité comprend deux familles de simulation :
 
-Cette capacité répond à la question : **« Si je change ce paramètre, qu'est-ce que cela donne ? »**
+- **simulation d'objectif** : faire varier une échéance, un montant d'objectif, un effort mensuel, une somme déjà disponible ou un autre paramètre afin d'en mesurer les conséquences ;
+- **simulation d'imprévu** : introduire un choc financier hypothétique afin de mesurer sa capacité à être absorbé et son impact sur la situation et les objectifs.
+
+La simulation d'objectif répond notamment à la question : **« Si je change ce paramètre, qu'est-ce que cela donne ? »**
+
+La simulation d'imprévu répond notamment à la question : **« Si cet imprévu arrivait, à quel point ferait-il dévier ma trajectoire ? »**
+
+Gestio ne mesure donc pas seulement si un objectif est atteignable : il peut aussi mesurer la résistance de la trajectoire à un imprévu.
 
 ### 5.6 Identifier des ajustements possibles
 
@@ -141,11 +148,23 @@ Cette capacité répond à la question : **« Concrètement, où puis-je agir da
 
 Gestio propose des possibilités ; il ne choisit pas l'ajustement à appliquer à la place de l'utilisateur.
 
-### 5.7 Suivre la situation et les objectifs dans le temps
+### 5.7 Prendre en compte le fonds d'urgence
+
+Gestio doit permettre de distinguer une réserve destinée à absorber les imprévus de l'argent librement mobilisable pour les objectifs.
+
+Le fonds d'urgence fait partie de l'évaluation de la situation financière : sa présence ou son absence modifie la capacité de la situation à absorber un choc sans dégrader immédiatement les autres trajectoires.
+
+Lors d'une simulation d'imprévu, Gestio doit pouvoir montrer quelle part du choc peut être absorbée par le fonds d'urgence, quelle part reste à absorber et quelles conséquences cela aurait sur la situation ou les objectifs.
+
+Gestio ne se contente donc pas d'afficher le montant du fonds d'urgence : il permet d'en comprendre le rôle et ce qu'il protège réellement.
+
+### 5.8 Suivre la situation et les objectifs dans le temps
 
 Gestio doit réévaluer la situation au fur et à mesure que de nouvelles données apparaissent et indiquer si la trajectoire reste cohérente avec les objectifs, si la situation dérive ou si certaines hypothèses doivent être réévaluées.
 
-### 5.8 Rendre les analyses explicables
+Lorsqu'un imprévu réel apparaît, il devient une nouvelle donnée de la situation. Gestio réévalue alors la capacité financière et l'impact éventuel sur les objectifs au lieu de continuer à utiliser une trajectoire devenue obsolète.
+
+### 5.9 Rendre les analyses explicables
 
 Gestio doit permettre à l'utilisateur de comprendre l'origine de ses conclusions et de distinguer les données observées, les calculs, les hypothèses, les projections et les possibilités proposées.
 
@@ -156,15 +175,17 @@ Comprendre la situation et le rythme financier
                 ↓
 Évaluer la capacité financière réelle
                 ↓
+Prendre en compte la protection face aux imprévus
+                ↓
 Confronter cette capacité à un objectif
                 ↓
-Simuler des alternatives
+Simuler des objectifs ou des imprévus
                 ↓
 Identifier où des ajustements sont possibles
                 ↓
 L'utilisateur décide
                 ↓
-Suivre la situation dans le temps
+Suivre et réévaluer la situation dans le temps
 ```
 
 ## Étape suivante
