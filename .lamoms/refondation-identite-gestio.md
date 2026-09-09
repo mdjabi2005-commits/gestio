@@ -22,7 +22,7 @@ PARCOURS
 ARCHITECTURE TECHNIQUE
 ```
 
-À ce stade, les trois premières étapes sont établies. Les suivantes ne doivent pas être déduites ou figées avant d'être travaillées explicitement.
+À ce stade, les quatre premières étapes sont établies. Les suivantes ne doivent pas être déduites ou figées avant d'être travaillées explicitement.
 
 ## 1. Problème utilisateur
 
@@ -64,6 +64,28 @@ décision de l'utilisateur
 
 « Copilote » désigne ici un rôle produit et n'implique pas nécessairement une interface conversationnelle ou l'utilisation d'une IA. Gestio éclaire les choix et leurs conséquences sans décider à la place de l'utilisateur.
 
+## 4. Principes produit
+
+### 4.1 Gestio éclaire la décision, il ne décide pas à la place de l'utilisateur
+
+Gestio peut analyser une situation, montrer ce qu'un objectif implique et présenter plusieurs ajustements possibles. Il ne choisit pas automatiquement l'objectif, la dépense à réduire ou le compromis à effectuer. La décision finale appartient à l'utilisateur.
+
+### 4.2 Gestio part de la situation financière réelle de l'utilisateur, et non de règles budgétaires universelles imposées
+
+Gestio ne construit pas son analyse à partir d'un « budget parfait » ou d'une répartition théorique applicable à tout le monde. Il part des comptes, de l'historique, du rythme financier et des objectifs propres à l'utilisateur.
+
+Les éventuelles marges d'ajustement doivent donc être recherchées dans cette réalité. Gestio peut, par exemple, identifier des marges crédibles à partir des habitudes et de la variabilité des dépenses, puis proposer des scénarios. Ces scénarios restent des possibilités et non des prescriptions.
+
+### 4.3 Gestio distingue clairement les faits, les projections et les possibilités
+
+Gestio doit permettre à l'utilisateur de savoir de quelle nature est chaque information présentée :
+
+- un **fait** provient des données financières observées ;
+- une **projection** est une estimation de ce qui pourrait se produire à partir des données disponibles ;
+- une **possibilité** représente un scénario ou un ajustement que l'utilisateur pourrait choisir.
+
+Ces trois niveaux ne doivent pas être présentés avec le même degré de certitude.
+
 ## Étape suivante
 
-Définir les **principes produit** qui encadrent ce rôle de copilote, avant de déterminer les capacités nécessaires, les parcours, les écrans ou l'architecture technique.
+Définir les **capacités nécessaires** pour que Gestio puisse tenir sa promesse et remplir son rôle tout en respectant ces principes, avant de définir les parcours, les écrans ou l'architecture technique.
