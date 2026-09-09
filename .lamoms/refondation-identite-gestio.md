@@ -22,7 +22,7 @@ PARCOURS
 ARCHITECTURE TECHNIQUE
 ```
 
-À ce stade, seules les deux premières étapes sont établies. Les suivantes ne doivent pas être déduites ou figées avant d'être travaillées explicitement.
+À ce stade, les trois premières étapes sont établies. Les suivantes ne doivent pas être déduites ou figées avant d'être travaillées explicitement.
 
 ## 1. Problème utilisateur
 
@@ -44,6 +44,26 @@ Sa responsabilité est de fournir une base suffisamment réaliste pour permettre
 
 Gestio ne remplace donc pas la décision de l'utilisateur : il rend cette décision mieux informée.
 
+## 3. Rôle de Gestio
+
+**Gestio est un copilote financier qui transforme la situation financière réelle de l'utilisateur en informations exploitables pour comprendre ce qu'il peut viser, mesurer ce qu'impliquent ses objectifs et identifier les ajustements possibles. La décision finale appartient toujours à l'utilisateur.**
+
+Le rôle de copilote signifie que Gestio ne se limite pas à présenter des chiffres. Il accompagne la décision selon la logique suivante :
+
+```text
+situation réelle
+      ↓
+ce qu'elle permet
+      ↓
+ce qu'implique l'objectif
+      ↓
+ajustements possibles
+      ↓
+décision de l'utilisateur
+```
+
+« Copilote » désigne ici un rôle produit et n'implique pas nécessairement une interface conversationnelle ou l'utilisation d'une IA. Gestio éclaire les choix et leurs conséquences sans décider à la place de l'utilisateur.
+
 ## Étape suivante
 
-Définir le **rôle de Gestio** à partir du problème et de la promesse ci-dessus, sans encore figer les capacités techniques, les parcours, les écrans ou l'architecture.
+Définir les **principes produit** qui encadrent ce rôle de copilote, avant de déterminer les capacités nécessaires, les parcours, les écrans ou l'architecture technique.
