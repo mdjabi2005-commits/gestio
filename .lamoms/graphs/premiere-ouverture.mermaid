@@ -1,0 +1,33 @@
+flowchart LR
+    %% Parcours : Première ouverture
+    %% Source cible : docs/AUDIT_SERVICES_PARCOURS_CHECKPOINT.md
+
+    PDF[Relevé PDF / JSON]
+    MONO[Monopoly extraction]
+    LOCAL[(Données locales SQLDelight)]
+
+    LR[LectureReleves]
+    LDL[LectureDonneesLocales]
+    AT[AnalyseTransactions]
+    BM[BilanMensuel]
+    SEC[SeuilsEtCapacites]
+    RE[RepartitionEnveloppes]
+    PO[ProjectionObjectifs]
+    P1[PresentationPremiereOuverture]
+    UI[Écrans Compose première ouverture]
+
+    PDF -->|fichier importé| LR
+    MONO -->|transactions extraites| LR
+    LR -->|transactions + métadonnées relevé| AT
+    LOCAL -->|règles, comptes, historique| LDL
+    LDL -->|données locales utiles| AT
+    AT -->|transactions catégorisées + récurrences + transferts| BM
+    BM -->|bilan mensuel| SEC
+    SEC -->|capacités + seuils| RE
+    RE -->|répartition des enveloppes| PO
+    PO -->|proposition / projection d'objectif| P1
+    LDL -->|état comptes + progression onboarding| P1
+    AT -->|arbitrages + confirmations| P1
+    BM -->|solde du mois| P1
+    RE -->|marquage / répartition| P1
+    P1 -->|UiState + actions autorisées| UI
