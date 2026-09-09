@@ -34,12 +34,6 @@ Les difficultés comme ne pas savoir précisément où va son argent, ne pas sav
 
 ## 2. Promesse de Gestio
 
-### Formulation courte
-
-**Gestio donne du réalisme aux objectifs financiers.**
-
-### Formulation développée
-
 **Gestio évalue la situation financière réelle d'une personne pour lui permettre de construire des objectifs réalistes et d'en mesurer les conséquences.**
 
 ## Principe associé
