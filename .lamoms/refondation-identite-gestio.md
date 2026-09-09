@@ -22,7 +22,7 @@ PARCOURS
 ARCHITECTURE TECHNIQUE
 ```
 
-À ce stade, les quatre premières étapes sont établies. Les suivantes ne doivent pas être déduites ou figées avant d'être travaillées explicitement.
+À ce stade, les cinq premières étapes sont établies. Les parcours, les écrans et l'architecture technique ne doivent pas être déduits ou figés avant d'être travaillés explicitement.
 
 ## 1. Problème utilisateur
 
@@ -86,6 +86,87 @@ Gestio doit permettre à l'utilisateur de savoir de quelle nature est chaque inf
 
 Ces trois niveaux ne doivent pas être présentés avec le même degré de certitude.
 
+## 5. Capacités nécessaires
+
+Les capacités décrivent ce que Gestio doit savoir faire pour remplir son rôle de copilote financier. Elles sont définies indépendamment des solutions techniques qui pourront les implémenter.
+
+### 5.1 Construire la situation financière réelle
+
+Gestio doit pouvoir rassembler et exploiter les informations nécessaires pour obtenir une vue cohérente de la situation financière de l'utilisateur : comptes, soldes, transactions, épargne, revenus, dépenses et autres éléments pertinents.
+
+### 5.2 Comprendre le rythme financier
+
+Gestio doit analyser la manière dont les revenus et les dépenses se comportent dans le temps.
+
+Pour les dépenses, le comportement peut notamment être distingué entre :
+
+- **dépense récurrente fixe** : revient selon une fréquence identifiable avec un montant fixe ou suffisamment stable ;
+- **dépense récurrente variable** : revient selon une fréquence identifiable mais avec des montants différents ;
+- **dépense ponctuelle** : ne présente pas de récurrence identifiable.
+
+Cette dimension observable est distincte de la nature que l'utilisateur attribue à la dépense :
+
+- **vitale** ;
+- **plaisir**.
+
+Gestio peut analyser le comportement d'une dépense à partir des données, mais ne décide pas à la place de l'utilisateur si une dépense est vitale ou plaisir. Cette qualification appartient à l'utilisateur.
+
+### 5.3 Évaluer la capacité financière réelle
+
+À partir de la situation et du rythme financier observés, ainsi que des choix de l'utilisateur sur la nature de ses dépenses, Gestio doit estimer ce que sa situation lui permet réellement : capacité d'épargne, marge disponible, variabilité à absorber ou effort financier soutenable.
+
+Cette capacité ne doit pas être calculée à partir d'une règle budgétaire universelle, mais à partir de la situation propre à l'utilisateur.
+
+### 5.4 Évaluer un objectif
+
+Gestio doit pouvoir confronter un objectif à la capacité financière réelle de l'utilisateur afin de déterminer ce que cet objectif implique : délai réaliste, effort nécessaire, écart éventuel avec la situation actuelle et conséquences sur la trajectoire financière.
+
+Par exemple, Gestio peut constater qu'un objectif atteignable en 20 mois au rythme actuel nécessiterait un effort mensuel supplémentaire pour être atteint en 12 mois.
+
+### 5.5 Simuler des scénarios
+
+Gestio doit permettre d'explorer différents futurs possibles en faisant varier les paramètres d'un objectif ou de la situation sans modifier réellement les finances de l'utilisateur.
+
+L'utilisateur peut par exemple tester une autre échéance, un autre montant d'objectif, un autre effort mensuel ou une somme déjà disponible. Gestio recalcule alors les conséquences de chaque hypothèse.
+
+Cette capacité répond à la question : **« Si je change ce paramètre, qu'est-ce que cela donne ? »**
+
+### 5.6 Identifier des ajustements possibles
+
+Lorsque l'évaluation ou une simulation fait apparaître un effort supplémentaire nécessaire, Gestio doit pouvoir montrer où des ajustements sont potentiellement possibles dans la situation réelle de l'utilisateur.
+
+Cette analyse peut notamment s'appuyer sur le comportement des dépenses et sur leur qualification **vitale / plaisir définie par l'utilisateur**. Gestio peut ainsi montrer différentes marges ou combinaisons permettant, par exemple, de dégager une somme supplémentaire chaque mois.
+
+Cette capacité répond à la question : **« Concrètement, où puis-je agir dans mes finances ? »**
+
+Gestio propose des possibilités ; il ne choisit pas l'ajustement à appliquer à la place de l'utilisateur.
+
+### 5.7 Suivre la situation et les objectifs dans le temps
+
+Gestio doit réévaluer la situation au fur et à mesure que de nouvelles données apparaissent et indiquer si la trajectoire reste cohérente avec les objectifs, si la situation dérive ou si certaines hypothèses doivent être réévaluées.
+
+### 5.8 Rendre les analyses explicables
+
+Gestio doit permettre à l'utilisateur de comprendre l'origine de ses conclusions et de distinguer les données observées, les calculs, les hypothèses, les projections et les possibilités proposées.
+
+## Enchaînement central des capacités
+
+```text
+Comprendre la situation et le rythme financier
+                ↓
+Évaluer la capacité financière réelle
+                ↓
+Confronter cette capacité à un objectif
+                ↓
+Simuler des alternatives
+                ↓
+Identifier où des ajustements sont possibles
+                ↓
+L'utilisateur décide
+                ↓
+Suivre la situation dans le temps
+```
+
 ## Étape suivante
 
-Définir les **capacités nécessaires** pour que Gestio puisse tenir sa promesse et remplir son rôle tout en respectant ces principes, avant de définir les parcours, les écrans ou l'architecture technique.
+Définir les **parcours de Gestio** à partir de ces capacités, avant de définir les écrans puis l'architecture technique. Le choix des solutions techniques telles que Powens, Kotlin ou Monopoly sera traité au niveau approprié sans les confondre avec les capacités métier de Gestio.
