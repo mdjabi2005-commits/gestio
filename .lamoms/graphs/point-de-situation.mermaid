@@ -1,0 +1,27 @@
+flowchart LR
+    %% Parcours : Point de situation
+    %% Source cible : docs/AUDIT_SERVICES_PARCOURS_CHECKPOINT.md
+
+    LOCAL[(Données locales SQLDelight)]
+    EB[Enable Banking / relevés]
+
+    LDL[LectureDonneesLocales]
+    LB[LectureBancaire]
+    PO[ProjectionObjectifs]
+    ET[EcartTrajectoire]
+    DM[DepensesDuMois]
+    PS[PresentationPointDeSituation]
+    UI[Écrans Compose point de situation]
+
+    LOCAL -->|objectifs, poches, historique| LDL
+    EB -->|transactions + soldes observés| LB
+    LDL -->|objectif + capacités + poches| PO
+    LB -->|observé bancaire| ET
+    LDL -->|historique local + objectif| ET
+    PO -->|projection attendue| ET
+    LDL -->|transactions locales du périmètre| DM
+    DM -->|courbes de dépenses| PS
+    ET -->|écart + attribution + conséquences| PS
+    PO -->|trajectoire cible| PS
+    LDL -->|enveloppes + contexte de période| PS
+    PS -->|UiState + navigation + actions| UI
