@@ -15,4 +15,4 @@ recovery/
 .env.*
 
 # Artefacts d'analyse locaux
-.lamoms/
+.lamoms/lab/
