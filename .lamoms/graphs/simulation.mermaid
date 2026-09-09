@@ -1,0 +1,28 @@
+flowchart LR
+    %% Parcours : Simulation
+    %% Source cible : docs/AUDIT_SERVICES_PARCOURS_CHECKPOINT.md
+
+    LOCAL[(Données locales SQLDelight)]
+
+    LDL[LectureDonneesLocales]
+    SEC[SeuilsEtCapacites]
+    RE[RepartitionEnveloppes]
+    PO[ProjectionObjectifs]
+    ET[EcartTrajectoire]
+    PSIM[PresentationSimulation]
+    UI[Écrans Compose simulation]
+
+    LOCAL -->|poches, objectif, historique, paramètres| LDL
+    LDL -->|données de capacité + seuils| SEC
+    SEC -->|bornes + capacité disponible| RE
+    LDL -->|répartition observée + identifiants de poches| RE
+    RE -->|répartition simulée + compensations| PO
+    LDL -->|objectif courant| PO
+    PO -->|projection après simulation| ET
+    LDL -->|observé + historique| ET
+    RE -->|simulation proposée| ET
+    ET -->|écart + conséquences| PSIM
+    RE -->|répartition + création/ajustement de poches| PSIM
+    SEC -->|bornes du curseur| PSIM
+    PO -->|conséquence sur l'objectif| PSIM
+    PSIM -->|UiState + actions explicites| UI
