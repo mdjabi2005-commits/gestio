@@ -11,7 +11,7 @@ journey:
   intent: "Permettre à l'utilisateur d'explorer les conséquences d'un changement hypothétique sur sa situation financière ou sur un objectif, sans modifier immédiatement sa situation réelle."
   actor: "Utilisateur de Gestio disposant déjà d'une situation financière exploitable."
   trigger: "L'utilisateur souhaite tester une hypothèse sur son objectif, sa répartition financière ou un imprévu potentiel afin de comprendre ce que cela changerait."
-  expected_outcome: "L'utilisateur compare clairement sa situation de référence à un scénario hypothétique, comprend les effets du changement testé sur sa capacité financière, ses objectifs et sa protection, puis décide librement de poursuivre, d'abandonner ou de retenir certaines modifications."
+  expected_outcome: "L'utilisateur compare clairement sa situation de référence à un scénario hypothétique, comprend les effets du changement testé sur sa capacité d'épargne, ses objectifs et sa protection, puis décide librement de poursuivre, d'abandonner ou de retenir certaines modifications."
   artifact_decision: "La fiche conserve la définition durable du parcours. Les scénarios, hypothèses temporaires, paramètres simulés et résultats calculés appartiennent à l'état métier de Gestio et ne sont pas dupliqués comme artefacts documentaires parallèles."
   scope_in:
     - "Partir d'une situation financière de référence déjà construite."
@@ -27,14 +27,15 @@ journey:
     - "Modifier automatiquement la situation réelle de l'utilisateur dès qu'un paramètre est changé dans une simulation."
     - "Présenter une hypothèse comme un fait observé."
     - "Décider à la place de l'utilisateur quels paramètres doivent être modifiés pour améliorer un objectif."
-    - "Considérer le fonds d'urgence comme librement mobilisable pour un objectif hors contexte d'absorption d'un imprévu."
+    - "Considérer le fonds d'urgence comme librement affectable à un objectif hors contexte d'absorption d'un imprévu."
+    - "Créer un journey autonome pour l'ajustement ou l'imprévu réel."
     - "Définir ici les écrans ou l'architecture technique détaillée."
 
 user_flow:
   preconditions:
     - "Une première situation financière exploitable a déjà été construite."
     - "Gestio dispose d'une situation de référence comprenant au minimum les données nécessaires aux calculs concernés par la simulation."
-    - "Le fonds d'urgence est identifié séparément des avoirs librement mobilisables lorsqu'il existe."
+    - "Le fonds d'urgence est identifié séparément des avoirs potentiellement affectables à un objectif lorsqu'il existe."
   steps:
     - action: "L'utilisateur ouvre le parcours Simulation."
       visible_result: "Gestio présente une situation de référence clairement identifiable comme point de comparaison et indique qu'aucune hypothèse ne modifie encore la situation réelle."
@@ -45,11 +46,11 @@ user_flow:
       possible_error: "Le scénario choisi nécessite des données qui ne sont pas disponibles ; Gestio doit rendre cette limite explicite."
       state: expected
     - action: "Dans une simulation d'objectif, l'utilisateur modifie un ou plusieurs paramètres tels que le montant cible, l'échéance ou la somme déjà affectée."
-      visible_result: "Gestio recalcule le reste à financer, l'effort ou le délai associé, la part de capacité d'épargne mobilisée et l'écart éventuel par rapport à la situation de référence."
+      visible_result: "Gestio recalcule le reste à financer, l'effort ou le délai associé, la part de capacité d'épargne (CP) mobilisée et l'écart éventuel par rapport à la situation de référence."
       possible_error: "Une valeur simulée est incohérente ou inexploitable ; Gestio doit signaler le paramètre concerné sans altérer la référence."
       state: expected
     - action: "Dans une simulation de répartition, l'utilisateur teste une variation de SB ou de SPP."
-      visible_result: "Gestio conserve SH comme référence fixe pour ce scénario, recalcule CP à partir de la nouvelle répartition et montre explicitement le delta entre référence et simulation."
+      visible_result: "Gestio conserve SH comme référence fixe pour ce scénario, recalcule CP à partir de la nouvelle répartition selon `SH = SB + SPP + CP` et montre explicitement le delta entre référence et simulation."
       possible_error: "L'hypothèse produit une répartition incohérente ou négative ; Gestio doit rendre cette incohérence visible et empêcher de présenter le résultat comme exploitable."
       state: expected
     - action: "Dans une simulation d'imprévu, l'utilisateur introduit un choc financier hypothétique."
@@ -68,7 +69,7 @@ user_flow:
       visible_result: "Il peut quitter sans rien changer, poursuivre l'exploration ou retenir explicitement certains changements comme nouvelle référence lorsque le type de modification le permet. Gestio ne transforme jamais implicitement une hypothèse en réalité."
       possible_error: "Une modification simulée ne peut pas être adoptée directement parce qu'elle nécessite une action concrète ou des données supplémentaires ; Gestio doit l'indiquer sans prétendre que la situation réelle a changé."
       state: expected
-  success_result: "L'utilisateur comprend les conséquences d'un scénario en les comparant à sa situation de référence. Il distingue clairement ce qui est observé de ce qui est hypothétique, voit l'impact sur sa capacité financière, ses objectifs ou son fonds d'urgence, puis décide librement de poursuivre, d'abandonner ou de retenir certaines modifications."
+  success_result: "L'utilisateur comprend les conséquences d'un scénario en les comparant à sa situation de référence. Il distingue clairement ce qui est observé de ce qui est hypothétique, voit l'impact sur sa capacité d'épargne, ses objectifs ou son fonds d'urgence, puis décide librement de poursuivre, d'abandonner ou de retenir certaines modifications."
   exit_conditions:
     - "L'utilisateur quitte la simulation sans modifier sa situation ou son objectif de référence."
     - "L'utilisateur continue à modifier le scénario."
@@ -175,7 +176,8 @@ progress:
 
 ## Notes de cadrage
 
-- La relation de travail actuelle entre les grandeurs financières est `SH = SB + SPP + CP`. Dans une simulation de répartition, `SH` reste la référence fixe et les variations de `SB` ou `SPP` entraînent un recalcul de `CP`. Ce vocabulaire sera normalisé après stabilisation des parcours.
+- La relation entre les grandeurs financières est `SH = SB + SPP + CP`. Dans une simulation de répartition, `SH` reste la référence fixe et les variations de `SB` ou `SPP` entraînent un recalcul de `CP`.
 - Une simulation est toujours distincte de la situation réelle : modifier un paramètre ne suffit jamais à transformer l'hypothèse en nouvelle réalité.
 - La simulation d'objectif explore notamment montant, échéance et somme déjà affectée ; la simulation d'imprévu mesure l'absorption du choc par le fonds d'urgence puis son impact résiduel.
 - Le résultat essentiel du parcours est la comparaison entre référence et scénario, pas seulement l'affichage d'une nouvelle valeur calculée.
+- L'ajustement et l'imprévu ne sont pas des parcours autonomes : ils sont traités comme possibilités ou situations à l'intérieur des quatre journeys de la refondation.
