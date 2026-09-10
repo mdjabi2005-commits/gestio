@@ -22,7 +22,7 @@ PARCOURS
 ARCHITECTURE TECHNIQUE
 ```
 
-À ce stade, les cinq premières étapes sont établies. Les parcours, les écrans et l'architecture technique ne doivent pas être déduits ou figés avant d'être travaillés explicitement.
+À ce stade, les cinq premières étapes sont établies et le cadrage des parcours est en cours. Les écrans et l'architecture technique ne doivent pas être déduits ou figés avant que les parcours soient travaillés explicitement.
 
 ## 1. Problème utilisateur
 
@@ -154,6 +154,10 @@ Gestio doit permettre de distinguer une réserve destinée à absorber les impr�
 
 Le fonds d'urgence fait partie de l'évaluation de la situation financière : sa présence ou son absence modifie la capacité de la situation à absorber un choc sans dégrader immédiatement les autres trajectoires.
 
+**Le rôle de fonds d'urgence est défini par l'utilisateur au niveau des comptes d'épargne.** Gestio peut identifier les comptes et leurs soldes, mais ne décide pas qu'un compte constitue le fonds d'urgence. L'utilisateur indique quels comptes d'épargne en font partie ou non.
+
+Lorsqu'un compte est désigné comme faisant partie du fonds d'urgence, son solde est considéré comme réservé à ce rôle et n'est pas assimilé à de l'argent librement mobilisable pour les objectifs. Cette règle conserve une unité de qualification explicite : le compte, plutôt qu'un montant arbitraire à l'intérieur d'un compte.
+
 Lors d'une simulation d'imprévu, Gestio doit pouvoir montrer quelle part du choc peut être absorbée par le fonds d'urgence, quelle part reste à absorber et quelles conséquences cela aurait sur la situation ou les objectifs.
 
 Gestio ne se contente donc pas d'afficher le montant du fonds d'urgence : il permet d'en comprendre le rôle et ce qu'il protège réellement.
@@ -188,6 +192,53 @@ L'utilisateur décide
 Suivre et réévaluer la situation dans le temps
 ```
 
+## 6. Parcours — cadrage en cours
+
+### 6.1 Première ouverture — construire ma situation
+
+**Intention :** permettre à Gestio de passer d'un utilisateur dont il ne connaît encore rien à une première représentation suffisamment fiable de sa situation financière pour commencer à l'accompagner.
+
+Enchaînement actuellement validé :
+
+```text
+Première utilisation de Gestio
+        ↓
+Apporter ses données financières
+        ↓
+Gestio construit l'historique disponible
+        ↓
+Gestio analyse revenus et dépenses
+        ↓
+Gestio détecte les comportements
+récurrents fixes / récurrents variables / ponctuels
+        ↓
+L'utilisateur complète ce que Gestio
+ne peut pas décider seul
+notamment vital / plaisir
+        ↓
+L'utilisateur indique quels comptes d'épargne
+constituent son fonds d'urgence
+        ↓
+Gestio évalue le rythme financier
+        ↓
+Gestio calcule une première
+capacité financière réelle
+        ↓
+Première situation financière construite
+        ↓
+Entrée dans l'usage courant
+```
+
+#### Décision sur le fonds d'urgence
+
+Le fonds d'urgence n'est pas automatiquement déduit par Gestio et n'est pas défini comme un montant arbitraire demandé à l'utilisateur.
+
+Gestio présente les comptes d'épargne identifiés et **l'utilisateur indique lesquels constituent son fonds d'urgence**. Gestio observe les données financières ; l'utilisateur attribue le rôle de ces comptes.
+
+Cette décision suit le même principe que la qualification **vitale / plaisir** : Gestio peut observer et analyser les données, mais ne remplace pas le jugement de l'utilisateur lorsqu'il s'agit de leur donner un sens personnel.
+
+Le détail du `user_flow`, notamment la manière de qualifier vital / plaisir sans imposer le classement manuel de centaines de transactions, reste à définir avant de considérer ce parcours comme cadré.
+
 ## Étape suivante
 
-Définir les **parcours de Gestio** à partir de ces capacités, avant de définir les écrans puis l'architecture technique. Le choix des solutions techniques telles que Powens, Kotlin ou Monopoly sera traité au niveau approprié sans les confondre avec les capacités métier de Gestio.
+Poursuivre le cadrage du parcours **Première ouverture**, puis cadrer les autres parcours. Une fois les parcours validés, construire leur graphe Mermaid global puis créer les fiches Lamoms dans `.lamoms/journeys/` à partir de `knowledge/templates/JOURNEY_TEMPLATE.md` de `DOCUMENTATION_URL`.
