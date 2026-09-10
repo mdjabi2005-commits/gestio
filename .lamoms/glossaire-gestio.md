@@ -4,9 +4,36 @@
 
 ## Situation financière réelle
 
-Représentation cohérente de la situation de l'utilisateur construite à partir des données observées : comptes, soldes, transactions, épargne, revenus, dépenses, historiques disponibles, fonds d'urgence et autres éléments utiles.
+Représentation cohérente de la situation de l'utilisateur construite à partir des données observées : établissements financiers, supports financiers, soldes, transactions, épargne, revenus, dépenses, historiques disponibles, fonds d'urgence et autres éléments utiles.
 
 Gestio part de cette situation réelle pour analyser ce que l'utilisateur peut viser. Elle n'est pas construite à partir d'une règle budgétaire universelle.
+
+## Établissement financier
+
+Organisation qui ouvre, héberge ou administre un support financier de l'utilisateur.
+
+Une banque, un courtier ou une plateforme de crypto-actifs peuvent être des établissements financiers. L'établissement n'est ni le titulaire ni le support lui-même. Un portefeuille crypto en auto-conservation peut ne dépendre d'aucun établissement.
+
+## Compte bancaire
+
+Support bancaire qui porte un solde en monnaie et des opérations. Dans Gestio, un compte bancaire reçoit l'un des deux types métier suivants :
+
+- **compte courant** : compte utilisé pour les encaissements, paiements et prélèvements du quotidien ; son solde contribue au budget libre ;
+- **compte d'épargne** : réserve monétaire volontairement séparée du quotidien ; son solde ne contribue pas au budget libre, mais peut être désigné comme fonds d'urgence ou devenir potentiellement affectable à un objectif par décision explicite de l'utilisateur.
+
+Le terme « compte principal » n'est pas utilisé : il ne décrit ni la nature du compte ni son rôle dans un calcul.
+
+## Support financier
+
+Terme générique pour ce que l'utilisateur détient financièrement. Un support financier est rattaché à un établissement lorsqu'il y en a un, mais cette relation n'est pas obligatoire.
+
+Les catégories actuellement reconnues sont :
+
+- compte bancaire ;
+- support d'investissement, par exemple un compte-titres ordinaire ou un PEA ;
+- portefeuille crypto, conservé par une plateforme ou en auto-conservation.
+
+Un support d'investissement ou un portefeuille crypto peut figurer dans la vue « épargne et placements », mais n'est pas un compte d'épargne et ne devient jamais automatiquement de l'argent disponible.
 
 ## Rythme financier
 
@@ -116,17 +143,33 @@ Exemple :
 
 Le budget libre est une notion de court terme liée à la liquidité à l'instant `t`. Il ne doit pas être confondu avec la CP, qui décrit une capacité d'épargne structurelle et mensuelle.
 
+Le budget libre est calculé à partir des comptes courants et des engagements connus. Les comptes d'épargne, supports d'investissement et portefeuilles crypto en sont exclus, même s'ils peuvent être mobilisables par un choix explicite de l'utilisateur.
+
+## Contrôle de liquidité — health check
+
+Consultation ponctuelle qui répond à la question : **« Les prélèvements et autres engagements connus partiront-ils du bon compte sans risque de rejet ? »**
+
+Pour chaque engagement à venir, Gestio compare son montant et sa date avec le solde observé du compte courant d'origine, après les engagements connus antérieurs. Le résultat est une projection, jamais une certitude : les transactions futures inconnues et la fraîcheur des données peuvent en limiter la fiabilité.
+
+Le contrôle produit l'un des trois constats suivants :
+
+- **couvert** : les données connues suffisent à couvrir l'engagement ;
+- **à risque** : les données connues indiquent que le compte d'origine pourrait être insuffisant ;
+- **à confirmer** : les données disponibles ne permettent pas de conclure.
+
+Ce contrôle n'est pas un tableau de bord ni une alerte permanente. Il peut être ouvert volontairement ; un signal contextuel n'apparaît dans l'usage courant que lorsqu'un engagement est à risque ou à confirmer.
+
 ## Fonds d'urgence
 
 Réserve destinée à absorber les imprévus sans dégrader immédiatement les autres trajectoires financières.
 
-Le rôle de fonds d'urgence est défini par l'utilisateur au niveau des comptes d'épargne. Lorsqu'un compte est désigné comme fonds d'urgence, son solde est réservé à ce rôle et n'est pas considéré comme librement mobilisable pour un objectif.
+Le rôle de fonds d'urgence est défini par l'utilisateur sur un ou plusieurs comptes d'épargne ou autres supports financiers désignés comme réserve. Lorsqu'un support est désigné comme fonds d'urgence, sa valeur est réservée à ce rôle et n'est pas considérée comme librement mobilisable pour un objectif.
 
 ## Avoir potentiellement affectable à un objectif
 
 Actif ou somme que l'utilisateur pourrait choisir d'utiliser pour financer un objectif, hors fonds d'urgence.
 
-Cela peut notamment inclure des comptes d'épargne, portefeuilles crypto ou autres supports financiers pertinents.
+Cela peut notamment inclure des comptes d'épargne, supports d'investissement, portefeuilles crypto ou autres supports financiers pertinents.
 
 Cette appellation reste volontairement provisoire : le concept est conservé, mais son nom pourra être simplifié lors de la validation finale du vocabulaire.
 
