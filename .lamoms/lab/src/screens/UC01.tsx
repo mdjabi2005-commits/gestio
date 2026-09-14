@@ -162,50 +162,36 @@ export const UC01: React.FC = () => {
         </div>
       </div>
 
-      <div className="border-t border-[#e5e5e5] pt-4 mb-7">
-        <div className="flex justify-between items-baseline mb-3">
+      <button
+        type="button"
+        onClick={() => navigate('UC-02')}
+        aria-label="Comprendre ma capacité d’épargne"
+        className="w-full text-left border-t border-[#e5e5e5] pt-4 mb-7 hover:bg-[#fafafa] transition-colors cursor-pointer"
+      >
+        <span className="flex justify-between items-baseline mb-3">
           <span className="text-xs text-[#737373] uppercase tracking-wider font-semibold">
             REPÈRES DU MOIS
           </span>
-          <span className="text-xs text-[#737373]">par mois</span>
-        </div>
-        <div className="grid grid-cols-3 gap-2 text-sm">
-          <div>
-            <div className="text-xs text-[#737373]">Vitales</div>
-            <div className="font-semibold tabular-nums">{formatAmount(vitalEnvelopeCents)}</div>
-          </div>
-          <div>
-            <div className="text-xs text-[#737373]">Plaisir</div>
-            <div className="font-semibold tabular-nums">{formatAmount(pleasureEnvelopeCents)}</div>
-          </div>
-          <div>
-            <div className="text-xs text-[#737373]">Capacité d’épargne</div>
-            <div className="font-semibold tabular-nums">{formatAmount(savingsCapacityCents)}</div>
-          </div>
-        </div>
-        <p className="text-xs text-[#737373] mt-3 leading-relaxed">
+          <span className="text-lg text-[#555555]">›</span>
+        </span>
+        <span className="grid grid-cols-3 gap-2 text-sm">
+          <span>
+            <span className="block text-xs text-[#737373]">Vitales</span>
+            <span className="block font-semibold tabular-nums">{formatAmount(vitalEnvelopeCents)}</span>
+          </span>
+          <span>
+            <span className="block text-xs text-[#737373]">Plaisir</span>
+            <span className="block font-semibold tabular-nums">{formatAmount(pleasureEnvelopeCents)}</span>
+          </span>
+          <span>
+            <span className="block text-xs text-[#737373]">Capacité d’épargne</span>
+            <span className="block font-semibold tabular-nums">{formatAmount(savingsCapacityCents)}</span>
+          </span>
+        </span>
+        <span className="block text-xs text-[#737373] mt-3 leading-relaxed">
           Les enveloppes restent sous le seuil haut de {formatAmount(upperThresholdCents)} de revenus récurrents.
-        </p>
-      </div>
-
-      <footer className="pt-2 flex flex-col">
-        <button
-          type="button"
-          onClick={() => navigate('UC-02')}
-          className="w-full flex justify-between items-center py-3.5 border-t border-b border-[#e5e5e5] text-[#111111] font-semibold text-[15px] hover:opacity-75 transition-opacity text-left cursor-pointer"
-        >
-          <span>Comprendre ma capacité d’épargne</span>
-          <span className="text-lg">›</span>
-        </button>
-        <button
-          type="button"
-          onClick={() => navigate('UC-03')}
-          className="w-full flex justify-between items-center py-3.5 border-b border-[#e5e5e5] text-[#5e5e5e] hover:text-[#111111] font-medium text-[15px] transition-colors text-left cursor-pointer"
-        >
-          <span>Voir la répartition des enveloppes</span>
-          <span className="text-lg">›</span>
-        </button>
-      </footer>
+        </span>
+      </button>
     </section>
   );
 };
