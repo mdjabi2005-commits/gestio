@@ -79,9 +79,15 @@ Exemple : achat exceptionnel ou dépense imprévue isolée.
 
 ## Pocket
 
-Regroupement métier de dépenses utilisé pour représenter la réalité financière de l'utilisateur.
+Regroupement métier de dépenses utilisé pour représenter la réalité financière de l'utilisateur. Une pocket de dépenses ne représente pas un compte bancaire ni une affectation d'épargne.
 
 Gestio peut proposer une structure initiale de pockets et y classer des transactions, mais l'utilisateur peut adapter cette structure à sa propre réalité.
+
+## Pocket d'épargne
+
+Affectation d'épargne choisie pour préparer ou financer un objectif. Elle peut s'appuyer sur un compte d'épargne, un support d'investissement ou un autre avoir potentiellement affectable ; elle ne doit pas être confondue avec une pocket de dépenses.
+
+Une pocket d'épargne proposée pour un prochain objectif reste une possibilité tant que l'utilisateur n'a pas confirmé le montant puis choisi la pocket concernée.
 
 ## Qualification vital / plaisir
 
@@ -179,6 +185,12 @@ Part des avoirs potentiellement affectables que l'utilisateur décide réellemen
 
 Un avoir disponible n'est donc jamais considéré comme automatiquement affecté à un objectif.
 
+## Multi-objectifs
+
+Situation dans laquelle plusieurs objectifs partagent la capacité d'épargne mensuelle et leurs propres sommes ou pockets d'épargne affectées.
+
+La capacité d'épargne reste une ressource commune : l'effort d'un objectif réduit la marge disponible pour les autres. Gestio peut recommander d'utiliser cette marge pour préparer un prochain objectif, mais ne crée ni n'affecte automatiquement un objectif ou une pocket.
+
 ## Objectif
 
 Résultat financier que l'utilisateur souhaite atteindre et que Gestio confronte à sa situation financière réelle afin de mesurer ce qu'il implique.
@@ -188,6 +200,8 @@ Un objectif peut notamment comporter :
 - un montant cible ;
 - une somme déjà affectée ;
 - une échéance facultative.
+- un effort mensuel retenu ;
+- une ou plusieurs pockets d'épargne affectées.
 
 Un objectif peut être conservé même si les paramètres actuels le rendent incompatible avec la CP. Gestio mesure alors l'écart sans qualifier l'objectif d'impossible.
 

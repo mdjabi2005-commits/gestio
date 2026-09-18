@@ -123,6 +123,8 @@ Gestio doit pouvoir confronter un objectif à la capacité financière réelle d
 
 Par exemple, Gestio peut constater qu'un objectif atteignable en 20 mois au rythme actuel nécessiterait un effort mensuel supplémentaire pour être atteint en 12 mois.
 
+Lorsque plusieurs objectifs sont suivis, la capacité d'épargne constitue une ressource commune. Gestio peut proposer d'utiliser la marge restante après l'effort d'un objectif pour préparer le suivant, mais le montant puis la pocket d'épargne doivent être confirmés par l'utilisateur.
+
 ### 5.5 Simuler des scénarios
 
 Gestio doit permettre d'explorer différents futurs possibles sans modifier réellement les finances de l'utilisateur.

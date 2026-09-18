@@ -11,7 +11,7 @@ journey:
   intent: "Permettre à l'utilisateur d'exprimer un objectif financier et de le confronter à sa situation financière réelle afin de comprendre ce qu'il implique avant de décider de le poursuivre."
   actor: "Utilisateur de Gestio disposant déjà d'une situation financière exploitable."
   trigger: "L'utilisateur souhaite créer ou consulter un objectif financier depuis Gestio, notamment après l'usage courant."
-  expected_outcome: "L'utilisateur comprend le montant restant à financer, l'effort mensuel ou le délai correspondant à sa situation actuelle, l'écart éventuel avec sa capacité d'épargne et les suites possibles sans que Gestio décide à sa place."
+  expected_outcome: "L'utilisateur comprend le montant restant à financer, l'effort mensuel ou le délai correspondant à sa situation actuelle, l'écart éventuel avec sa capacité d'épargne et les suites possibles, notamment la préparation facultative d'un prochain objectif, sans que Gestio décide à sa place."
   artifact_decision: "La fiche conserve la définition durable du parcours. Les objectifs personnels, les avoirs affectés, les paramètres choisis, les calculs de trajectoire et leur état courant appartiennent à l'état métier de Gestio et ne sont pas dupliqués comme artefacts documentaires parallèles."
   scope_in:
     - "Permettre à l'utilisateur de définir ce qu'il souhaite financer et son montant cible."
@@ -23,6 +23,9 @@ journey:
     - "Avec échéance, calculer l'effort mensuel nécessaire et le comparer à la capacité d'épargne actuelle."
     - "Rendre explicite l'écart lorsque l'effort nécessaire dépasse la capacité d'épargne actuelle."
     - "Rendre explicite la part de capacité d'épargne restant disponible lorsque l'objectif n'en consomme qu'une partie."
+    - "Proposer, lorsque l'objectif laisse une marge, de réserver cette marge pour préparer un prochain objectif sans l'affecter automatiquement."
+    - "Faire confirmer le montant recommandé avant de permettre le choix d'une pocket d'épargne pour le prochain objectif."
+    - "Distinguer la préparation d'un prochain objectif de la création complète de cet objectif, qui nécessite encore son nom, sa cible et ses paramètres propres."
     - "Permettre d'enregistrer un objectif même lorsqu'il n'est pas compatible avec la capacité d'épargne actuelle."
     - "Proposer une poursuite volontaire vers simulation lorsque l'utilisateur souhaite explorer d'autres paramètres ou des possibilités d'ajustement sans modifier immédiatement la référence."
   scope_out:
@@ -30,6 +33,7 @@ journey:
     - "Décider à la place de l'utilisateur quels avoirs doivent être liquidés ou affectés à l'objectif."
     - "Utiliser le fonds d'urgence comme somme librement affectable à un objectif."
     - "Considérer un objectif incompatible avec les paramètres actuels comme impossible ou interdit."
+    - "Créer automatiquement un deuxième objectif complet ou choisir automatiquement la pocket qui lui est destinée."
     - "Simuler dans ce parcours plusieurs variantes de montant, échéance, effort, somme initiale, SB ou SPP sans modifier l'objectif de référence."
     - "Définir ici les écrans ou l'architecture technique détaillée."
 
@@ -55,9 +59,9 @@ user_flow:
       visible_result: "Gestio calcule le montant cible diminué de la somme déjà affectée à l'objectif et présente clairement le montant restant à financer."
       possible_error: "La somme affectée dépasse le montant cible ; Gestio doit signaler que l'objectif est déjà couvert ou demander à l'utilisateur de revoir l'affectation plutôt que produire un reste négatif sans explication."
       state: expected
-    - action: "L'utilisateur choisit s'il souhaite fixer une échéance."
-      visible_result: "L'échéance reste facultative : l'utilisateur peut soit indiquer une date ou une durée souhaitée, soit laisser Gestio estimer le délai correspondant à sa situation actuelle."
-      possible_error: "L'échéance indiquée est incohérente ou déjà dépassée ; Gestio doit demander une échéance exploitable avant de calculer l'effort associé."
+    - action: "L'utilisateur consulte l'échéance retenue et l'effort mensuel associé."
+      visible_result: "Gestio affiche l'échéance retenue, l'effort mensuel versé chaque mois et la possibilité de modifier cet effort ; l'échéance est recalculée à partir du montant restant et du nouvel effort."
+      possible_error: "L'effort indiqué est nul ou inexploitable ; Gestio doit conserver le dernier calcul valide et demander une valeur positive avant de recalculer l'échéance."
       state: expected
     - action: "Si aucune échéance n'est fixée, l'utilisateur demande à Gestio ce que sa situation actuelle permet."
       visible_result: "Gestio estime un délai réaliste à partir du montant restant à financer et de la capacité d'épargne actuelle (CP), en distinguant cette projection des faits observés."
@@ -71,15 +75,24 @@ user_flow:
       visible_result: "Gestio indique si l'effort demandé tient dans la capacité d'épargne actuelle, la mobilise entièrement ou la dépasse. En cas de dépassement, Gestio quantifie l'écart ; en cas de capacité restante, il indique la part encore disponible."
       possible_error: "Une variation récente de la situation rend la capacité de référence obsolète ; Gestio doit signaler qu'une actualisation de la situation est nécessaire."
       state: expected
+    - action: "Lorsque l'objectif laisse une marge de capacité, l'utilisateur consulte la recommandation pour un prochain objectif."
+      visible_result: "Gestio propose le montant égal à la marge après l'effort de l'objectif courant et précise qu'il s'agit d'une recommandation, pas d'une affectation déjà réalisée."
+      possible_error: "La marge est nulle ou la capacité de référence est trop incertaine ; aucune recommandation d'épargne pour un prochain objectif ne doit être présentée comme disponible."
+      state: expected
+    - action: "L'utilisateur confirme le montant recommandé puis choisit une pocket d'épargne pour le prochain objectif."
+      visible_result: "Gestio enregistre la préparation confirmée avec le montant et la pocket choisis, sans modifier la somme déjà affectée à l'objectif courant ni le fonds d'urgence."
+      possible_error: "L'utilisateur renonce ou aucune pocket n'est disponible ; le montant reste une possibilité non affectée et l'objectif courant reste inchangé."
+      state: expected
     - action: "L'utilisateur décide de la suite à donner à son objectif."
       visible_result: "Il peut conserver l'objectif tel quel, y compris lorsqu'un écart existe, modifier directement l'objectif de référence, explorer une simulation ou quitter le parcours. Gestio ne choisit pas à sa place."
       possible_error: "Aucun scénario complémentaire n'est pertinent ou disponible ; l'objectif peut néanmoins être conservé avec son état d'évaluation courant."
       state: expected
-  success_result: "L'utilisateur dispose d'un objectif exprimé et évalué par rapport à sa situation financière réelle. Il comprend ce qu'il reste à financer, le délai ou l'effort mensuel associé, la part de capacité d'épargne mobilisée et l'écart éventuel. Il peut décider de conserver l'objectif, de le modifier ou de poursuivre volontairement vers simulation."
+  success_result: "L'utilisateur dispose d'un objectif exprimé et évalué par rapport à sa situation financière réelle. Il comprend ce qu'il reste à financer, le délai ou l'effort mensuel associé, la part de capacité d'épargne mobilisée et l'écart éventuel. Il peut conserver ou modifier l'objectif courant, ou confirmer la préparation d'un prochain objectif avec une pocket choisie, sans affectation automatique."
   exit_conditions:
     - "L'utilisateur enregistre ou conserve l'objectif tel qu'évalué."
     - "L'utilisateur modifie directement les paramètres de l'objectif de référence."
     - "L'utilisateur poursuit vers simulation pour explorer des hypothèses sans modifier immédiatement l'objectif de référence."
+    - "L'utilisateur confirme la préparation d'un prochain objectif avec un montant et une pocket d'épargne choisis."
     - "L'utilisateur quitte le parcours sans enregistrer l'objectif."
 
 execution_flow:
@@ -185,5 +198,7 @@ progress:
 - Le parcours Objectif utilise la capacité d'épargne actuelle comme référence ; il ne modifie pas lui-même `SB` ou `SPP` pour rendre un objectif compatible.
 - Les **avoirs potentiellement affectables à un objectif** peuvent inclure des comptes d'épargne, portefeuilles crypto ou autres supports pertinents, mais le fonds d'urgence en est exclu.
 - Un avoir potentiellement affectable n'est pas automatiquement affecté à l'objectif : l'utilisateur choisit ce qu'il souhaite réellement y consacrer.
+- La marge après l'effort de l'objectif courant peut être proposée pour préparer un prochain objectif ; la proposition exige une confirmation du montant puis un choix explicite de pocket d'épargne.
+- Cette préparation ne constitue pas encore un deuxième objectif complet : son nom, son montant cible, son échéance et sa trajectoire restent à définir.
 - Un objectif peut être conservé même si son effort nécessaire dépasse la capacité d'épargne actuelle. L'écart devient une information à comprendre, pas une interdiction.
 - Les ajustements de `SB` ou `SPP` sont explorés comme des possibilités dans le parcours `simulation`, pas comme un journey autonome.
