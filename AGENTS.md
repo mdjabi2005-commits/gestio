@@ -37,6 +37,25 @@ faits techniques du checkpoint, puis vérification dans le code présent.
 Le code Kotlin est cartographié avec Emerge. Graphify n'est pas requis pour
 l'analyse Kotlin de ce projet.
 
+## Routes documentaires et décisions
+
+- Le template canonique d'une décision est dans
+  `C:\Users\djabi\bibliotheque\docs\knowledge\templates\DECISION_TEMPLATE.md`
+  et sa forme YAML dans `DECISION_TEMPLATE.yaml`.
+- L'artefact produit est
+  `.lamoms/decisions/<decision-id>.yaml`, un fichier par décision. Ne pas
+  enregistrer une décision uniquement dans `POWENS.md`, une fiche de parcours
+  ou un plan.
+- Les fiches de parcours sont dans `.lamoms/journeys/<journey-id>.md` ; la
+  référence fournisseur Powens est
+  `C:\Users\djabi\bibliotheque\docs\core\POWENS.md`.
+- Avant de planifier ou coder, lire les décisions existantes, la fiche
+  concernée et les références applicables. Une décision métier ou
+  d'architecture reste `proposed` jusqu'à validation humaine ; ne pas choisir
+  à la place de l'humain.
+- `POWENS.md` décrit la décision retenue et ses conséquences ; il ne remplace
+  pas l'artefact de décision canonique.
+
 ## Convention d'exécution
 
 1. Lire l'issue ou le plan approuvé, ce fichier et les références du parcours.
