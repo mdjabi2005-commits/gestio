@@ -54,11 +54,12 @@
 ## Diagnostic des connexions
 
 - Les dates sont réduites au mois ; les identifiants techniques et messages bancaires bruts ne sont pas conservés.
+- `SUCCESS_NULL` signifie que Powens renvoie `state=null`, ce que sa documentation définit comme une synchronisation réussie ; `NOT_REPORTED` signifie que le champ existe mais vaut `null`.
 | Connexion / banque | months_to_fetch connector | État | Erreur | Créée | Dernière mise à jour | Dernier push | Logs lus |
 |---|---:|---|---|---|---|---|---:|
-| Revolut |  | UNKNOWN | NONE | 2026-09 | 2026-09 | UNKNOWN | 2 |
-| La Banque Postale | 3 | UNKNOWN | NONE | 2026-09 | 2026-09 | UNKNOWN | 3 |
-| Trade Republic |  | UNKNOWN | NONE | 2026-09 | 2026-09 | UNKNOWN | 3 |
+| Revolut |  | SUCCESS_NULL | NONE | 2026-09 | 2026-09 | NOT_REPORTED | 2 |
+| La Banque Postale | 3 | SUCCESS_NULL | NONE | 2026-09 | 2026-09 | NOT_REPORTED | 3 |
+| Trade Republic |  | SUCCESS_NULL | NONE | 2026-09 | 2026-09 | NOT_REPORTED | 3 |
 
 ## Synthèse par connexion
 
@@ -81,16 +82,16 @@
 
 | Compte | Connexion / banque | Nom du compte | Type API | Usage Powens | Ouverture API | Dernière mise à jour | Transactions | Dates interprétées | Premier mois | Dernier mois | Mois couverts | >=24 mois |
 |---|---|---|---|---|---|---|---:|---:|---|---|---:|---|
-| ACCOUNT_01 | Revolut | Revolut Current EUR | checking | PRIV | UNKNOWN | 2026-09 | 249 | 249 | 2025-03 | 2026-09 | 19 | NO |
-| ACCOUNT_02 | Revolut | Revolut Current EUR | checking | PRIV | UNKNOWN | 2026-09 | 49 | 49 | 2025-09 | 2026-09 | 13 | NO |
-| ACCOUNT_03 | Revolut | Revolut Current EUR | checking | PRIV | UNKNOWN | 2026-09 | 36 | 36 | 2025-07 | 2026-03 | 9 | NO |
-| ACCOUNT_04 | Revolut | Revolut Current EUR | checking | PRIV | UNKNOWN | 2026-09 | 17 | 17 | 2026-02 | 2026-08 | 7 | NO |
-| ACCOUNT_05 | La Banque Postale | MR DJABI MOHAMED | checking | PRIV | UNKNOWN | 2026-09 | 63 | 63 | 2026-06 | 2026-09 | 4 | NO |
-| ACCOUNT_06 | La Banque Postale | Livret A | savings | PRIV | UNKNOWN | 2026-09 | 52 | 52 | 2025-06 | 2026-09 | 16 | NO |
-| ACCOUNT_07 | La Banque Postale | Livret Jeune | savings | PRIV | UNKNOWN | 2026-09 | 6 | 6 | 2025-12 | 2025-12 | 1 | NO |
-| ACCOUNT_08 | Trade Republic | Trade Republic PEA | pea | UNKNOWN | UNKNOWN | 2026-09 | 34 | 34 | 2025-07 | 2026-04 | 10 | NO |
-| ACCOUNT_09 | Trade Republic | Trade Republic Portfolio | market | UNKNOWN | UNKNOWN | 2026-09 | 117 | 117 | 2025-02 | 2026-08 | 19 | NO |
-| ACCOUNT_10 | Trade Republic | Trade Republic Cash | checking | UNKNOWN | UNKNOWN | 2026-09 | 516 | 516 | 2023-08 | 2026-08 | 37 | YES |
+| ACCOUNT_01 | Revolut | Revolut Current EUR | checking | PRIV | NOT_REPORTED | 2026-09 | 249 | 249 | 2025-03 | 2026-09 | 19 | NO |
+| ACCOUNT_02 | Revolut | Revolut Current EUR | checking | PRIV | NOT_REPORTED | 2026-09 | 49 | 49 | 2025-09 | 2026-09 | 13 | NO |
+| ACCOUNT_03 | Revolut | Revolut Current EUR | checking | PRIV | NOT_REPORTED | 2026-09 | 36 | 36 | 2025-07 | 2026-03 | 9 | NO |
+| ACCOUNT_04 | Revolut | Revolut Current EUR | checking | PRIV | NOT_REPORTED | 2026-09 | 17 | 17 | 2026-02 | 2026-08 | 7 | NO |
+| ACCOUNT_05 | La Banque Postale | MR DJABI MOHAMED | checking | PRIV | NOT_REPORTED | 2026-09 | 63 | 63 | 2026-06 | 2026-09 | 4 | NO |
+| ACCOUNT_06 | La Banque Postale | Livret A | savings | PRIV | NOT_REPORTED | 2026-09 | 52 | 52 | 2025-06 | 2026-09 | 16 | NO |
+| ACCOUNT_07 | La Banque Postale | Livret Jeune | savings | PRIV | NOT_REPORTED | 2026-09 | 6 | 6 | 2025-12 | 2025-12 | 1 | NO |
+| ACCOUNT_08 | Trade Republic | Trade Republic PEA | pea | UNKNOWN | NOT_REPORTED | 2026-09 | 34 | 34 | 2025-07 | 2026-04 | 10 | NO |
+| ACCOUNT_09 | Trade Republic | Trade Republic Portfolio | market | UNKNOWN | NOT_REPORTED | 2026-09 | 117 | 117 | 2025-02 | 2026-08 | 19 | NO |
+| ACCOUNT_10 | Trade Republic | Trade Republic Cash | checking | UNKNOWN | NOT_REPORTED | 2026-09 | 516 | 516 | 2023-08 | 2026-08 | 37 | YES |
 | USER_AGGREGATE | ALL_CONNECTIONS | ALL_ACCOUNTS | N/A | N/A | N/A | N/A | 1139 | 1139 | 2023-08 | 2026-09 | 38 | YES |
 
 ## Relevés et documents fournisseur
@@ -110,7 +111,6 @@
 ## Blocages précis
 
 - Aucun blocage HTTP ni échec client sur les routes exécutées.
-- Les détails de connexion ont répondu, mais certaines métadonnées d'état ou de date sont absentes (`UNKNOWN`) ; elles ne permettent pas de conclure sur la santé de la connexion ni sur l'âge du compte.
 - La date d'ouverture API est absente pour au moins un compte ; une profondeur observée de quelques mois ne peut donc pas être attribuée automatiquement à une création récente du compte.
 - `months_to_fetch` est reporté comme indice de configuration du connector uniquement ; il n'est pas interprété comme une borne, car la preuve retenue est l'amplitude des transactions réellement retournées.
 - La route Documents a répondu sans document ; cela bloque seulement la preuve d'un relevé statement ou d'un fichier/lien dans ce contexte Sandbox, pas l'existence de tels éléments chez la banque.

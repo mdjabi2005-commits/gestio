@@ -306,6 +306,16 @@ function Get-ReportMonth {
     $date.ToString('yyyy-MM')
 }
 
+function Get-ReportMonthStatus {
+    param([AllowNull()][object]$Object, [Parameter(Mandatory)][string]$Name)
+
+    if ($null -eq $Object) { return 'UNKNOWN' }
+    $property = $Object.PSObject.Properties[$Name]
+    if ($null -eq $property) { return 'UNKNOWN' }
+    if ($null -eq $property.Value) { return 'NOT_REPORTED' }
+    Get-ReportMonth $property.Value
+}
+
 function Get-ConnectionLabel {
     param(
         [AllowNull()][object]$Connection,
@@ -406,6 +416,7 @@ function Write-HistoryReport {
     $lines.Add('## Diagnostic des connexions')
     $lines.Add('')
     $lines.Add('- Les dates sont réduites au mois ; les identifiants techniques et messages bancaires bruts ne sont pas conservés.')
+    $lines.Add('- `SUCCESS_NULL` signifie que Powens renvoie `state=null`, ce que sa documentation définit comme une synchronisation réussie ; `NOT_REPORTED` signifie que le champ existe mais vaut `null`.')
     $lines.Add('| Connexion / banque | months_to_fetch connector | État | Erreur | Créée | Dernière mise à jour | Dernier push | Logs lus |')
     $lines.Add('|---|---:|---|---|---|---|---|---:|')
     foreach ($result in $connectionDiagnostics) {
@@ -470,7 +481,7 @@ function Write-HistoryReport {
     if ($unknownConnectionMetadata -gt 0) {
         $lines.Add('- Les détails de connexion ont répondu, mais certaines métadonnées d''état ou de date sont absentes (`UNKNOWN`) ; elles ne permettent pas de conclure sur la santé de la connexion ni sur l''âge du compte.')
     }
-    $unknownAccountOpening = @($depthResults | Where-Object { $_.AccountOpeningMonth -eq 'UNKNOWN' }).Count
+    $unknownAccountOpening = @($depthResults | Where-Object { $_.AccountOpeningMonth -in @('UNKNOWN', 'NOT_REPORTED') }).Count
     if ($unknownAccountOpening -gt 0) {
         $lines.Add('- La date d''ouverture API est absente pour au moins un compte ; une profondeur observée de quelques mois ne peut donc pas être attribuée automatiquement à une création récente du compte.')
     }
@@ -556,18 +567,24 @@ try {
             Add-Observation 'connection-details' GET 'GET /users/{userId}/connections/{connectionId}' 'Authorization: Bearer <user-access-token>' 'userId; connectionId' $connectionDetail 'État et métadonnées de synchronisation inspectés; identifiant technique non conservé.'
             $connectionLogs = Invoke-PowensCollection 'connection-logs' "$userRoute/connections/$connectionId/logs?limit=100" 'GET /users/{userId}/connections/{connectionId}/logs?limit=100' 'Authorization: Bearer <user-access-token>' 'userId; connectionId; limit facultatif' 'connectionlogs' $userToken
             $connectionPayload = if ($connectionDetail.Status -ge 200 -and $connectionDetail.Status -lt 300) { $connectionDetail.Json } else { $null }
-            $connectionState = if ($null -ne $connectionPayload) { Get-ReportText (Get-JsonProperty $connectionPayload 'state') } else { 'UNKNOWN' }
+            $stateProperty = if ($null -ne $connectionPayload) { $connectionPayload.PSObject.Properties['state'] } else { $null }
+            $connectionState = if ($null -eq $connectionPayload -or $null -eq $stateProperty) { 'UNKNOWN' }
+                elseif ($null -eq $stateProperty.Value) { 'SUCCESS_NULL' }
+                else { Get-ReportText $stateProperty.Value }
             if ([string]::IsNullOrWhiteSpace($connectionState)) { $connectionState = 'UNKNOWN' }
-            $connectionError = if ($null -ne $connectionPayload) { Get-ReportText (Get-JsonProperty $connectionPayload 'error') } else { 'UNKNOWN' }
+            $errorProperty = if ($null -ne $connectionPayload) { $connectionPayload.PSObject.Properties['error'] } else { $null }
+            $connectionError = if ($null -eq $connectionPayload -or $null -eq $errorProperty) { 'UNKNOWN' }
+                elseif ($null -eq $errorProperty.Value) { 'NONE' }
+                else { Get-ReportText $errorProperty.Value }
             if ([string]::IsNullOrWhiteSpace($connectionError)) { $connectionError = 'NONE' }
             $connectionDiagnostics.Add([pscustomobject]@{
                 Connection = $connectionLabel
                 ConnectorMonthsToFetch = $connectorMonthsToFetch
                 State = $connectionState
                 Error = $connectionError
-                Created = if ($null -ne $connectionPayload) { Get-ReportMonth (Get-JsonProperty $connectionPayload 'created') } else { 'UNKNOWN' }
-                LastUpdate = if ($null -ne $connectionPayload) { Get-ReportMonth (Get-JsonProperty $connectionPayload 'last_update') } else { 'UNKNOWN' }
-                LastPush = if ($null -ne $connectionPayload) { Get-ReportMonth (Get-JsonProperty $connectionPayload 'last_push') } else { 'UNKNOWN' }
+                Created = Get-ReportMonthStatus $connectionPayload 'created'
+                LastUpdate = Get-ReportMonthStatus $connectionPayload 'last_update'
+                LastPush = Get-ReportMonthStatus $connectionPayload 'last_push'
                 Logs = @($connectionLogs.Items).Count
             })
             $connectionById["$connectionId"] = $connectionLabel
@@ -600,8 +617,8 @@ try {
         if ([string]::IsNullOrWhiteSpace($accountUsage)) { $accountUsage = 'UNKNOWN' }
         $accountType = Get-ReportText (Get-JsonProperty $accountPayload 'type')
         if ([string]::IsNullOrWhiteSpace($accountType)) { $accountType = 'UNKNOWN' }
-        $accountOpeningMonth = Get-ReportMonth (Get-JsonProperty $accountPayload 'opening_date')
-        $accountLastUpdateMonth = Get-ReportMonth (Get-JsonProperty $accountPayload 'last_update')
+        $accountOpeningMonth = Get-ReportMonthStatus $accountPayload 'opening_date'
+        $accountLastUpdateMonth = Get-ReportMonthStatus $accountPayload 'last_update'
         $transactionPath = "$userRoute/accounts/$accountId/transactions?limit=1000&filter=date&min_date=1900-01-01&max_date=2100-01-01"
         $transactions = Invoke-PowensCollection 'transactions' $transactionPath 'GET /users/{userId}/accounts/{accountId}/transactions?limit=1000&filter=date&min_date=1900-01-01&max_date=2100-01-01' 'Authorization: Bearer <user-access-token>' 'userId; accountId; limit obligatoire; min_date/max_date facultatifs' 'transactions' $userToken
         $span = Get-MonthSpan $transactions.Items { param($item) Get-TransactionDate $item }
