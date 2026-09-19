@@ -104,6 +104,17 @@ Sources officielles consultees :
 
 Conclusion observee dans le Sandbox : les comptes candidats PEA et compte-titres ont repondu `200` sur les routes filtrees par compte, mais les collections `investments` et `marketorders` etaient vides. Cela valide les routes et leur structure, pas l absence definitive de positions ou d ordres historiques.
 
+## Limite de validation : profondeur historique
+
+La profondeur historique annoncee par certains connecteurs, notamment 24 mois, n a pas ete verifiee experimentalement dans ce banc.
+
+- La pagination des transactions a bien ete suivie, mais la passe n a pas etabli une couverture calendaire exacte par compte et par connexion.
+- Les releves PDF n ont pas ete recuperes ni compares ; aucune conclusion ne peut donc etre tiree de ce canal.
+- La profondeur annoncee dans les metadonnees d un connecteur ne vaut pas preuve de la profondeur effectivement retournee pour un utilisateur donne.
+- Les mentions `12 mois` presentes dans certaines maquettes React sont des donnees de prototype, pas une observation de l API Powens.
+
+Conclusion : la profondeur reelle reste `NON VERIFIEE`. Une verification ulterieure devra comparer les dates reelles `first_date`/`last_date` des transactions par compte et par connexion, sans enregistrer de releve ni de donnee financiere brute.
+
 ## Exemples JSON anonymises du parcours utilisateur
 
 ```json
