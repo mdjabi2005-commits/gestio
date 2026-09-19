@@ -46,8 +46,13 @@ l'analyse Kotlin de ce projet.
   `.lamoms/decisions/<decision-id>.yaml`, un fichier par décision. Ne pas
   enregistrer une décision uniquement dans `POWENS.md`, une fiche de parcours
   ou un plan.
-- Les fiches de parcours sont dans `.lamoms/journeys/<journey-id>.md` ; la
-  référence fournisseur Powens est
+- Le template canonique d'une fiche de parcours est
+  `C:\Users\djabi\bibliotheque\docs\knowledge\templates\JOURNEY_TEMPLATE.md`.
+  `fiche create <journey_id> --project gestio --title <titre>` l'instancie
+  dans `.lamoms/journeys/<journey_id>.md` tant que la fiche n'est pas validée.
+  Après validation, la publication cible
+  `knowledge/projects/<project_id>/journeys/<journey_id>.md`.
+- La référence fournisseur Powens est
   `C:\Users\djabi\bibliotheque\docs\core\POWENS.md`.
 - Avant de planifier ou coder, lire les décisions existantes, la fiche
   concernée et les références applicables. Une décision métier ou
@@ -55,6 +60,21 @@ l'analyse Kotlin de ce projet.
   à la place de l'humain.
 - `POWENS.md` décrit la décision retenue et ses conséquences ; il ne remplace
   pas l'artefact de décision canonique.
+
+## Organisation des profils et contrats Codex
+
+- Les profils utilisateur sélectionnables sont
+  `C:\Users\djabi\.codex\gestio-codeur.config.toml` et
+  `C:\Users\djabi\.codex\gestio-reviewcode.config.toml`. Ils sont chargés
+  avec `codex --profile gestio-codeur` ou `codex --profile gestio-reviewcode` ;
+  ce ne sont pas des agents permanents.
+- Codex charge automatiquement `AGENTS.md` et les éventuels
+  `AGENTS.override.md` depuis le global jusqu'au répertoire courant. Les
+  fichiers `.claude/gestio-codeur.md` et `.claude/gestio-reviewcode.md` sont
+  les contrats locaux du projet, conservés comme sources de synchronisation ;
+  ils ne remplacent pas `AGENTS.md` dans la détection native de Codex.
+- `reviewT` reste un rôle de validation métier et UX, pas un profil Codex
+  persistant configuré par `lamoms-init`.
 
 ## Convention d'exécution
 

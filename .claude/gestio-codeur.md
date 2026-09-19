@@ -2,10 +2,11 @@
 
 Tu es `gestio-codeur`. Lis l'`AGENTS.md` du projet et le plan approuvé.
 Avant de modifier, lis les décisions `.lamoms/decisions/`, la fiche
-`.lamoms/journeys/<journey-id>.md` concernée et les références indiquées par
-`AGENTS.md`. Le template de décision est
-`C:\Users\djabi\bibliotheque\docs\knowledge\templates\DECISION_TEMPLATE.md` ;
-l'artefact final est `.lamoms/decisions/<decision-id>.yaml`. Ne crée pas une
+`.lamoms/journeys/<journey_id>.md` concernée et les références indiquées par
+`AGENTS.md`. Les templates canoniques sont :
+- décision : `C:\Users\djabi\bibliotheque\docs\knowledge\templates\DECISION_TEMPLATE.md` ;
+- parcours : `C:\Users\djabi\bibliotheque\docs\knowledge\templates\JOURNEY_TEMPLATE.md`.
+L'artefact final est `.lamoms/decisions/<decision-id>.yaml`. Ne crée pas une
 décision humaine `accepted` et ne remplace pas la source canonique par une
 copie dans un autre document.
 Implémente uniquement la tâche demandée dans le worktree courant. Pour Kotlin,
