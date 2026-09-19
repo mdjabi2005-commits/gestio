@@ -7,6 +7,7 @@ Set-StrictMode -Version Latest
 $reportPath = Join-Path $PSScriptRoot 'HISTORY_DEPTH_REPORT.md'
 $observations = [System.Collections.Generic.List[object]]::new()
 $depthResults = [System.Collections.Generic.List[object]]::new()
+$connectionDepthResults = [System.Collections.Generic.List[object]]::new()
 $documentResults = [System.Collections.Generic.List[object]]::new()
 $baseUri = $null
 $http = $null
@@ -380,6 +381,20 @@ function Write-HistoryReport {
         $lines.Add("| $($observation.Area) | $($observation.Method) | ``$($observation.Path)`` | $($observation.TokenRequired) | $($observation.RequiredParameters) | $($observation.Status) | $($observation.Structure) | $($observation.Result) | $note |")
     }
     $lines.Add('')
+    $lines.Add('## Synthèse par connexion')
+    $lines.Add('')
+    $lines.Add('- `CONNECTION_01`, `CONNECTION_02` et `CONNECTION_03` sont des regroupements anonymisés de comptes rattachés à une connexion ; ils ne contiennent pas le nom de la banque.')
+    $lines.Add('- `USER_AGGREGATE` est la vue de tous les comptes et ne constitue pas une quatrième connexion.')
+    $lines.Add('- `YES` dans la colonne « au moins un » ne signifie pas que tous les comptes de la connexion ont cette profondeur.')
+    $lines.Add('- Les catégories de produit comme compte courant ou Livret A ne sont pas déduites par ce probe ; la preuve reste au niveau de chaque compte.')
+    $lines.Add('')
+    $lines.Add('| Connexion | Comptes | Mois minimum | Mois maximum | Comptes >=12 mois | Au moins un >=12 | Tous >=12 | Comptes >=24 mois |')
+    $lines.Add('|---|---:|---:|---:|---:|---|---|---:|')
+    foreach ($result in $connectionDepthResults) {
+        $lines.Add("| $($result.Connection) | $($result.Accounts) | $($result.MinMonths) | $($result.MaxMonths) | $($result.AccountsAtLeast12) | $($result.AtLeast12) | $($result.AllAccountsAtLeast12) | $($result.AccountsAtLeast24) |")
+    }
+    if ($connectionDepthResults.Count -eq 0) { $lines.Add('| aucune | 0 |  |  | 0 | NO_DATA | NO_DATA | 0 |') }
+    $lines.Add('')
     $lines.Add('## Profondeur transactionnelle observée')
     $lines.Add('')
     $lines.Add('- Les mois sont calculés localement à partir des dates reçues ; les dates exactes, libellés, montants et identifiants ne sont pas conservés.')
@@ -508,6 +523,22 @@ try {
         Months = if ($null -eq $aggregateSpan.Months) { '' } else { $aggregateSpan.Months }
         AtLeast24 = $aggregateSpan.AtLeast24
     })
+
+    foreach ($group in @($depthResults | Where-Object { "$($_.Account)" -like 'ACCOUNT_*' } | Group-Object Connection | Sort-Object Name)) {
+        $spans = @($group.Group | Where-Object { "$($_.Months)" -ne '' } | ForEach-Object { [int]$_.Months })
+        $atLeast12 = @($spans | Where-Object { $_ -ge 12 }).Count
+        $atLeast24 = @($spans | Where-Object { $_ -ge 24 }).Count
+        $connectionDepthResults.Add([pscustomobject]@{
+            Connection = $group.Name
+            Accounts = $group.Count
+            MinMonths = if ($spans.Count -gt 0) { ($spans | Measure-Object -Minimum).Minimum } else { '' }
+            MaxMonths = if ($spans.Count -gt 0) { ($spans | Measure-Object -Maximum).Maximum } else { '' }
+            AccountsAtLeast12 = $atLeast12
+            AtLeast12 = if ($spans.Count -eq 0) { 'NO_DATA' } elseif ($atLeast12 -gt 0) { 'YES' } else { 'NO' }
+            AllAccountsAtLeast12 = if ($spans.Count -eq 0) { 'NO_DATA' } elseif ($atLeast12 -eq $spans.Count) { 'YES' } else { 'NO' }
+            AccountsAtLeast24 = $atLeast24
+        })
+    }
 
     $subscriptions = Invoke-PowensCollection 'subscriptions' "$userRoute/subscriptions?all" 'GET /users/{userId}/subscriptions?all' 'Authorization: Bearer <user-access-token>' 'userId; all facultatif' 'subscriptions' $userToken
     $documents = Invoke-PowensCollection 'documents' "$userRoute/documents?limit=1000" 'GET /users/{userId}/documents?limit=1000' 'Authorization: Bearer <user-access-token>' 'userId; limit obligatoire (maximum 1000)' 'documents' $userToken

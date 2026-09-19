@@ -32,6 +32,19 @@
 | subscriptions | GET | `GET /users/{userId}/subscriptions?all (page 1)` | Authorization: Bearer <user-access-token> | userId; all facultatif | 200 | JSON object; keys=subscriptions, total; arrays=subscriptions[3] | PASS | HTTP succès; structure JSON inspectée, valeurs non enregistrées. |
 | documents | GET | `GET /users/{userId}/documents?limit=1000 (page 1)` | Authorization: Bearer <user-access-token> | userId; limit obligatoire (maximum 1000) | 200 | JSON object; keys=documents, first_date, last_date, total; arrays=documents[0] | PASS | HTTP succès; structure JSON inspectée, valeurs non enregistrées. |
 
+## Synthèse par connexion
+
+- `CONNECTION_01`, `CONNECTION_02` et `CONNECTION_03` sont des regroupements anonymisés de comptes rattachés à une connexion ; ils ne contiennent pas le nom de la banque.
+- `USER_AGGREGATE` est la vue de tous les comptes et ne constitue pas une quatrième connexion.
+- `YES` dans la colonne « au moins un » ne signifie pas que tous les comptes de la connexion ont cette profondeur.
+- Les catégories de produit comme compte courant ou Livret A ne sont pas déduites par ce probe ; la preuve reste au niveau de chaque compte.
+
+| Connexion | Comptes | Mois minimum | Mois maximum | Comptes >=12 mois | Au moins un >=12 | Tous >=12 | Comptes >=24 mois |
+|---|---:|---:|---:|---:|---|---|---:|
+| CONNECTION_01 | 4 | 7 | 19 | 2 | YES | NO | 0 |
+| CONNECTION_02 | 3 | 1 | 16 | 1 | YES | NO | 0 |
+| CONNECTION_03 | 3 | 10 | 37 | 2 | YES | NO | 1 |
+
 ## Profondeur transactionnelle observée
 
 - Les mois sont calculés localement à partir des dates reçues ; les dates exactes, libellés, montants et identifiants ne sont pas conservés.
