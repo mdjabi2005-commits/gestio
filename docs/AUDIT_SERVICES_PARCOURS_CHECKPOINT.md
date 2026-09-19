@@ -223,7 +223,7 @@ de transposition.
 
 ## Reproduire l'analyse Emerge
 
-Depuis la racine de `gestio-core`, avec l'environnement Emerge installé :
+Depuis la racine de `gestio`, avec l'environnement Emerge installé :
 
 ```powershell
 New-Item -ItemType Directory -Force .lamoms/lab/emerge-kotlin | Out-Null

@@ -1,10 +1,10 @@
-# Gestio Core — instructions du projet
+# Gestio — instructions du projet
 
 ## Identité
 
-- Projet : `gestio-core`
+- Projet : `gestio`
 - Stack : Kotlin Multiplatform, Compose, SQLDelight.
-- Agents : `gestio-core-codeur` implémente ; `gestio-core-reviewcode` relit et pousse après verdict vert.
+- Agents : `gestio-codeur` implémente ; `gestio-reviewcode` relit et pousse après verdict vert.
 - `reviewT` garde la validation métier et UX des parcours.
 
 ## Structure métier
@@ -61,8 +61,8 @@ l'analyse Kotlin de ce projet.
 1. Lire l'issue ou le plan approuvé, ce fichier et les références du parcours.
 2. Implémenter le plus petit changement cohérent avec les services existants.
 3. Exécuter les commandes réellement disponibles et rapporter leurs résultats.
-4. `gestio-core-codeur` crée toujours un commit local borné à sa tâche.
-5. `gestio-core-reviewcode` relit ce commit ; GREEN et contrôles réussis
+4. `gestio-codeur` crée toujours un commit local borné à sa tâche.
+5. `gestio-reviewcode` relit ce commit ; GREEN et contrôles réussis
    autorisent le push, RED ou contrôle manquant interdit le push.
 
 Ne pas copier les relevés réels dans le dépôt. Les données de validation restent

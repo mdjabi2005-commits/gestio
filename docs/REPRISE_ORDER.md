@@ -1,4 +1,4 @@
-# Ordre de reprise de Gestio Core
+# Ordre de reprise de Gestio
 
 Date : 2026-09-08.
 
@@ -63,8 +63,8 @@ chaque hypothèse et conserver les identifiants de poches utilisés par le domai
 ### 5. Preuves de livraison
 
 Après les quatre parcours : installer l'APK, importer un relevé réel depuis le
-PC, vérifier le chemin d'import et réaliser la validation visuelle. `gestio-core-codeur`
-committe chaque étape ; `gestio-core-reviewcode` relit puis pousse seulement un
+PC, vérifier le chemin d'import et réaliser la validation visuelle. `gestio-codeur`
+committe chaque étape ; `gestio-reviewcode` relit puis pousse seulement un
 commit GREEN avec contrôles réels.
 
 ## Règle de structure

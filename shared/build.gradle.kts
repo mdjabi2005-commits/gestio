@@ -54,7 +54,7 @@ kotlin {
     cocoapods {
         version = "1.0"
         summary = "Gestio local-first transaction core"
-        homepage = "https://example.invalid/gestio-core"
+        homepage = "https://example.invalid/gestio"
         ios.deploymentTarget = "14.0"
         pod("SQLCipher", "~> 4.18")
         framework {

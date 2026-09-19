@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "gestio-core-kotlin"
+rootProject.name = "gestio"
 include(":shared", ":androidApp")
