@@ -8,6 +8,7 @@ $reportPath = Join-Path $PSScriptRoot 'HISTORY_DEPTH_REPORT.md'
 $observations = [System.Collections.Generic.List[object]]::new()
 $depthResults = [System.Collections.Generic.List[object]]::new()
 $connectionDepthResults = [System.Collections.Generic.List[object]]::new()
+$connectionDiagnostics = [System.Collections.Generic.List[object]]::new()
 $documentResults = [System.Collections.Generic.List[object]]::new()
 $baseUri = $null
 $http = $null
@@ -297,6 +298,14 @@ function Get-ReportText {
     $text.Substring(0, [Math]::Min(100, $text.Length)).Trim()
 }
 
+function Get-ReportMonth {
+    param([AllowNull()][object]$Value)
+
+    $date = Convert-ToDate $Value
+    if ($null -eq $date) { return 'UNKNOWN' }
+    $date.ToString('yyyy-MM')
+}
+
 function Get-ConnectionLabel {
     param(
         [AllowNull()][object]$Connection,
@@ -394,31 +403,42 @@ function Write-HistoryReport {
         $lines.Add("| $($observation.Area) | $($observation.Method) | ``$($observation.Path)`` | $($observation.TokenRequired) | $($observation.RequiredParameters) | $($observation.Status) | $($observation.Structure) | $($observation.Result) | $note |")
     }
     $lines.Add('')
+    $lines.Add('## Diagnostic des connexions')
+    $lines.Add('')
+    $lines.Add('- Les dates sont réduites au mois ; les identifiants techniques et messages bancaires bruts ne sont pas conservés.')
+    $lines.Add('| Connexion / banque | months_to_fetch connector | État | Erreur | Créée | Dernière mise à jour | Dernier push | Logs lus |')
+    $lines.Add('|---|---:|---|---|---|---|---|---:|')
+    foreach ($result in $connectionDiagnostics) {
+        $lines.Add("| $($result.Connection) | $($result.ConnectorMonthsToFetch) | $($result.State) | $($result.Error) | $($result.Created) | $($result.LastUpdate) | $($result.LastPush) | $($result.Logs) |")
+    }
+    if ($connectionDiagnostics.Count -eq 0) { $lines.Add('| aucune |  | NO_DATA | NO_DATA |  |  |  | 0 |') }
+    $lines.Add('')
     $lines.Add('## Synthèse par connexion')
     $lines.Add('')
     $lines.Add('- La connexion/banque et le nom de compte sont affichés lorsqu''ils sont présents dans les réponses Powens ; sinon le probe conserve un libellé générique.')
     $lines.Add('- `USER_AGGREGATE` est la vue de tous les comptes et ne constitue pas une quatrième connexion.')
     $lines.Add('- `YES` dans la colonne « au moins un » ne signifie pas que tous les comptes de la connexion ont cette profondeur.')
     $lines.Add('- `usage` est affiché lorsqu''il est renvoyé par Powens ; les catégories de produit comme compte courant ou Livret A ne sont pas inventées.')
+    $lines.Add('- Le détail de connexion, les logs de synchronisation et le détail de chaque compte sont lus sans modifier ni resynchroniser les données.')
     $lines.Add('')
-    $lines.Add('| Connexion / banque | Comptes | Mois minimum | Mois maximum | Comptes >=12 mois | Au moins un >=12 | Tous >=12 | Comptes >=24 mois |')
-    $lines.Add('|---|---:|---:|---:|---:|---|---|---:|')
+    $lines.Add('| Connexion / banque | months_to_fetch connector | Comptes | Mois minimum | Mois maximum | Comptes >=12 mois | Au moins un >=12 | Tous >=12 | Comptes >=24 mois |')
+    $lines.Add('|---|---:|---:|---:|---:|---:|---|---|---:|')
     foreach ($result in $connectionDepthResults) {
-        $lines.Add("| $($result.Connection) | $($result.Accounts) | $($result.MinMonths) | $($result.MaxMonths) | $($result.AccountsAtLeast12) | $($result.AtLeast12) | $($result.AllAccountsAtLeast12) | $($result.AccountsAtLeast24) |")
+        $lines.Add("| $($result.Connection) | $($result.ConnectorMonthsToFetch) | $($result.Accounts) | $($result.MinMonths) | $($result.MaxMonths) | $($result.AccountsAtLeast12) | $($result.AtLeast12) | $($result.AllAccountsAtLeast12) | $($result.AccountsAtLeast24) |")
     }
-    if ($connectionDepthResults.Count -eq 0) { $lines.Add('| aucune | 0 |  |  | 0 | NO_DATA | NO_DATA | 0 |') }
+    if ($connectionDepthResults.Count -eq 0) { $lines.Add('| aucune |  | 0 |  |  | 0 | NO_DATA | NO_DATA | 0 |') }
     $lines.Add('')
     $lines.Add('## Profondeur transactionnelle observée')
     $lines.Add('')
     $lines.Add('- Les mois sont calculés localement à partir des dates reçues ; les dates exactes, libellés, montants et identifiants ne sont pas conservés.')
     $lines.Add('- `YES` signifie une amplitude calendaire inclusive d''au moins 24 mois, pas une garantie d''exhaustivité bancaire.')
     $lines.Add('')
-    $lines.Add('| Compte | Connexion / banque | Nom du compte | Usage Powens | Transactions | Dates interprétées | Premier mois | Dernier mois | Mois couverts | >=24 mois |')
-    $lines.Add('|---|---|---|---|---:|---:|---|---|---:|---|')
+    $lines.Add('| Compte | Connexion / banque | Nom du compte | Type API | Usage Powens | Ouverture API | Dernière mise à jour | Transactions | Dates interprétées | Premier mois | Dernier mois | Mois couverts | >=24 mois |')
+    $lines.Add('|---|---|---|---|---|---|---|---:|---:|---|---|---:|---|')
     foreach ($result in $depthResults) {
-        $lines.Add("| $($result.Account) | $($result.Connection) | $($result.AccountName) | $($result.AccountUsage) | $($result.Count) | $($result.Parsed) | $($result.FirstMonth) | $($result.LastMonth) | $($result.Months) | $($result.AtLeast24) |")
+        $lines.Add("| $($result.Account) | $($result.Connection) | $($result.AccountName) | $($result.AccountType) | $($result.AccountUsage) | $($result.AccountOpeningMonth) | $($result.AccountLastUpdateMonth) | $($result.Count) | $($result.Parsed) | $($result.FirstMonth) | $($result.LastMonth) | $($result.Months) | $($result.AtLeast24) |")
     }
-    if ($depthResults.Count -eq 0) { $lines.Add('| aucune | aucune |  |  | 0 | 0 |  |  |  | NOT RUN |') }
+    if ($depthResults.Count -eq 0) { $lines.Add('| aucune | aucune |  |  |  |  |  | 0 | 0 |  |  |  | NOT RUN |') }
     $lines.Add('')
     $lines.Add('## Relevés et documents fournisseur')
     $lines.Add('')
@@ -436,6 +456,28 @@ function Write-HistoryReport {
     $lines.Add('- Une collection vide ne prouve pas que la banque ne possède aucun historique ; elle prouve seulement que Powens n''a rien retourné dans ce contexte Sandbox.')
     $lines.Add('- L''absence d''un indicateur fichier ne prouve pas l''absence d''un PDF si le fournisseur expose uniquement un espace bancaire en ligne.')
     $lines.Add('- Aucun téléchargement de relevé n''est effectué automatiquement.')
+    $lines.Add('')
+    $lines.Add('## Blocages précis')
+    $lines.Add('')
+    if ($blocked -eq 0 -and $fail -eq 0) {
+        $lines.Add('- Aucun blocage HTTP ni échec client sur les routes exécutées.')
+    } else {
+        $lines.Add("- Routes bloquées: $blocked ; routes en échec: $fail.")
+    }
+    $unknownConnectionMetadata = @($connectionDiagnostics | Where-Object {
+        $_.State -eq 'UNKNOWN' -or $_.Created -eq 'UNKNOWN' -or $_.LastUpdate -eq 'UNKNOWN' -or $_.LastPush -eq 'UNKNOWN'
+    }).Count
+    if ($unknownConnectionMetadata -gt 0) {
+        $lines.Add('- Les détails de connexion ont répondu, mais certaines métadonnées d''état ou de date sont absentes (`UNKNOWN`) ; elles ne permettent pas de conclure sur la santé de la connexion ni sur l''âge du compte.')
+    }
+    $unknownAccountOpening = @($depthResults | Where-Object { $_.AccountOpeningMonth -eq 'UNKNOWN' }).Count
+    if ($unknownAccountOpening -gt 0) {
+        $lines.Add('- La date d''ouverture API est absente pour au moins un compte ; une profondeur observée de quelques mois ne peut donc pas être attribuée automatiquement à une création récente du compte.')
+    }
+    $lines.Add('- `months_to_fetch` est reporté comme indice de configuration du connector uniquement ; il n''est pas interprété comme une borne, car la preuve retenue est l''amplitude des transactions réellement retournées.')
+    if (@($documentResults | Where-Object { $_.Count -eq 0 }).Count -gt 0) {
+        $lines.Add('- La route Documents a répondu sans document ; cela bloque seulement la preuve d''un relevé statement ou d''un fichier/lien dans ce contexte Sandbox, pas l''existence de tels éléments chez la banque.')
+    }
     $lines.Add('')
     $lines.Add('## Commande de relance')
     $lines.Add('')
@@ -491,11 +533,13 @@ try {
     $userRoute = "users/$userId"
     $connections = Invoke-PowensCollection 'connections' "$userRoute/connections" 'GET /users/{userId}/connections' 'Authorization: Bearer <user-access-token>' 'userId' 'connections' $userToken
     $connectionById = @{}
+    $connectionMetadataById = @{}
     $connectionIndex = 0
     foreach ($connection in @($connections.Items)) {
         $connectionIndex++
         $connectionId = Get-FirstProperty $connection @('id', 'id_connection')
         $connectionLabel = Get-ConnectionLabel $connection $connectionIndex
+        $connectorMonthsToFetch = 'UNKNOWN'
         $connector = Get-JsonProperty $connection 'connector'
         $connectorRef = Get-FirstProperty $connector @('uuid', 'id')
         if ($null -eq $connectorRef) { $connectorRef = Get-FirstProperty $connection @('id_connector', 'connector_id', 'connectorUuid', 'connector_uuid') }
@@ -504,9 +548,36 @@ try {
             Add-Observation 'connectors' GET 'GET /connectors/{connectorUuid}' 'none' 'connectorUuid' $connectorResponse 'Nom du connector inspecté; aucun identifiant technique conservé.'
             if ($connectorResponse.Status -ge 200 -and $connectorResponse.Status -lt 300) {
                 $connectionLabel = Get-ConnectionLabel $connection $connectionIndex $connectorResponse.Json
+                $connectorMonthsToFetch = Get-ReportText (Get-JsonProperty $connectorResponse.Json 'months_to_fetch')
             }
         }
-        if ($null -ne $connectionId) { $connectionById["$connectionId"] = $connectionLabel }
+        if ($null -ne $connectionId) {
+            $connectionDetail = Invoke-PowensApi -Method GET -Path "$userRoute/connections/$connectionId" -Token $userToken
+            Add-Observation 'connection-details' GET 'GET /users/{userId}/connections/{connectionId}' 'Authorization: Bearer <user-access-token>' 'userId; connectionId' $connectionDetail 'État et métadonnées de synchronisation inspectés; identifiant technique non conservé.'
+            $connectionLogs = Invoke-PowensCollection 'connection-logs' "$userRoute/connections/$connectionId/logs?limit=100" 'GET /users/{userId}/connections/{connectionId}/logs?limit=100' 'Authorization: Bearer <user-access-token>' 'userId; connectionId; limit facultatif' 'connectionlogs' $userToken
+            $connectionPayload = if ($connectionDetail.Status -ge 200 -and $connectionDetail.Status -lt 300) { $connectionDetail.Json } else { $null }
+            $connectionState = if ($null -ne $connectionPayload) { Get-ReportText (Get-JsonProperty $connectionPayload 'state') } else { 'UNKNOWN' }
+            if ([string]::IsNullOrWhiteSpace($connectionState)) { $connectionState = 'UNKNOWN' }
+            $connectionError = if ($null -ne $connectionPayload) { Get-ReportText (Get-JsonProperty $connectionPayload 'error') } else { 'UNKNOWN' }
+            if ([string]::IsNullOrWhiteSpace($connectionError)) { $connectionError = 'NONE' }
+            $connectionDiagnostics.Add([pscustomobject]@{
+                Connection = $connectionLabel
+                ConnectorMonthsToFetch = $connectorMonthsToFetch
+                State = $connectionState
+                Error = $connectionError
+                Created = if ($null -ne $connectionPayload) { Get-ReportMonth (Get-JsonProperty $connectionPayload 'created') } else { 'UNKNOWN' }
+                LastUpdate = if ($null -ne $connectionPayload) { Get-ReportMonth (Get-JsonProperty $connectionPayload 'last_update') } else { 'UNKNOWN' }
+                LastPush = if ($null -ne $connectionPayload) { Get-ReportMonth (Get-JsonProperty $connectionPayload 'last_push') } else { 'UNKNOWN' }
+                Logs = @($connectionLogs.Items).Count
+            })
+            $connectionById["$connectionId"] = $connectionLabel
+            $connectionMetadataById["$connectionId"] = [pscustomobject]@{
+                Label = $connectionLabel
+                ConnectorMonthsToFetch = $connectorMonthsToFetch
+                DetailStatus = if ($null -ne $connectionDetail.Status) { $connectionDetail.Status } else { 'client error' }
+                LogsPages = $connectionLogs.Pages
+            }
+        }
     }
 
     $accounts = Invoke-PowensCollection 'accounts' "$userRoute/accounts" 'GET /users/{userId}/accounts' 'Authorization: Bearer <user-access-token>' 'userId; all facultatif' 'accounts' $userToken
@@ -516,12 +587,21 @@ try {
         $accountId = Get-FirstProperty $account @('id', 'id_account')
         if ($null -eq $accountId) { continue }
         $connectionId = Get-FirstProperty $account @('id_connection', 'connection_id')
-        $connectionLabel = if ($null -ne $connectionId -and $connectionById.ContainsKey("$connectionId")) { $connectionById["$connectionId"] } else { 'CONNECTION_UNKNOWN' }
+        $connectionInfo = if ($null -ne $connectionId -and $connectionMetadataById.ContainsKey("$connectionId")) { $connectionMetadataById["$connectionId"] } else { $null }
+        $connectionLabel = if ($null -ne $connectionInfo) { $connectionInfo.Label } elseif ($null -ne $connectionId -and $connectionById.ContainsKey("$connectionId")) { $connectionById["$connectionId"] } else { 'CONNECTION_UNKNOWN' }
+        $connectorMonthsToFetch = if ($null -ne $connectionInfo) { $connectionInfo.ConnectorMonthsToFetch } else { 'UNKNOWN' }
         $displayAccount = "ACCOUNT_$('{0:D2}' -f $accountIndex)"
-        $accountName = Get-ReportText (Get-JsonProperty $account 'name')
+        $accountDetail = Invoke-PowensApi -Method GET -Path "$userRoute/accounts/$accountId" -Token $userToken
+        Add-Observation 'account-details' GET 'GET /users/{userId}/accounts/{accountId}' 'Authorization: Bearer <user-access-token>' 'userId; accountId' $accountDetail 'Métadonnées du compte inspectées; identifiant technique non conservé.'
+        $accountPayload = if ($accountDetail.Status -ge 200 -and $accountDetail.Status -lt 300) { $accountDetail.Json } else { $account }
+        $accountName = Get-ReportText (Get-JsonProperty $accountPayload 'name')
         if ([string]::IsNullOrWhiteSpace($accountName)) { $accountName = 'UNKNOWN' }
-        $accountUsage = Get-ReportText (Get-JsonProperty $account 'usage')
+        $accountUsage = Get-ReportText (Get-JsonProperty $accountPayload 'usage')
         if ([string]::IsNullOrWhiteSpace($accountUsage)) { $accountUsage = 'UNKNOWN' }
+        $accountType = Get-ReportText (Get-JsonProperty $accountPayload 'type')
+        if ([string]::IsNullOrWhiteSpace($accountType)) { $accountType = 'UNKNOWN' }
+        $accountOpeningMonth = Get-ReportMonth (Get-JsonProperty $accountPayload 'opening_date')
+        $accountLastUpdateMonth = Get-ReportMonth (Get-JsonProperty $accountPayload 'last_update')
         $transactionPath = "$userRoute/accounts/$accountId/transactions?limit=1000&filter=date&min_date=1900-01-01&max_date=2100-01-01"
         $transactions = Invoke-PowensCollection 'transactions' $transactionPath 'GET /users/{userId}/accounts/{accountId}/transactions?limit=1000&filter=date&min_date=1900-01-01&max_date=2100-01-01' 'Authorization: Bearer <user-access-token>' 'userId; accountId; limit obligatoire; min_date/max_date facultatifs' 'transactions' $userToken
         $span = Get-MonthSpan $transactions.Items { param($item) Get-TransactionDate $item }
@@ -530,6 +610,10 @@ try {
             Connection = $connectionLabel
             AccountName = $accountName
             AccountUsage = $accountUsage
+            AccountType = $accountType
+            AccountOpeningMonth = $accountOpeningMonth
+            AccountLastUpdateMonth = $accountLastUpdateMonth
+            ConnectorMonthsToFetch = $connectorMonthsToFetch
             Count = $span.Count
             Parsed = $span.Parsed
             FirstMonth = $span.FirstMonth
@@ -548,6 +632,9 @@ try {
         Connection = 'ALL_CONNECTIONS'
         AccountName = 'ALL_ACCOUNTS'
         AccountUsage = 'N/A'
+        AccountType = 'N/A'
+        AccountOpeningMonth = 'N/A'
+        AccountLastUpdateMonth = 'N/A'
         Count = $aggregateSpan.Count
         Parsed = $aggregateSpan.Parsed
         FirstMonth = $aggregateSpan.FirstMonth
@@ -560,9 +647,11 @@ try {
         $spans = @($group.Group | Where-Object { "$($_.Months)" -ne '' } | ForEach-Object { [int]$_.Months })
         $atLeast12 = @($spans | Where-Object { $_ -ge 12 }).Count
         $atLeast24 = @($spans | Where-Object { $_ -ge 24 }).Count
+        $connectorMonthsToFetch = Get-ReportText (($group.Group | Select-Object -First 1).ConnectorMonthsToFetch)
         $connectionDepthResults.Add([pscustomobject]@{
             Connection = $group.Name
             Accounts = $group.Count
+            ConnectorMonthsToFetch = $connectorMonthsToFetch
             MinMonths = if ($spans.Count -gt 0) { ($spans | Measure-Object -Minimum).Minimum } else { '' }
             MaxMonths = if ($spans.Count -gt 0) { ($spans | Measure-Object -Maximum).Maximum } else { '' }
             AccountsAtLeast12 = $atLeast12
