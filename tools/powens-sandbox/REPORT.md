@@ -57,6 +57,35 @@
 
 Cette extension represente `PASS=13`, `BLOCKED=1`, `FAIL=0`. Le navigateur a ete utilise pour le parcours WebView; aucun identifiant bancaire, token ou code temporaire n a ete imprime ou enregistre.
 
+## Deuxieme passage apres ajout des connexions Trade Republic et Banque Postale
+
+| Test | HTTP | Structure / resultat anonymise |
+|---|---:|---|
+| `POST /auth/renew` | 200 | object; keys=`access_token`, `token_type`; token conserve en memoire uniquement |
+| `GET /users/me/connections` | 200 | 3 connexions, toutes `active=true` |
+| `GET /users/me/accounts` | 200 | 10 comptes; champs `id`, `id_connection`, `name`, `original_name`, `type` presents |
+| `GET /users/me/transactions?limit=50` | 200 | 23 pages, 1 139 transactions parcourues; pagination suivie |
+| `GET /users/me/investments` | 200 | collection vide |
+| `GET /users/me/marketorders` | 200 | collection vide |
+| `GET /users/me/pockets` | 200 | collection vide |
+| `GET /users/me/subscriptions` | 200 | collection vide |
+| `GET /users/me/documents?limit=50` | 200 | collection vide |
+| `GET /documenttypes` | 200 | 18 types; item keys=`id`, `name`, `attacheable` |
+| `GET /users/me/amortizations` | 401 | object d erreur; `code=unauthorized` |
+
+Les libelles recus permettent une classification candidate, sans enregistrer les noms : un compte candidat `Livret A`, un `Livret Jeune`, un `PEA`, un `portfolio/compte-titres` et six comptes non determines. Cette classification est indicative; les valeurs brutes et les identifiants restent masques.
+
+Les routes filtrees par compte ont aussi ete testees :
+
+| Compte candidat | Route | HTTP | Resultat |
+|---|---|---:|---|
+| PEA | `GET /users/me/accounts/{accountId}/investments` | 200 | collection vide |
+| PEA | `GET /users/me/accounts/{accountId}/marketorders` | 200 | collection vide |
+| portfolio/compte-titres | `GET /users/me/accounts/{accountId}/investments` | 200 | collection vide |
+| portfolio/compte-titres | `GET /users/me/accounts/{accountId}/marketorders` | 200 | collection vide |
+
+Ce deuxieme passage represente `PASS=15`, `BLOCKED=1`, `FAIL=0`. Les comptes sont bien exposes, mais aucune position ou ordre de marche n est encore renvoye par Powens pour ces deux comptes au moment du test.
+
 ## Exemples JSON anonymises du parcours utilisateur
 
 ```json
@@ -775,7 +804,7 @@ Cette extension represente `PASS=13`, `BLOCKED=1`, `FAIL=0`. Le navigateur a ete
 ## Routes impossibles ou non executees
 
 - Le script relancable n auto-selectionne pas un utilisateur si `POWENS_USER_ID` est absent; le parcours execute a utilise l alias documente `me` apres la creation explicite.
-- `POST /auth/renew` permettrait d'obtenir un user-access-token avec `grant_type`, `client_id`, `client_secret`, `id_user` et `revoke_previous` facultatif; risque: emission de token; non execute car POST interdit.
+- `POST /auth/renew` a ete execute au deuxieme passage avec `grant_type`, `client_id`, `client_secret`, `id_user` et `revoke_previous=false`; le token a ete utilise en memoire puis la session a ete fermee.
 - `POST /auth/init` avec `client_id` et `client_secret` a ete execute une fois en Sandbox, avec valeurs provenant uniquement des variables d environnement; aucun token ou identifiant n a ete conserve dans Git.
 - `POST /users/{userId}/subscriptions/{subscriptionId}` avec `{ "disabled": true|false }` changerait le consentement et pourrait supprimer des documents enfants; token utilisateur; non execute.
 - Les POST/PUT de connexion, compte, transaction et document, ainsi que les PUT/PATCH de connector et les DELETE documentes, restent non executes; ils modifient ou suppriment des donnees et exigeraient leurs tokens documentes.
@@ -787,11 +816,13 @@ Cette extension represente `PASS=13`, `BLOCKED=1`, `FAIL=0`. Le navigateur a ete
 - Analyse syntaxique PowerShell: PASS.
 - Execution du banc relancable: 5 PASS, 1 BLOCKED, 0 FAIL, 10 NOT RUN.
 - Parcours utilisateur explicite: 13 PASS, 1 BLOCKED, 0 FAIL; aucun secret ni contenu financier n a ete ecrit dans le rapport.
+- Deuxieme passage comptes/investissements: 15 PASS, 1 BLOCKED, 0 FAIL; aucun secret ni identifiant brut n a ete conserve.
 - Commande du banc: `& .\tools\powens-sandbox\powens-readonly-tests.ps1` avec variables d'environnement injectees en memoire depuis le scope utilisateur; aucune valeur n'est reproduite.
 
 ## Prochaines etapes minimales
 
 - Pour relancer le parcours complet, recreer explicitement un utilisateur Sandbox et refaire l interaction WebView; ne pas automatiser la creation par defaut.
+- Pour les nouvelles connexions, relancer les GET apres la fin de synchronisation si les positions PEA ou compte-titres sont attendues; aucune nouvelle creation n est necessaire.
 - Pour lever le blocage, demander l activation de la capacite `amortizations` dans le domaine Sandbox; aucune modification n a ete tentee.
 - Le banc relancable reste volontairement GET-only; les ecritures de connexions, comptes, transactions, subscriptions, documents et les DELETE restent hors perimetre.
 
