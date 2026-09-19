@@ -1,0 +1,42 @@
+decision_id: powens-backend-hosting-progression
+journey_id: null
+decision_type: cadrage
+question: >-
+  Quel environnement doit héberger le relais backend Powens pendant le
+  développement, puis lors de la montée en charge ?
+options:
+  - PC local pour le développement et le Sandbox
+  - Raspberry Pi contrôlé localement pour le pilote et le fonctionnement permanent initial
+  - VPS ou serveur plus puissant lorsque les mesures montrent une saturation
+criteria:
+  - garder les secrets Powens dans un environnement contrôlé
+  - pouvoir apprendre et administrer Linux progressivement
+  - mesurer la charge réelle avant de payer ou d ajouter de l infrastructure
+  - pouvoir déplacer le même backend sans réécrire l application
+value: >-
+  Commencer avec l infrastructure déjà contrôlée, puis augmenter la capacité
+  uniquement sur la base de mesures observables.
+time_to_value: court
+estimated_effort: faible pour le développement local, moyen pour le pilote Raspberry Pi
+impact: >-
+  Le backend Powens sera conçu comme un relais déplaçable entre le PC, le
+  Raspberry Pi et une machine plus puissante.
+risks:
+  - le PC ou le Raspberry Pi peut être indisponible s il est éteint ou perd sa connexion
+  - une machine unique devient un point de panne à mesure que le nombre d utilisateurs augmente
+  - la capacité réelle dépend aussi des limites, synchronisations et webhooks Powens
+decision: continue
+rationale: >-
+  Le PC suffit pour commencer les développements et les tests Sandbox. Le
+  Raspberry Pi constituera l étape suivante pour disposer d une machine
+  contrôlée et apprendre l exploitation Linux. La migration vers un VPS ou un
+  serveur plus puissant sera déclenchée par des mesures de saturation réelles,
+  et non par une estimation prématurée du nombre total d utilisateurs.
+decided_by: user
+source_refs:
+  - tools/powens-sandbox/REPORT.md
+  - https://docs.powens.com/api-reference/overview/webview
+  - https://docs.powens.com/documentation/integration-guides/webhooks
+parent_artifact_ids: []
+status: accepted
+version: 1
