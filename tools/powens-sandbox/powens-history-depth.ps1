@@ -203,7 +203,14 @@ function Add-Observation {
         elseif ([int]$Response.Status -in @(401, 403, 404, 409)) { 'BLOCKED' }
         else { 'FAIL' }
     $code = if ($null -ne $Response) { Get-ErrorCode $Response.Json } else { '' }
-    if ([string]::IsNullOrWhiteSpace($Note) -and $status -eq 'client error') { $Note = 'client_error' }
+    if ($status -eq 'client error') {
+        $clientError = if ($null -ne $Response) { "$($Response.Error)" } else { '' }
+        if ([string]::IsNullOrWhiteSpace($clientError)) { $clientError = 'client_error' }
+        $clientError = [regex]::Replace($clientError, 'https?://\S+', '<url>')
+        $clientError = [regex]::Replace($clientError, '(?i)\bBearer\s+\S+', 'Bearer <redacted>')
+        $clientError = $clientError.Substring(0, [Math]::Min(240, $clientError.Length))
+        $Note = if ([string]::IsNullOrWhiteSpace($Note)) { "client_error: $clientError" } else { "$Note; client_error: $clientError" }
+    }
     if ([string]::IsNullOrWhiteSpace($Note) -and $result -in @('BLOCKED', 'FAIL')) {
         $Note = if ($code) { "HTTP $status; code=$code" } else { "HTTP $status" }
     }
