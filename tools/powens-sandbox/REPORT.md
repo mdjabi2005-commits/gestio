@@ -1,7 +1,7 @@
 # Powens Sandbox REST - rapport
 
 - Domaine: `gestio-sandbox.biapi.pro`
-- Reference API: `C:\Users\djabi\bibliotheque\docs\core\POWENS.md` uniquement
+- Reference initiale: `C:\Users\djabi\bibliotheque\docs\core\POWENS.md`; verification complementaire dans la documentation officielle Powens le 2026-09-19
 - Mode: le banc relancable reste GET-only; un parcours Sandbox explicite a ensuite execute `POST /auth/init`, puis la WebView et les GET utilisateur.
 - Ecritures: aucun PUT, PATCH ou DELETE; un seul POST de creation utilisateur a ete autorise et execute.
 - Secrets: valeurs jamais imprimees ou enregistrees.
@@ -12,7 +12,7 @@
 - `POWENS_CLIENT_ID`: present
 - `POWENS_CLIENT_SECRET`: present
 - `POWENS_USERS_TOKEN`: present
-- `POWENS_USER_ID`: missing
+- `POWENS_USER_ID`: absent pendant la passe relancable initiale, puis fourni par l utilisateur pour le parcours Sandbox
 - Le parcours utilisateur a utilise l alias documente `me`; aucune valeur d identifiant n a ete ajoutee a l environnement ou au rapport.
 
 ## Resume de la passe relancable initiale: PASS=5 BLOCKED=1 FAIL=0 NOT_RUN=10
@@ -85,6 +85,24 @@ Les routes filtrees par compte ont aussi ete testees :
 | portfolio/compte-titres | `GET /users/me/accounts/{accountId}/marketorders` | 200 | collection vide |
 
 Ce deuxieme passage represente `PASS=15`, `BLOCKED=1`, `FAIL=0`. Les comptes sont bien exposes, mais aucune position ou ordre de marche n est encore renvoye par Powens pour ces deux comptes au moment du test.
+
+## Interpretation des routes wealth et transactions
+
+La documentation officielle confirme la distinction suivante :
+
+- `investments` represente les positions detenues : quantite, prix unitaire, valeur unitaire, valorisation, evolution et part du portefeuille. Une route d historique de valorisation est documentee avec `GET /investments/{investmentId}/history`.
+- `marketorders` represente les ordres d achat ou de vente : direction, type, etat, quantite, montant et dates d execution. C est une ressource separee des positions.
+- `transactions` represente les ecritures rattachees a un compte bancaire. Les types documentes incluent notamment `order`, `market_order`, `market_fee` et `profit`.
+
+La documentation ne definit pas de relation universelle un-pour-un entre un market order et une transaction. La presence d un ordre dans les transactions depend donc de l execution et de ce que le connecteur remonte. De meme, aucune route d historique dediee des `marketorders` n est documentee sur la page officielle consultee; une collection vide ne prouve donc pas l absence d anciens ordres.
+
+Sources officielles consultees :
+
+- https://docs.powens.com/api-reference/products/wealth-aggregation/investments
+- https://docs.powens.com/api-reference/products/wealth-aggregation/market-orders
+- https://docs.powens.com/api-reference/products/data-aggregation/bank-transactions
+
+Conclusion observee dans le Sandbox : les comptes candidats PEA et compte-titres ont repondu `200` sur les routes filtrees par compte, mais les collections `investments` et `marketorders` etaient vides. Cela valide les routes et leur structure, pas l absence definitive de positions ou d ordres historiques.
 
 ## Exemples JSON anonymises du parcours utilisateur
 
