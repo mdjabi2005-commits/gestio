@@ -659,18 +659,37 @@ visible.
 | `market_order` dans `/transactions` et objet `/marketorders` sont différents | Aucun ordre bancaire ou détail d'investissement n'est créé par supposition |
 | Cooccurrence observée et obligation de contrat sont différentes | Les taux de la matrice servent d'évidence, pas de validation automatique |
 
-### Questions métier que la matrice ne tranche pas seule
+### Positions métier exprimées — proposition de contrat
 
-Avant d'appeler ce contrat « validé », il faut encore décider :
+Les réponses données pour cette première passe modifient le statut de plusieurs
+questions : elles deviennent des positions de travail, sans être encore une
+décision d'architecture irréversible.
 
-- comment déterminer la nature métier du flux (revenu, dépense, transfert,
-  investissement) sans la déduire abusivement du seul `type` ;
-- quel libellé humain afficher lorsque plusieurs wording sont présents ;
-- si une catégorie Powens absente doit être affichée comme indisponible,
-  « non catégorisée » ou complétée par une classification locale ;
+| Sujet | Position de travail | Conséquence pour le contrat |
+|---|---|---|
+| Nature du flux | Faire confiance au `type` Powens comme classification fournisseur ; traiter `unknown` explicitement lorsque l'API le retourne | Ne pas reconstruire par défaut une classification locale concurrente ; conserver le type brut et prévoir un présentateur générique pour `unknown` |
+| Libellé d'origine | `original_wording` doit rester la trace du libellé bancaire reçu | Ne jamais l'écraser avec une correction utilisateur |
+| Libellé utilisateur | `wording` est le libellé personnalisable ; `comment` est une note distincte | Rendre ces métadonnées modifiables dans l'interface sans modifier l'identité du mouvement |
+| Autres métadonnées modifiables | La référence locale documente aussi `application_date`, `categories` et `active` comme propriétés modifiables par le POST Powens | Traiter ces modifications comme des actions séparées, avec confirmation et journalisation ; ne pas les confondre avec le libellé bancaire |
+| Unicité | Un libellé peut aider l'humain, mais il est modifiable et ne constitue pas une identité | Utiliser une clé technique fondée sur la source, la ressource, le compte et l'identifiant Powens (`id`), jamais sur `wording` |
+| Parsing | Un mouvement déjà identifié peut être normalisé une première fois puis retrouvé par son identité technique | Rejouer le parsing si les données source pertinentes changent ; une simple correction de `wording` ne doit pas créer un nouveau mouvement |
+| Champs techniques | Ils sont surtout utiles au développeur, mais certains peuvent aider un utilisateur en détail ou en support | Les conserver dans le modèle et les rendre accessibles dans un niveau avancé, sans les afficher par défaut |
+| Catégorie « sélectionnée » | Dans la question précédente, « sélectionner » désignait le choix d'affichage ou de traitement ; Powens fournit d'abord une catégorie, ce n'est pas automatiquement un choix utilisateur | Séparer catégorie fournisseur reçue, éventuel remplacement manuel et pocket Gestio ; ne pas appeler une catégorie Powens une pocket |
+
+Les propriétés documentées comme modifiables sont `wording`, `comment`,
+`application_date`, `categories` et `active`. La structure exacte d'écriture de
+`categories` reste toutefois à vérifier avant tout POST, car la documentation
+Powens présente une incohérence de type.
+
+### Questions métier que la matrice ne tranche pas encore
+
+- quel libellé humain privilégier lorsqu'il existe plusieurs wording ;
+- si une catégorie Powens absente doit rester « indisponible », être affichée
+  comme « non catégorisée » ou recevoir un remplacement local ;
 - quelle relation stable, s'il en existe une, rattache un `market_order` à une
   transaction monétaire ;
-- quels champs techniques doivent rester accessibles dans le détail avancé.
+- quels champs techniques doivent être accessibles à l'utilisateur en mode
+  avancé et lesquels doivent rester réservés au diagnostic développeur.
 
 ## Types de transactions par type de compte
 
