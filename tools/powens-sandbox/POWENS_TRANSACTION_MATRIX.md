@@ -450,6 +450,80 @@
 | `transaction.webid` | withdrawal | 0 | 4 | 1 |
 | `transaction.wording` | withdrawal | 4 | 0 | 1 |
 
+## Dépendances de contrat et de ressources
+
+La présence d'un `type` ne suffit pas à déduire tout le schéma d'un élément. Le
+type fixe surtout une famille sémantique et un vocabulaire d'affichage ; les
+autres champs restent optionnels ou dépendent d'un état, d'une activation de
+produit, d'une expansion ou de la disponibilité du connecteur.
+
+### Dépendances officielles de la ressource Transaction
+
+| Condition ou relation | Conséquence de contrat | Confiance |
+|---|---|---|
+| `type` | Choisit la nature documentée (`card`, `transfer`, `profit`, `market_order`, etc.) ; ne garantit pas à lui seul la présence d'un sous-ensemble complet de champs | officielle |
+| `coming = true` | Le mouvement n'est pas encore comptabilisé sur le compte | officielle |
+| `active = false` | Powens l'ignore dans ses synthèses et sommes ; ce n'est pas la même information que « à venir » | officielle |
+| `deleted != null` | Le mouvement a été retiré par la banque ; la liste standard l'exclut, `all` permet de le demander | officielle |
+| `rdate` / `rdatetime` | Date de passation de l'ordre | officielle |
+| `date` / `datetime` | Date de comptabilisation sur le compte | officielle |
+| `vdate` / `vdatetime` | Date de valeur ; souvent égale à `date`, mais à conserver séparément | officielle |
+| `bdate` / `bdatetime` | Date affichée par la banque, désormais déconseillée au profit de `date` / `datetime` | officielle |
+| `value` | Montant de la transaction ; la documentation le déclare nullable, même si le corpus local l'a toujours renseigné | officielle + observée |
+| `gross_value`, `commission`, `original_value`, `original_currency` | Détails monétaires conditionnels ; leur absence ne signifie pas que le mouvement est invalide | officielle |
+| `counterparty` | Objet facultatif ; ses sous-champs (`label`, compte, rôle) ne sont valides que si l'objet existe | officielle |
+| `counterparty.type` | Rôle documenté `creditor` ou `debtor`, uniquement interprétable avec une contrepartie | officielle |
+| `categories` | Disponible seulement si la catégorisation est activée et demandée par `expand=categories` | officielle |
+| `attachments` | Disponible seulement si la capacité est activée et demandée par `expand=attachments` | officielle |
+
+Les états `coming`, `active` et `deleted` doivent donc être modélisés comme des
+axes distincts. Il ne faut pas les réduire à un seul enum `BOOKED/PENDING` sans
+conserver l'information fournisseur.
+
+### Ressource MarketOrder : schéma séparé
+
+`transaction.type = market_order` est une valeur de l'enum TransactionType,
+mais `/transactions` et `/marketorders` sont deux ressources différentes. La
+ressource `MarketOrder` porte les propriétés propres à un ordre de marché :
+
+| Condition ou relation | Champs concernés | Règle d'affichage |
+|---|---|---|
+| Direction de l'ordre | `order_direction.name` = `BUY` ou `SALE` | Afficher « achat » ou « vente », jamais seulement `market_order` |
+| Type d'ordre | `order_type.name` = `MARKET`, `LIMIT`, `TRIGGER`, `UNKNOWN` | Afficher le type ; montrer `ordervalue` seulement pour les types où il s'applique |
+| État de l'ordre | `state` | Pilote le texte « en attente », « exécuté », etc. ; ne pas le confondre avec `coming` d'une transaction bancaire |
+| Cycle de vie | `date`, `execution_date`, `validity_date` | Afficher trois dates nommées : création, exécution, validité ; chacune peut être absente selon l'état |
+| Mode de paiement | `payment_method` = `CASH`, `DEFERRED`, `UNKNOWN` | Donne le contexte du règlement ; ne prouve pas à lui seul qu'une transaction bancaire correspondante existe |
+| Exécution | `quantity`, `amount`, `unitprice` | Les valeurs peuvent être absentes avant l'exécution ; les présenter comme inconnues, jamais comme zéro |
+| Synchronisation / suppression | `last_update`, `deleted` | Distinguer dernière observation et ordre supprimé |
+
+Les ordres de marché disposent donc d'une vue de détail propre. Un débit ou un
+crédit bancaire lié à l'ordre ne doit être créé dans Gestio que lorsqu'il est
+observé comme transaction monétaire ; il ne doit pas être inventé à partir du
+seul `type`.
+
+### Conséquence pour la matrice et l'affichage
+
+| Niveau | Contenu |
+|---|---|
+| Socle commun | Identité, compte, type fournisseur, libellé, montant/devise si présent, dates disponibles, état de visibilité |
+| Extension transaction bancaire | Comptabilisation, valeur, contrepartie, commission, devise d'origine, catégories, pièces jointes |
+| Extension ordre de marché | Instrument, direction, type d'ordre, état, dates d'ordre, quantité, prix, montant et mode de paiement |
+| Technique | Identifiants, `webid`, `date_scraped`, `last_update`, état brut et payload original ; replié par défaut |
+
+La règle retenue pour l'interface est donc : **le type choisit la présentation,
+la présence réelle et la dépendance documentée des champs choisissent le contenu**.
+Une absence est affichée comme « non disponible » ou masquée selon le niveau de
+détail ; elle n'est jamais remplacée par zéro ou par une valeur déduite.
+
+Sources officielles :
+
+- [Bank transactions](https://docs.powens.com/api-reference/products/data-aggregation/bank-transactions)
+- [Transactions integration guide](https://docs.powens.com/documentation/integration-guides/transactions/transactions-integration-guide)
+- [Market orders](https://docs.powens.com/api-reference/products/wealth-aggregation/market-orders)
+- [Wealth and loans integration guide](https://docs.powens.com/documentation/integration-guides/wealth-and-loans)
+- [Categorization](https://docs.powens.com/api-reference/products/data-aggregation/categorization)
+- [Transactions attachments](https://docs.powens.com/api-reference/products/data-aggregation/transactions-attachments)
+
 ## Types de transactions par type de compte
 
 | Type de compte | Type transaction | Nombre |
