@@ -8,6 +8,74 @@
 - Champs top-level observés dans la réponse de base : 40
 - Sous-champs JSON observés : 4
 
+## Document de travail
+
+Cette matrice sert à passer de la réponse JSON Powens à un modèle compréhensible
+et affichable dans Gestio. Elle réunit trois niveaux qu'il faut conserver
+séparés :
+
+1. **Contrat documenté** : ce que Powens promet dans sa documentation ;
+2. **Observation Sandbox** : ce qui a effectivement été reçu dans le corpus ;
+3. **Règle Gestio proposée** : la manière de présenter ou de modéliser ces
+   données, à valider avant de la transformer en contrat produit.
+
+La présence d'un champ dans le corpus ne suffit donc pas à en faire un champ
+obligatoire. De même, l'absence d'un champ dans ce corpus ne suffit pas à
+conclure qu'il est impossible pour tous les connecteurs.
+
+### Ordre de lecture
+
+| Partie | Question à laquelle elle répond |
+|---|---|
+| Matrice connexion / compte | Dans quels supports le corpus a-t-il été observé ? |
+| Matrice des champs | Quel est le statut du champ, sa couverture et ses types observés ? |
+| Matrice champ × type de transaction | Avec quels `type` le champ a-t-il été observé ? |
+| Dépendances de contrat et de ressources | Quelle condition explique la présence, l'absence ou le sens du champ ? |
+| Catégorisation Powens | Comment utiliser la classification fournisseur sans la confondre avec une pocket Gestio ? |
+| Expansions et limites | Qu'est-ce qui a réellement été demandé et reçu dans le Sandbox ? |
+
+### Vocabulaire de travail
+
+| Terme | Usage dans Gestio | Source et limite |
+|---|---|---|
+| **Mouvement** | Terme neutre d'affichage pour un événement financier présenté à l'utilisateur | Ce n'est pas une ressource Powens ; la ressource d'origine doit rester conservée |
+| **Transaction bancaire** | Mouvement porté par `/transactions`, avec un montant, des dates et un état de comptabilisation éventuel | Un objet peut être `coming` ou supprimé ; « transaction » ne signifie donc pas automatiquement « définitivement comptabilisé » |
+| **Ordre de marché** | Instruction ou cycle de vie d'investissement présenté avec ses propres informations | Ressource distincte `/marketorders` ; ne pas le fabriquer à partir d'un simple `type=market_order` |
+| **Catégorie** | Classification fournie par Powens lorsqu'elle est disponible | Classification hiérarchique ; elle ne devient pas automatiquement une pocket personnalisable |
+| **Pocket** | Construction métier Gestio pour regrouper des dépenses ou affecter de l'épargne | À ne pas confondre avec une catégorie fournisseur |
+
+### Les axes qui conditionnent le schéma
+
+| Axe déterminant | Ce qu'il conditionne | Ce qu'il ne permet pas de déduire seul |
+|---|---|---|
+| Ressource appelée | Le schéma de base : transaction bancaire ou ordre de marché | Une correspondance automatique entre les deux ressources |
+| `transaction.type` | La famille sémantique et le présentateur à utiliser (`transfer`, `card`, `profit`, `market_order`, etc.) | La présence de tous les champs propres à cette famille |
+| `coming` | Le libellé d'état « à venir » / non comptabilisé | L'absence de montant ou l'absence de date |
+| `active` | L'inclusion dans les services et synthèses PFM | La comptabilisation du mouvement |
+| `deleted` | Le fait qu'un mouvement a été retiré et qu'il n'est normalement plus dans la liste standard | Une annulation métier ou un remboursement |
+| `rdate`, `date`, `vdate` | Le libellé de la date à afficher : ordre, comptabilisation ou valeur | Qu'une date absente puisse être remplacée par une autre sans le signaler |
+| Présence de `counterparty` | La possibilité de lire ses sous-champs (`label`, compte, rôle) | Qu'une contrepartie existe pour chaque type de mouvement |
+| Activation de la fonctionnalité + `expand=categories` | La disponibilité des catégories Powens | Qu'un `id_category` observé suffise à reconstruire la hiérarchie |
+| Activation de la fonctionnalité + `expand=attachments` | La disponibilité des pièces jointes | Qu'une réponse HTTP 200 contienne effectivement des pièces |
+| Connector, type de compte et période synchronisée | La couverture réellement observable | Une règle métier universelle sur le type de mouvement |
+
+### Règle de présentation humaine
+
+Le présentateur ne doit pas afficher le JSON brut. Il compose une fiche à partir
+des champs disponibles et de leurs dépendances :
+
+1. un intitulé humain construit à partir du type et du libellé disponible ;
+2. le montant et la devise s'ils sont réellement présents ;
+3. des dates nommées selon leur rôle (`passée le`, `comptabilisée le`, `valeur le`) ;
+4. un état indépendant pour `à venir`, `active` et `deleted` ;
+5. la catégorie fournisseur, si elle est reçue, séparée des classifications
+   propres à Gestio ;
+6. les métadonnées techniques dans un niveau de détail secondaire.
+
+Une donnée absente doit être affichée comme **non disponible** ou être masquée
+selon le niveau de détail. Elle ne doit jamais être remplacée par zéro, par une
+date voisine ou par une relation supposée.
+
 ## Matrice connexion / compte
 
 - Les libellés `CONNECTION_nn` et `ACCOUNT_nn` sont des positions locales anonymisées ; aucun identifiant bancaire n'est conservé.
@@ -82,6 +150,11 @@
 | `transaction.wording` | official | Editable transaction label | 1139 | 1139 | 0 | string | checking, market, pea, savings | La Banque Postale, Revolut, Trade Republic | 10 | bank, card, deposit, market_order, order, profit, transfer, unknown, withdrawal |  |
 
 ## Matrice champ × type de transaction
+
+Cette table mesure une cooccurrence dans le corpus. Elle ne transforme pas un
+`100 % non-null` observé en obligation de schéma et ne transforme pas un champ
+rare en champ réservé à un seul `type`. Pour décider de l'affichage, il faut
+croiser cette table avec les axes de dépendance et la ressource appelée.
 
 | Chemin JSON | Type transaction | Non-null | Null | Comptes touchés |
 |---|---|---:|---:|---:|
@@ -457,6 +530,25 @@ type fixe surtout une famille sémantique et un vocabulaire d'affichage ; les
 autres champs restent optionnels ou dépendent d'un état, d'une activation de
 produit, d'une expansion ou de la disponibilité du connecteur.
 
+### Ce que le type fixe réellement
+
+| Situation | Relation observée ou documentée | Règle de travail |
+|---|---|---|
+| `transaction.type` quel que soit sa valeur | Le type est un enum de la ressource Transaction | Choisir une famille de présentation, puis vérifier les champs présents ; ne pas construire un sous-schéma obligatoire uniquement à partir du type |
+| `type = transfer` | `counterparty` est documenté comme facultatif ; dans le corpus, les 100 objets de contrepartie observés sont associés à des transferts | Présenter le bénéficiaire ou l'émetteur si l'objet existe ; conserver une vue de transfert même lorsqu'il manque |
+| `type = market_order` dans `/transactions` | La valeur existe dans le flux transactionnel, mais les détails d'ordre appartiennent à la ressource `/marketorders` | Afficher un mouvement lié à un ordre seulement avec les données reçues ; ne pas ajouter quantité, prix ou état d'ordre par supposition |
+| `type = order` | Quatre occurrences sont observées dans le corpus, sans contrat local suffisant pour les assimiler à un ordre de marché | Garder une présentation générique et documenter la relation seulement après preuve sur la ressource concernée |
+| `type = bank`, `card`, `deposit`, `profit` ou `withdrawal` | La valeur choisit une famille sémantique, mais le corpus ne démontre pas un ensemble de champs exclusif et obligatoire pour chacune | Utiliser le socle commun puis enrichir avec chaque champ réellement présent |
+| `categories` quel que soit le `type` | La classification dépend de l'activation Powens et de l'expansion, pas de la valeur de `type` | Traiter la catégorie comme une extension indépendante et conserver ses niveaux `parent_code` / `code` |
+
+La bonne dépendance à retenir est donc :
+
+```text
+ressource → type → présentateur
+                    ↘ champs réellement présents
+état / activation / expansion / connector → disponibilité des champs
+```
+
 ### Dépendances officielles de la ressource Transaction
 
 | Condition ou relation | Conséquence de contrat | Confiance |
@@ -600,6 +692,20 @@ produit.
 
 Source officielle : [Categorization](https://docs.powens.com/api-reference/products/data-aggregation/categorization)
 et [Bank transactions](https://docs.powens.com/api-reference/products/data-aggregation/bank-transactions).
+
+## Points à fermer avant le contrat Gestio
+
+Cette section empêche de confondre une hypothèse de travail avec une décision
+validée :
+
+| Point | État actuel | Preuve ou décision attendue |
+|---|---|---|
+| Activation de la catégorisation sur le domaine Sandbox | À confirmer auprès de Powens | Après activation, refaire un GET avec `expand=categories` et constater `categories[]` sur des transactions |
+| Libellés humains des codes Powens | À définir | Choisir la source de traduction ou afficher temporairement le code avec son parent |
+| Catégorie fournisseur versus pocket Gestio | Proposition de séparation | Validation métier avant de supprimer toute classification locale existante |
+| Lien entre `transaction.type = market_order` et `/marketorders` | Non démontré | Identifier une relation stable avant de fusionner les vues |
+| Corps exact du POST de mise à jour des catégories | Non vérifié | Ne rien écrire avant résolution de l'incohérence de documentation et validation dans le Sandbox |
+| Fallback lorsque `categories` est absente | À décider | Définir si l'interface affiche « non catégorisé », une classification locale ou seulement l'absence |
 
 ## Expansions categories / attachments
 
