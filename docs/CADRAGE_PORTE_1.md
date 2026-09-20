@@ -43,6 +43,24 @@ quatre anciennes restent à corriger pour CRLF. La nouvelle fiche passe le
 contrôle. La commande `check` n'accepte pas `--project` : le premier essai avec
 cette option a été refusé, puis remplacé par le chemin explicite ci-dessus.
 
+## Règle d'effort mensuel confirmée — 2026-09-21
+
+La décision canonique
+[objectifs-efforts-mensuels-paralleles.yaml](../.lamoms/decisions/objectifs-efforts-mensuels-paralleles.yaml)
+retient des efforts mensuels choisis en parallèle et des dates d'atteinte
+calculées. **L'échéance n'est pas un paramètre indépendant à saisir.**
+Chaque objectif a un montant cible, une somme déjà affectée et un effort
+mensuel retenu ; son reste à financer et cet effort déterminent la projection.
+Avec 800 € de capacité, 300 € + 300 € + 200 € mobilisent toute la capacité ;
+la règle s'applique à un nombre quelconque d'objectifs.
+
+La première interprétation de l'agent, qui proposait de vérifier un effort
+contre une échéance souhaitée, est retirée. Les mentions d'échéance choisie ou
+de financement exclusivement séquentiel dans l'analyse historique ci-dessous
+décrivent désormais des éléments à réconcilier, pas la règle retenue. Les
+fiches existantes, le glossaire et les maquettes ne sont pas encore actualisés
+sur ce point ; le fonds d'urgence et les autres arbitrages restent ouverts.
+
 ## Exécution et périmètre
 
 - Orchestration Astra ; paramètres demandés : `gpt-6-astra`, effort `high`.
@@ -99,7 +117,7 @@ Il ne constitue pas une analyse sémantique des parcours ni un verdict UX.
 | Public et promesse de la première version | `gestion-pourquoi.md:45` cible les étudiants autonomes et le suivi de dérive ; la refondation, lignes 27–65, parle plus largement de comprendre sa situation pour décider de ses objectifs. | Confirmer le public V1 et la promesse de référence ; dater explicitement ce qui remplace l'ancien cadrage. |
 | Identité des parcours | Corpus : Première ouverture, Usage courant, Point de situation, Simulation. Fiches et brief initiaux : Première ouverture, Usage courant, Objectif, Simulation. | Objectif autonome accepté le 2026-09-20 ; Point de situation autonome confirmé, décision consignée le 2026-09-21. Cinq identités retenues ; leurs règles et flux détaillés restent à réconcilier. |
 | Fin de Première ouverture | Le corpus conduit jusqu'à la simulation, l'objectif et son financement ; la refondation, lignes 199–232, termine à la première situation puis Usage courant. | Dire si l'objectif est obligatoire à l'entrée, facultatif, ou repris dans un parcours distinct. |
-| Flux entre plusieurs objectifs | `gestion-modele.md:159` impose une file à priorité stricte ; la fiche Objectif et la refondation, ligne 126, permettent de préparer le suivant avec la marge après effort choisi. | Articuler file séquentielle et préparation du prochain objectif ; décider si des efforts simultanés sont permis. Ne pas traiter ces formulations comme une règle unique déjà établie. |
+| Flux entre plusieurs objectifs | `gestion-modele.md:159` impose une file à priorité stricte ; la fiche Objectif et la refondation, ligne 126, permettent de préparer le suivant avec la marge après effort choisi. | Efforts mensuels parallèles confirmés le 2026-09-21 ; leur somme est comparée à la capacité commune. La date d'atteinte est calculée, sans échéance indépendante. Anciennes formulations à réconcilier selon la décision canonique. |
 | Fonds d'urgence | Corpus : fonds prioritaire et cible par défaut liée à six mois de vital. Refondation, lignes 153–165 et 234–240 : comptes désignés par l'utilisateur, solde réservé. | Définir le stock protégé, la cible éventuelle, l'alimentation et la reconstitution ; préciser ce qui se passe en l'absence de fonds. |
 | Catégories et pockets | Corpus et Kotlin comportent un classement local ; matrice Powens, lignes 695–701 et 744–758 : catégorie fournisseur nominale, sans moteur concurrent automatique. | Stabiliser la relation catégorie fournisseur → pocket choisie et le comportement en cas de catégorie absente, notamment pour un import PDF. |
 | Contrat transactionnel | `NormalizedTransaction.kt:25` ne porte pas séparément `type`, `categories`, `wording`, `comment`, `coming`, `active`, `deleted`. Les contrats candidats les distinguent. | Valider le contrat conservé, les absences/nulls et la séparation brut / dérivé / présentation, avant les tâches de migration. |

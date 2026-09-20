@@ -1,0 +1,58 @@
+# Template de décision Lamoms (.lamoms/decisions/<decision-id>.yaml)
+decision_id: objectifs-efforts-mensuels-paralleles
+journey_id: objectif
+# Règle partagée avec simulation et point-de-situation.
+decision_type: produit
+question: Comment financer plusieurs objectifs et déterminer leur date d'atteinte ?
+options:
+  - Efforts mensuels choisis en parallèle ; dates d'atteinte calculées
+  - Financement successif selon une priorité stricte
+  - Échéance saisie comme paramètre indépendant de l'effort
+criteria: []
+value: >-
+  Pour chaque objectif, le montant cible et la somme déjà affectée déterminent
+  le reste à financer. L'utilisateur choisit l'effort mensuel ; la durée et la
+  date d'atteinte sont des résultats calculés, jamais une échéance indépendante
+  à saisir. Plusieurs objectifs sont financés en parallèle : la somme de leurs
+  efforts mensuels se compare à la capacité d'épargne disponible sur la même
+  période, sans limite métier fixée à trois objectifs. Avec une capacité de
+  800 EUR et des efforts de 300, 300 et 200 EUR, la somme vaut 800 EUR et la marge
+  vaut zéro. Augmenter ou diminuer un effort modifie la projection et la marge
+  commune ; Gestio n'affecte pas automatiquement cette marge à un autre objectif.
+time_to_value:
+estimated_effort:
+impact: >-
+  Objectif règle le montant cible, les sommes affectées et l'effort mensuel ;
+  il affiche le délai et la date résultants. Simulation explore les changements
+  d'effort et leurs conséquences sur chaque objectif et sur la capacité commune.
+  Point de situation compare les observations à la trajectoire correspondante.
+  Les références à une échéance choisie, à un effort requis pour cette échéance
+  ou à une file de financement obligatoirement séquentielle sont à réconcilier
+  dans les fiches, le glossaire, le corpus, le brief et les futurs contrats.
+  La compatibilité globale des efforts ne signifie pas que les objectifs ont
+  la même date d'atteinte : celle-ci dépend aussi de chaque reste à financer.
+  À effort constant positif, le délai dépend du reste à financer divisé par
+  l'effort ; les conventions calendaires et de versement restent à préciser.
+  S'il reste un montant à financer, une absence de données ou d'effort positif
+  ne permet pas d'inventer une date.
+  Le traitement détaillé du fonds d'urgence reste un arbitrage distinct.
+risks: []
+decision: continue
+rationale: >-
+  Le 2026-09-21, le maître de projet a décrit une capacité de 800 EUR partagée
+  entre trois efforts de 300, 300 et 200 EUR, en précisant que le raisonnement
+  s'applique à davantage d'objectifs. Il a ensuite corrigé explicitement
+  l'interprétation de l'agent : il ne souhaite pas d'échéance comme paramètre
+  supplémentaire. La date dépend de l'effort mensuel ; pour l'avancer ou la
+  reculer, on modifie cet effort. Cette décision enregistre les deux messages
+  ensemble et remplace l'interprétation initiale comportant une échéance saisie.
+decided_by: user
+source_refs:
+  - docs/CADRAGE_PORTE_1.md
+  - .lamoms/journeys/objectif.md
+  - .lamoms/journeys/simulation.md
+  - .lamoms/journeys/point-de-situation.md
+  - "Conversation Codex 01a0be87-6de4-7810-ae2d-ec81c566bc65, 2026-09-21 : exemple 800/300/300/200 puis correction explicite supprimant l'échéance comme paramètre"
+parent_artifact_ids: []
+status: accepted
+version: 1
