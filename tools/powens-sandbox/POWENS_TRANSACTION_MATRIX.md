@@ -616,6 +616,62 @@ Sources officielles :
 - [Categorization](https://docs.powens.com/api-reference/products/data-aggregation/categorization)
 - [Transactions attachments](https://docs.powens.com/api-reference/products/data-aggregation/transactions-attachments)
 
+## Contrats métier candidats issus de la matrice champ × type
+
+Les contrats ci-dessous sont des **propositions de travail**. Ils traduisent les
+relations observées en règles lisibles par Gestio, mais ne valent pas encore
+validation métier ou décision d'architecture.
+
+### Contrat commun : mouvement affichable
+
+| Bloc | Champs candidats | Condition | Règle métier proposée |
+|---|---|---|---|
+| Identité | `id`, `id_account`, `type` | Objet issu de `/transactions` | Identifier le mouvement et conserver son type Powens sans le remplacer par un libellé local |
+| Libellé | `wording`, `simplified_wording`, `original_wording` | Au moins un libellé disponible | Choisir un libellé humain ; garder le libellé brut en détail |
+| Montant | `value`, `original_value`, devises | Valeur et devise présentes ou nulles | Afficher le montant réellement reçu ; ne jamais transformer `null` en zéro |
+| Temps | `date` / `datetime`, puis `rdate` / `vdate` | Une ou plusieurs dates présentes | Afficher chaque date avec son rôle ; ne pas les fusionner silencieusement |
+| Cycle de vie | `coming`, `active`, `deleted` | Champs présents | Afficher trois états indépendants ; ne pas fabriquer un unique statut `pending` |
+| Classification | `categories[]` | Fonction activée, expansion demandée et propriété reçue | Afficher la classification fournisseur séparément des concepts métier Gestio |
+| Technique | `webid`, `date_scraped`, `last_update`, extensions | Niveau de détail secondaire | Conserver pour le diagnostic, replier dans l'interface courante |
+
+Ce contrat commun définit ce qu'un présentateur peut tenter d'afficher. Il ne
+rend pas tous les champs obligatoires : un mouvement peut rester compréhensible
+avec une date ou une devise indisponible, à condition que cette absence soit
+visible.
+
+### Extensions conditionnelles
+
+| Extension | Déclencheur | Champs concernés | Ce que le contrat garantit |
+|---|---|---|---|
+| Contrepartie | `counterparty` est un objet non nul, souvent observé avec `transfer` | `label`, `account_scheme_name`, `account_identification`, `type` | Une contrepartie détaillée peut être affichée ; son absence ne rend pas le transfert invalide |
+| Ordre de marché | Données reçues depuis `/marketorders` | direction, type d'ordre, état, dates, quantité, prix, montant | Une vue d'ordre dédiée ; ces champs ne doivent pas être inventés depuis `/transactions` |
+| Catégorisation fournisseur | Activation Powens + `expand=categories` + `categories[]` présent | `parent_code`, `code` | Une classification hiérarchique peut être affichée ; elle n'est pas une pocket |
+| Pièces jointes | Activation + `expand=attachments` + éléments reçus | `attachments[]` | Un accès aux pièces peut être proposé ; HTTP 200 seul ne suffit pas |
+
+### Invariants à conserver dans le contrat
+
+| Invariant | Conséquence |
+|---|---|
+| `type` choisit une famille, pas un schéma complet | Le présentateur vérifie chaque champ avant de l'utiliser |
+| `coming`, `active` et `deleted` sont indépendants | Aucun ne doit être déduit des deux autres |
+| Absence et valeur nulle ne signifient pas zéro | L'interface distingue « non disponible » de « montant nul » |
+| Catégorie Powens et pocket Gestio sont différentes | Une catégorie fournisseur ne crée ni ne modifie une pocket |
+| `market_order` dans `/transactions` et objet `/marketorders` sont différents | Aucun ordre bancaire ou détail d'investissement n'est créé par supposition |
+| Cooccurrence observée et obligation de contrat sont différentes | Les taux de la matrice servent d'évidence, pas de validation automatique |
+
+### Questions métier que la matrice ne tranche pas seule
+
+Avant d'appeler ce contrat « validé », il faut encore décider :
+
+- comment déterminer la nature métier du flux (revenu, dépense, transfert,
+  investissement) sans la déduire abusivement du seul `type` ;
+- quel libellé humain afficher lorsque plusieurs wording sont présents ;
+- si une catégorie Powens absente doit être affichée comme indisponible,
+  « non catégorisée » ou complétée par une classification locale ;
+- quelle relation stable, s'il en existe une, rattache un `market_order` à une
+  transaction monétaire ;
+- quels champs techniques doivent rester accessibles dans le détail avancé.
+
 ## Types de transactions par type de compte
 
 | Type de compte | Type transaction | Nombre |
