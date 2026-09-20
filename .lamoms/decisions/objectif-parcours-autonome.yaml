@@ -1,0 +1,34 @@
+# Template de décision Lamoms (.lamoms/decisions/<decision-id>.yaml)
+decision_id: objectif-parcours-autonome
+journey_id: objectif
+# cycle_id est optionnel pour une decision de cadrage.
+decision_type: cadrage
+question: Quel rattachement retenir pour le parcours Objectif ?
+options:
+  - Parcours autonome
+  - Etape de Premiere ouverture
+  - Sous-parcours de Point de situation
+criteria: []
+value:
+time_to_value:
+estimated_effort:
+impact: >-
+  Conserver la fiche .lamoms/journeys/objectif.md avec son identifiant objectif
+  et son intention propre. La place de Point de situation, les liens entre
+  parcours et les autres arbitrages de cadrage restent a preciser. Cette decision
+  ne valide ni le contenu complet des fiches, ni leur UX, ni le PRD ou les tasks.
+risks: []
+decision: continue
+rationale: >-
+  Le 2026-09-20, en reponse a la question sur le rattachement d Objectif,
+  le maitre de projet a choisi explicitement : « parcours autonome ».
+  Cette decision enregistre uniquement ce choix, sans en deduire la creation
+  d une fiche Point de situation ni une decision sur les autres regles metier.
+decided_by: user
+source_refs:
+  - docs/CADRAGE_PORTE_1.md
+  - .lamoms/journeys/objectif.md
+  - "Conversation Codex 01a0be87-6de4-7810-ae2d-ec81c566bc65, 2026-09-20, reponse utilisateur : parcours autonome"
+parent_artifact_ids: []
+status: accepted
+version: 1

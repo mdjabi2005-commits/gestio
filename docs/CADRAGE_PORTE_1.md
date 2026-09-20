@@ -6,6 +6,20 @@ Ce rapport prépare une décision humaine. Il ne constitue ni le PRD final, ni
 une validation des parcours, ni une autorisation de commencer le code.
 Les propositions de sections restent dans ce rapport jusqu'à l'arbitrage.
 
+## Décision humaine reçue — 2026-09-20
+
+Le maître de projet a répondu « parcours autonome » à la question du
+rattachement d'Objectif. **Objectif reste donc une journey autonome**, portée
+par `.lamoms/journeys/objectif.md` et l'identifiant `objectif`.
+La décision canonique est enregistrée dans
+[objectif-parcours-autonome.yaml](../.lamoms/decisions/objectif-parcours-autonome.yaml).
+
+Cet arbitrage ne fixe pas à lui seul la place de Point de situation, le
+caractère obligatoire d'un objectif à la première ouverture, ni les autres
+règles métier. La porte de validation reste ouverte sur ces points ; les
+fiches, le PRD et les tasks ne sont pas déclarés validés.
+Le rapport ci-dessous conserve les constats et options de la première passe.
+
 ## Exécution et périmètre
 
 - Orchestration Astra ; paramètres demandés : `gpt-6-astra`, effort `high`.
@@ -60,7 +74,7 @@ Il ne constitue pas une analyse sémantique des parcours ni un verdict UX.
 | Sujet | Sources en tension | Décision à consigner après réponse humaine |
 |---|---|---|
 | Public et promesse de la première version | `gestion-pourquoi.md:45` cible les étudiants autonomes et le suivi de dérive ; la refondation, lignes 27–65, parle plus largement de comprendre sa situation pour décider de ses objectifs. | Confirmer le public V1 et la promesse de référence ; dater explicitement ce qui remplace l'ancien cadrage. |
-| Identité des parcours | Corpus : Première ouverture, Usage courant, Point de situation, Simulation. Fiches et brief : Première ouverture, Usage courant, Objectif, Simulation. | Fixer le rattachement d'Objectif et le propriétaire du suivi de trajectoire ; voir les options du worker 3. Aucun découpage ne peut encore être qualifié de définitif. |
+| Identité des parcours | Corpus : Première ouverture, Usage courant, Point de situation, Simulation. Fiches et brief : Première ouverture, Usage courant, Objectif, Simulation. | Objectif autonome : accepté par l'humain le 2026-09-20. Reste à fixer le propriétaire du suivi de trajectoire ; le découpage complet n'est pas encore définitif. |
 | Fin de Première ouverture | Le corpus conduit jusqu'à la simulation, l'objectif et son financement ; la refondation, lignes 199–232, termine à la première situation puis Usage courant. | Dire si l'objectif est obligatoire à l'entrée, facultatif, ou repris dans un parcours distinct. |
 | Flux entre plusieurs objectifs | `gestion-modele.md:159` impose une file à priorité stricte ; la fiche Objectif et la refondation, ligne 126, permettent de préparer le suivant avec la marge après effort choisi. | Articuler file séquentielle et préparation du prochain objectif ; décider si des efforts simultanés sont permis. Ne pas traiter ces formulations comme une règle unique déjà établie. |
 | Fonds d'urgence | Corpus : fonds prioritaire et cible par défaut liée à six mois de vital. Refondation, lignes 153–165 et 234–240 : comptes désignés par l'utilisateur, solde réservé. | Définir le stock protégé, la cible éventuelle, l'alimentation et la reconstitution ; préciser ce qui se passe en l'absence de fonds. |
@@ -76,7 +90,7 @@ nécessaire de redemander chaque préférence déjà explicitement formulée.
 
 | Ensemble | Traitement proposé, soumis à validation |
 |---|---|
-| Les quatre fiches actuelles | Conserver pendant l'arbitrage. Première ouverture, Usage courant et Simulation ont un noyau commun aux deux cadrages. Le devenir d'Objectif dépend du choix sur Point de situation. |
+| Les quatre fiches actuelles | Conserver pendant l'arbitrage. Première ouverture, Usage courant et Simulation ont un noyau commun aux deux cadrages. Le maintien d'Objectif comme fiche autonome est accepté le 2026-09-20. |
 | Une éventuelle fiche `point-de-situation` | Création uniquement si son identité autonome est retenue ; aucun fichier créé à ce stade. |
 | `gestion-*.md`, refondation et glossaires | Chevauchements de règles et de vocabulaire à résoudre. Garder les raisons historiques ; référencer ensuite la source retenue et les décisions canoniques. Aucun document entier n'est déclaré supprimable par cette analyse. |
 | Carte des écrans du corpus et `stitch-brief.md` | Deux découpages UX concurrents ; mettre à jour le brief après validation des parcours, sans en faire un contrat métier indépendant. |
