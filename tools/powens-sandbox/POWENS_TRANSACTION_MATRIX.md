@@ -670,6 +670,7 @@ décision d'architecture irréversible.
 | Nature du flux | Faire confiance au `type` Powens comme classification fournisseur ; traiter `unknown` explicitement lorsque l'API le retourne | Ne pas reconstruire par défaut une classification locale concurrente ; conserver le type brut et prévoir un présentateur générique pour `unknown` |
 | Libellé d'origine | `original_wording` doit rester la trace du libellé bancaire reçu | Ne jamais l'écraser avec une correction utilisateur |
 | Libellé utilisateur | `wording` est le libellé personnalisable ; `comment` est une note distincte | Rendre ces métadonnées modifiables dans l'interface sans modifier l'identité du mouvement |
+| Priorité d'affichage du libellé | Afficher d'abord le libellé bancaire d'origine ; après modification, afficher le libellé choisi par l'utilisateur | Conserver `original_wording` comme référence, afficher `wording` comme libellé courant après édition, et montrer `comment` séparément |
 | Autres métadonnées modifiables | La référence locale documente aussi `application_date`, `categories` et `active` comme propriétés modifiables par le POST Powens | Traiter ces modifications comme des actions séparées, avec confirmation et journalisation ; ne pas les confondre avec le libellé bancaire |
 | Unicité | Un libellé peut aider l'humain, mais il est modifiable et ne constitue pas une identité | Utiliser une clé technique fondée sur la source, la ressource, le compte et l'identifiant Powens (`id`), jamais sur `wording` |
 | Parsing | Un mouvement déjà identifié peut être normalisé une première fois puis retrouvé par son identité technique | Rejouer le parsing si les données source pertinentes changent ; une simple correction de `wording` ne doit pas créer un nouveau mouvement |
@@ -683,13 +684,94 @@ Powens présente une incohérence de type.
 
 ### Questions métier que la matrice ne tranche pas encore
 
-- quel libellé humain privilégier lorsqu'il existe plusieurs wording ;
-- si une catégorie Powens absente doit rester « indisponible », être affichée
-  comme « non catégorisée » ou recevoir un remplacement local ;
 - quelle relation stable, s'il en existe une, rattache un `market_order` à une
   transaction monétaire ;
-- quels champs techniques doivent être accessibles à l'utilisateur en mode
-  avancé et lesquels doivent rester réservés au diagnostic développeur.
+
+Le principe d'affichage des champs techniques est désormais fixé : ils ne sont
+pas affichés dans les écrans courants ; ils restent conservés et peuvent être
+exposés uniquement dans un détail avancé ou un contexte de support lorsque cela
+répond à un besoin réel.
+
+La question de l'absence de catégorie ne constitue plus une alternative métier
+pour le produit : le chemin nominal s'appuie sur les catégories Powens. Si
+`categories[]` manque malgré ce contrat, il s'agit d'une indisponibilité
+technique ou d'une activation incomplète ; Gestio ne doit ni inventer une
+catégorie ni recréer automatiquement un moteur local concurrent. La réaction
+visible exacte (information, écran partiellement disponible ou blocage d'un
+calcul) reste à préciser écran par écran.
+
+## Matrice écrans × données nécessaires
+
+Cette matrice répond à la question : **quelles données sont nécessaires pour
+répondre à la question de chaque écran ?** Elle ne demande pas d'afficher tous
+les champs disponibles. Un écran reçoit un état préparé ; il ne rend jamais le
+JSON Powens directement.
+
+### Niveaux de données
+
+| Niveau | Données | Règle d'affichage |
+|---|---|---|
+| Socle mouvement | `id`, `id_account`, `type`, `value`, devise si disponible, `date` / `datetime`, un libellé (`wording`, `simplified_wording` ou `original_wording`) | Utilisé pour identifier, calculer et afficher un mouvement ; l'identifiant reste technique |
+| État et périmètre | `coming`, `active`, `deleted`, puis le traitement dérivé (`INTERNAL_NEUTRAL`, `INCOME_CANDIDATE`, `EXPENSE_CANDIDATE`, `TO_REVIEW`) | Filtrer et expliquer sans confondre « à venir », « actif » et « supprimé » |
+| Classification | `categories[]` avec `parent_code` et `code`, après activation et expansion | Utilisé pour les regroupements et les libellés humains ; jamais affiché comme JSON et jamais transformé en pocket par défaut |
+| Contexte conditionnel | `counterparty.*`, dates `rdate` / `vdate`, `comment`, pièces jointes, détails d'ordre | Affiché uniquement lorsqu'il répond à la question de l'écran ou lorsque l'utilisateur ouvre le détail |
+| Technique | `webid`, `date_scraped`, `last_update`, `state`, payload source et identifiants de rapprochement | Conservé pour synchronisation, support et diagnostic ; replié par défaut |
+
+### Besoin par écran
+
+| Parcours / écran | Réponse attendue par l'utilisateur | Données métier indispensables | Champs Powens qui alimentent ces données | À ne pas afficher par défaut |
+|---|---|---|---|---|
+| Première ouverture — Deux questions | Donner une estimation d'épargne et une intention | Saisie utilisateur, état de l'étape | Aucun champ de transaction ; l'import vient après | Tout mouvement avant l'import |
+| Première ouverture — Import du relevé | Faire entrer les mouvements sans doublon | Payload source, source, compte, identité technique, rapport d'import | `id`, `id_account`, `date`, `value`, `type`, libellés et état source | JSON brut, tokens, métadonnées de synchronisation |
+| Première ouverture — Solde du mois | Comprendre où part l'argent sur une période | Période, couverture, revenus, dépenses, catégories, exclusion des virements internes | `id`, `id_account`, `value`, `date`, `type`, `active`, `coming`, `deleted`, `categories[]`; `counterparty` et libellés pour rapprocher les transferts | `webid`, `date_scraped`, `last_update`, payload |
+| Première ouverture — Arbitrage des grosses lignes | Reconnaître ou corriger une ligne importante | Identité, libellé humain, montant, date, type, catégorie fournisseur, contrepartie si présente | `id`, `wording` / `simplified_wording` / `original_wording`, `value`, `date`, `type`, `categories[]`, `counterparty.*` | `id` technique en présentation principale, état brut et JSON |
+| Première ouverture — Confirmer les récurrences | Dire si une série revient et si son montant est imposé | Série de mouvements, libellé, montants, dates, nature de fréquence, identité des lignes | `id`, libellés, `value`, `date`, `type`, `active`, `coming` | Toutes les dates techniques et le détail fournisseur non nécessaire à la décision |
+| Première ouverture — Vital ou plaisir | Qualifier les catégories de dépenses | Catégorie Powens mappée, total observé, période, décision `VITAL` ou `PLEASURE` | `categories[]`, `value`, `date`, traitement interne déjà exclu | Libellé bancaire de chaque ligne, identifiants et champs de synchronisation |
+| Première ouverture — Objectif et financement | Dire combien atteindre et quelles économies affecter | Soldes des comptes/supports d'épargne, cible, échéance, affectations utilisateur | Principalement comptes et soldes ; les transactions servent seulement à établir les soldes/couverture | Détail des mouvements courants |
+| Simulation — Simulation | Comprendre l'effet d'une enveloppe choisie | Seuil bas, seuil haut, enveloppe, répartition observée, capacité, projection d'objectif | Agrégats calculés à partir des mouvements classés ; aucune ligne Powens n'est affichée | Libellés, catégories brutes, identifiants |
+| Simulation — Créer une poche | Nommer et qualifier une nouvelle poche | Nom, marque `VITAL` / `PLEASURE`, enveloppe proposée | Agrégat historique éventuellement utilisé pour proposer une valeur | Toute métadonnée transactionnelle |
+| Usage courant — Budget libre | Savoir combien dépenser jusqu'à la prochaine entrée | Solde courant, horizon, engagements, trois mouvements à venir et trois récents, alertes | Pour le solde et les lignes : `id_account`, `value`, `date`, libellé, `type`, `coming`, `active`, `deleted`; le rapprochement interne utilise aussi `counterparty.*` | `original_wording` si un libellé utilisateur existe déjà, JSON et champs techniques |
+| Usage courant — Alerte de liquidité | Comprendre quel compte risque un rejet | Compte concerné, solde daté, engagement, date, montant, déficit | `id_account`, `value`, `date`, libellé si nécessaire ; données de compte et engagements calculés | Détails techniques et catégories sans rapport avec le risque |
+| Usage courant — Planifier une dépense | Ajouter explicitement une sortie future | Montant, échéance, compte, catégorie Powens affichable, nature, lien éventuel avec une transaction réalisée | Catégories `categories[]` pour les choix ; `id_account` pour le compte ; `id` uniquement au rapprochement ultérieur | Payload source et états techniques |
+| Usage courant — Dépenses du mois | Voir le réel par rapport au plafond | Mois, dépenses cumulées, catégories, lignes du mois, traitement des internes | `value`, `date`, `type`, `categories[]`, libellé humain, `id_account`, rapprochement interne | `rdate`, `vdate`, `date_scraped`, `webid` sauf détail avancé |
+| Point de situation — Point de situation | Savoir si la trajectoire est tenue | Épargne affectée, courbes réelle/référence, écart, conséquence, arbitrages | Agrégats : `value`, `date`, `type`, catégories et nature récurrente ; les lignes ne sont pas le contenu dominant | Liste brute des mouvements et métadonnées techniques |
+| Point de situation — Enveloppes de vie | Comparer dépensé et prévu par poche | Total dépensé, enveloppe, période, catégorie → poche, dépassement | `value`, `date`, `categories[]`, traitement interne, périodes | Libellés et détails de chaque mouvement |
+| Point de situation — Poche | Comprendre ce qui produit le dépassement | Poche, enveloppe, contribution, trois plus grosses sorties, lien d'ajustement | `value`, `date`, libellé humain, `id`, catégorie Powens mappée, traitement interne | `id` en texte courant, compte et détails techniques sauf demande |
+| Point de situation — Transactions | Consulter la liste complète d'une poche | Liste filtrée, triée et datée, libellé utilisateur/original, montant, catégorie, commentaire éventuel | `id`, `value`, `date`, `id_account`, `type`, `categories[]`, `wording`, `original_wording`, `comment` | JSON brut, `webid`, synchronisation et détails non pertinents |
+
+### Conséquence pour le contrat de modèle
+
+Le modèle actuel `NormalizedTransaction` couvre une partie du socle
+(`id`, compte, dates, montant, devise, libellés normalisés, contrepartie et
+rapprochement), mais ne porte pas encore explicitement `type`,
+`categories[]`, `comment`, `wording`, `original_wording`, `coming`, `active` et
+`deleted` comme données Powens distinctes. La matrice d'écran ne justifie pas
+de les ajouter tous à tous les écrans : elle montre plutôt que la normalisation
+doit conserver ces informations, puis que chaque état de présentation ne doit
+projeter que son sous-ensemble.
+
+Le code contient encore un classement local dans
+`shared/src/commonMain/kotlin/com/gestio/core/categorization/Categorization.kt`
+et un repli `non catégorisé`. Ce fait est conservé comme écart technique à
+résoudre ; il ne remplace pas la position métier actuelle qui fait de Powens la
+source de classification attendue. Aucune suppression de code n'est décidée
+dans cette matrice.
+
+### Règle de lecture finale
+
+Pour construire un état d'écran :
+
+```text
+source Powens → normalisation conservant les champs utiles →
+classification/rapprochement dérivés → agrégat métier → état d'écran →
+présentation humaine
+```
+
+Le `type` choisit la famille de présentation et participe aux règles de
+traitement, mais il ne rend pas automatiquement tous les champs d'une
+transaction obligatoires. Les écrans décident du sous-ensemble visible ; la
+présence du champ dans le JSON décide seulement de ce qui peut être calculé ou
+signalé comme indisponible.
 
 ## Comptabilisation et virements internes
 
@@ -831,7 +913,7 @@ catégories ne sont pas encore démontrées dans ce Sandbox.
 | `categories[].parent_code` | Famille de classification | Conserver comme niveau parent, sans le transformer en pocket |
 | `categories[].code` | Catégorie fournisseur | Conserver le code et afficher un libellé humain mappé |
 | Tableau `categories[]` | Classification d'une transaction | Conserver le tableau ; ne pas l'écraser prématurément en catégorie unique |
-| Absence de `categories` | Classification indisponible | Afficher l'absence et garder la transaction classifiable par un fallback validé |
+| Absence de `categories` sur le chemin nominal | Indisponibilité technique | Signaler une activation ou une réception incomplète ; ne pas inventer de catégorie et ne pas réactiver automatiquement une classification locale concurrente |
 
 Si l'activation Powens est confirmée, le concept de **pocket de gestion servant
 uniquement à classer les transactions** devient inutile. Il faudra alors
@@ -854,7 +936,7 @@ validée :
 | Catégorie fournisseur versus pocket Gestio | Proposition de séparation | Validation métier avant de supprimer toute classification locale existante |
 | Lien entre `transaction.type = market_order` et `/marketorders` | Non démontré | Identifier une relation stable avant de fusionner les vues |
 | Corps exact du POST de mise à jour des catégories | Non vérifié | Ne rien écrire avant résolution de l'incohérence de documentation et validation dans le Sandbox |
-| Fallback lorsque `categories` est absente | À décider | Définir si l'interface affiche « non catégorisé », une classification locale ou seulement l'absence |
+| Réaction à une absence de `categories` | Position de travail : ce n'est pas une catégorie métier | Afficher une indisponibilité technique selon l'écran ; ne pas inventer de catégorie et ne pas lancer de classification locale concurrente |
 
 ## Expansions categories / attachments
 
