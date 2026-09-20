@@ -691,6 +691,80 @@ Powens présente une incohérence de type.
 - quels champs techniques doivent être accessibles à l'utilisateur en mode
   avancé et lesquels doivent rester réservés au diagnostic développeur.
 
+## Comptabilisation et virements internes
+
+Le type `transfer` ne suffit pas à dire si l'argent est réellement entré ou
+sorti de la situation financière de l'utilisateur. Il faut distinguer le
+mouvement observé sur un compte de son effet sur le périmètre Gestio.
+
+### Trois niveaux à ne pas mélanger
+
+| Niveau | Question | Traitement d'un virement A → B entre deux comptes inclus |
+|---|---|---|
+| Compte | Que s'est-il passé sur ce compte précis ? | Sortie sur A et entrée sur B |
+| Périmètre Gestio | L'argent est-il entré dans l'ensemble des comptes suivis ou en est-il sorti ? | Effet net nul |
+| Synthèse métier | Est-ce un revenu ou une dépense ? | Ni revenu ni dépense |
+
+Le virement interne doit donc rester visible dans l'historique et modifier les
+soldes propres aux comptes, mais il ne doit pas gonfler les revenus, les
+dépenses, les catégories de dépenses ou la capacité calculée à partir de ces
+flux. Un transfert d'un compte courant vers un compte d'épargne peut toutefois
+modifier le budget libre ou la disponibilité d'un compte : c'est un changement
+de répartition de liquidité, pas une dépense.
+
+### Contrat de flux dérivé
+
+| Donnée dérivée | Valeurs de travail | Rôle |
+|---|---|---|
+| Type fournisseur | Valeur Powens brute, par exemple `transfer` | Conserver la classification source |
+| Sens sur le compte | `IN` ou `OUT` | Décrire la variation du compte à partir du montant normalisé |
+| Périmètre | `INTERNAL`, `EXTERNAL_IN`, `EXTERNAL_OUT`, `UNKNOWN` | Dire si l'argent reste dans le périmètre suivi |
+| Traitement comptable | `INTERNAL_NEUTRAL`, `INCOME_CANDIDATE`, `EXPENSE_CANDIDATE`, `TO_REVIEW` | Décider ce qui entre dans les agrégats, sans le déduire du seul `type` |
+| Rapprochement | Identifiant commun des deux jambes, ou absence | Relier la sortie A et l'entrée B sans fusionner les événements bruts |
+
+`EXTERNAL_IN` et `EXTERNAL_OUT` décrivent d'abord un franchissement du périmètre
+Gestio. Ils ne doivent pas être automatiquement renommés « revenu » ou
+« dépense » sans règle métier complémentaire : un apport, un remboursement, un
+prêt ou un transfert vers un tiers peuvent avoir des traitements différents.
+
+### Invariant d'un virement interne confirmé
+
+Un virement interne est confirmé lorsque deux mouvements peuvent être reliés
+avec suffisamment de preuves :
+
+- montants opposés et même devise ;
+- comptes différents mais inclus dans le périmètre Gestio ;
+- dates de comptabilisation compatibles ;
+- indice de virement dans les libellés ou les données fournisseur ;
+- contrepartie qui prouve que le compte opposé appartient bien au même périmètre.
+
+Pour une paire confirmée de montant `x` :
+
+```text
+compte A       : -x
+compte B       : +x
+périmètre      :  0
+revenus        :  0
+dépenses       :  0
+historique     : 2 jambes reliées, ou 1 mouvement groupé avec détail
+```
+
+La classification interne doit être appliquée avant la catégorisation des
+dépenses : un virement confirmé ne reçoit pas une pocket de dépense.
+
+### État actuel du code et risque à traiter
+
+`shared/src/commonMain/kotlin/com/gestio/core/transfers/Transfers.kt` rapproche
+actuellement les deux jambes avec les critères ci-dessus, puis
+`Balance.kt`, `DepensesDuMois.kt` et la catégorisation excluent les identifiants
+rapprochés des agrégats de revenus et de dépenses.
+
+Le risque restant est explicite : une jambe qui ressemble à un virement mais
+qui ne trouve pas sa contrepartie retombe aujourd'hui sur le calcul par signe.
+Elle peut alors être comptée comme dépense ou revenu. Le contrat cible doit
+prévoir un état `TO_REVIEW` ou équivalent pour rendre ces cas visibles avant de
+les intégrer définitivement dans les agrégats.
+
 ## Types de transactions par type de compte
 
 | Type de compte | Type transaction | Nombre |
