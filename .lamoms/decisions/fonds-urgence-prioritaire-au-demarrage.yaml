@@ -1,0 +1,54 @@
+# Template de décision Lamoms (.lamoms/decisions/<decision-id>.yaml)
+decision_id: fonds-urgence-prioritaire-au-demarrage
+journey_id: premiere-ouverture
+# Décision transversale à objectif, point-de-situation et simulation.
+decision_type: produit
+question: Quelle priorité donner au fonds d'urgence avant les objectifs personnels au démarrage ?
+options:
+  - Constituer d'abord le minimum du fonds d'urgence, puis financer les objectifs personnels
+  - Financer le fonds d'urgence et les objectifs personnels simultanément dès le démarrage
+criteria: []
+value: >-
+  Au démarrage, si le fonds d'urgence n'atteint pas le minimum requis, toute
+  la capacité d'épargne disponible est consacrée à sa constitution. Le
+  financement des objectifs personnels est bloqué pendant cette phase :
+  l'utilisateur constitue d'abord sa protection minimale. Une fois ce minimum
+  effectivement constitué, les objectifs personnels peuvent commencer selon
+  leurs efforts mensuels parallèles et leurs dates d'atteinte calculées.
+  Cette priorité ne rétablit pas une file séquentielle entre les objectifs
+  personnels. Le montant minimal et sa méthode de détermination ne sont pas
+  encore décidés.
+time_to_value:
+estimated_effort:
+impact: >-
+  Première ouverture établit la situation et les comptes désignés par
+  l'utilisateur comme fonds d'urgence. L'expérience doit ensuite permettre
+  de suivre sa constitution avant de passer aux objectifs personnels ; les
+  parcours et leurs préconditions seront réconciliés après les arbitrages
+  restants. L'effort prévu ne prouve pas que la réserve existe déjà : la
+  progression doit distinguer le stock observé des montants projetés.
+  Le choix des comptes reste humain. L'ancienne référence à six mois de
+  dépenses n'est pas reprise comme seuil validé par cette décision.
+  Restent à définir le minimum, le passage du seuil et le comportement
+  après un retrait lorsque des objectifs personnels sont déjà en cours.
+  Cette décision de cadrage n'autorise aucun virement bancaire automatique.
+risks: []
+decision: continue
+rationale: >-
+  Le 2026-09-21, le maître de projet a rappelé que l'absence de fonds d'urgence
+  est l'un des problèmes fondateurs de Gestio. Il demande de constituer
+  cette protection en premier : au début, toute la capacité d'épargne doit
+  aller au fonds d'urgence et les objectifs viennent seulement après sa
+  constitution suffisante. Il a évoqué un minimum de protection sans
+  fixer de montant ou de formule. L'agent consigne la priorité sans choisir
+  ce seuil ni étendre automatiquement la règle à la reconstitution ultérieure.
+decided_by: user
+source_refs:
+  - docs/CADRAGE_PORTE_1.md
+  - .lamoms/journeys/premiere-ouverture.md
+  - .lamoms/decisions/objectifs-efforts-mensuels-paralleles.yaml
+  - "Conversation Codex 01a0be87-6de4-7810-ae2d-ec81c566bc65, 2026-09-21 : toute la capacité d'épargne au fonds d'urgence au début, puis les objectifs"
+parent_artifact_ids:
+  - objectifs-efforts-mensuels-paralleles
+status: accepted
+version: 1
