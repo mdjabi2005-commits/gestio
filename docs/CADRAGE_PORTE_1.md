@@ -20,6 +20,29 @@ règles métier. La porte de validation reste ouverte sur ces points ; les
 fiches, le PRD et les tasks ne sont pas déclarés validés.
 Le rapport ci-dessous conserve les constats et options de la première passe.
 
+## Confirmation suivante — consignée le 2026-09-21
+
+Le maître de projet confirme également **Point de situation comme parcours
+autonome de suivi, distinct d'Objectif**. Cette confirmation est conservée dans
+[point-de-situation-parcours-autonome.yaml](../.lamoms/decisions/point-de-situation-parcours-autonome.yaml).
+La nouvelle fiche [point-de-situation.md](../.lamoms/journeys/point-de-situation.md)
+contient un cadrage et un user-flow proposés, avec ses liens vers les autres
+parcours ; elle reste `draft`, sans validation UX.
+
+Les cinq identités retenues sont désormais : Première ouverture, Usage courant,
+Objectif, Point de situation et Simulation. Objectif porte la création et
+l'évaluation d'un projet financier ; Point de situation porte le suivi de sa
+trajectoire. L'accès sans objectif, les règles multi-objectifs, le fonds
+d'urgence et les autres arbitrages détaillés restent ouverts. Le PRD et les
+tasks attendent toujours les validations prévues.
+
+Contrôles exécutés lors de cette confirmation : `check journey
+.lamoms/journeys/point-de-situation.md` réussit ; `list journey --project gestio`
+liste cinq fiches `draft` ; `check journey --all` relève cinq fiches dont les
+quatre anciennes restent à corriger pour CRLF. La nouvelle fiche passe le
+contrôle. La commande `check` n'accepte pas `--project` : le premier essai avec
+cette option a été refusé, puis remplacé par le chemin explicite ci-dessus.
+
 ## Exécution et périmètre
 
 - Orchestration Astra ; paramètres demandés : `gpt-6-astra`, effort `high`.
@@ -74,7 +97,7 @@ Il ne constitue pas une analyse sémantique des parcours ni un verdict UX.
 | Sujet | Sources en tension | Décision à consigner après réponse humaine |
 |---|---|---|
 | Public et promesse de la première version | `gestion-pourquoi.md:45` cible les étudiants autonomes et le suivi de dérive ; la refondation, lignes 27–65, parle plus largement de comprendre sa situation pour décider de ses objectifs. | Confirmer le public V1 et la promesse de référence ; dater explicitement ce qui remplace l'ancien cadrage. |
-| Identité des parcours | Corpus : Première ouverture, Usage courant, Point de situation, Simulation. Fiches et brief : Première ouverture, Usage courant, Objectif, Simulation. | Objectif autonome : accepté par l'humain le 2026-09-20. Reste à fixer le propriétaire du suivi de trajectoire ; le découpage complet n'est pas encore définitif. |
+| Identité des parcours | Corpus : Première ouverture, Usage courant, Point de situation, Simulation. Fiches et brief initiaux : Première ouverture, Usage courant, Objectif, Simulation. | Objectif autonome accepté le 2026-09-20 ; Point de situation autonome confirmé, décision consignée le 2026-09-21. Cinq identités retenues ; leurs règles et flux détaillés restent à réconcilier. |
 | Fin de Première ouverture | Le corpus conduit jusqu'à la simulation, l'objectif et son financement ; la refondation, lignes 199–232, termine à la première situation puis Usage courant. | Dire si l'objectif est obligatoire à l'entrée, facultatif, ou repris dans un parcours distinct. |
 | Flux entre plusieurs objectifs | `gestion-modele.md:159` impose une file à priorité stricte ; la fiche Objectif et la refondation, ligne 126, permettent de préparer le suivant avec la marge après effort choisi. | Articuler file séquentielle et préparation du prochain objectif ; décider si des efforts simultanés sont permis. Ne pas traiter ces formulations comme une règle unique déjà établie. |
 | Fonds d'urgence | Corpus : fonds prioritaire et cible par défaut liée à six mois de vital. Refondation, lignes 153–165 et 234–240 : comptes désignés par l'utilisateur, solde réservé. | Définir le stock protégé, la cible éventuelle, l'alimentation et la reconstitution ; préciser ce qui se passe en l'absence de fonds. |
@@ -91,7 +114,7 @@ nécessaire de redemander chaque préférence déjà explicitement formulée.
 | Ensemble | Traitement proposé, soumis à validation |
 |---|---|
 | Les quatre fiches actuelles | Conserver pendant l'arbitrage. Première ouverture, Usage courant et Simulation ont un noyau commun aux deux cadrages. Le maintien d'Objectif comme fiche autonome est accepté le 2026-09-20. |
-| Une éventuelle fiche `point-de-situation` | Création uniquement si son identité autonome est retenue ; aucun fichier créé à ce stade. |
+| Fiche `point-de-situation` | Créée après confirmation humaine de son autonomie, avec cadrage proposé et statut `draft`. Les quatre fiches antérieures sont conservées. |
 | `gestion-*.md`, refondation et glossaires | Chevauchements de règles et de vocabulaire à résoudre. Garder les raisons historiques ; référencer ensuite la source retenue et les décisions canoniques. Aucun document entier n'est déclaré supprimable par cette analyse. |
 | Carte des écrans du corpus et `stitch-brief.md` | Deux découpages UX concurrents ; mettre à jour le brief après validation des parcours, sans en faire un contrat métier indépendant. |
 | Corpus `parcours-*.mermaid` et `.lamoms/graphs/*.mermaid` | Pas des doublons équivalents : les premiers décrivent les parcours UX, les seconds des raccordements techniques visant le checkpoint. Garder la distinction, expliciter date et nature attendue/observée. |
@@ -399,7 +422,12 @@ la progression (`PresentationPointDeSituation.kt:16`) : le raccordement entre
 épargne globale et épargne affectée nécessite une preuve dédiée. Le code
 présent ne prouve pas le contrat multi-objectifs récent.
 
-### 9. Options de découpage laissées à l'humain
+### 9. Options examinées et choix humain reçu
+
+Le choix humain reçu après cette analyse retient Objectif autonome et Point
+de situation autonome (option A pour ces deux identités). Les options B et C
+ci-dessous restent la trace de la comparaison initiale, pas des choix encore
+ouverts. Les conditions d'accès et le contenu détaillé restent à valider.
 
 | Option | Argument | Fiches et conséquence |
 |---|---|---|
@@ -407,9 +435,9 @@ présent ne prouve pas le contrat multi-objectifs récent.
 | B — Objectif intégré à Première ouverture | Conforme à la carte historique qui termine par Objectif et financement. | Conserver Première ouverture, Usage courant, Simulation ; créer/réorienter une fiche de suivi Point de situation. Décider du devenir d'`objectif.md` et de l'accès à la création après onboarding. Aucune suppression automatique. |
 | C — Objectif sous-parcours de Point de situation | Le suivi est dominé par l'objectif et ses conséquences. | Réorienter l'actuelle fiche vers un ensemble Point de situation + gestion d'objectif, avec accord explicite sur l'identifiant. Distinguer les préconditions créer/consulter/suivre. |
 
-Ces options ne constituent pas une recommandation imposée. Les quatre workers
-décrivent quatre axes d'analyse ; leur nombre ne fixe pas le nombre final de
-journeys. Il faut aussi décider si le suivi concerne un objectif actif ou
+Les quatre workers décrivent quatre axes d'analyse ; leur nombre ne fixe pas
+le nombre de journeys. Les deux confirmations humaines portent ce nombre à
+cinq. Il faut encore décider si le suivi concerne un objectif actif ou
 plusieurs, et s'il reste utile sans objectif.
 
 ### 10. Propositions de sections, non appliquées
@@ -515,7 +543,7 @@ uniquement après confirmation. Lien avec Première ouverture selon arbitrage.
 | `code_refs` | Fichiers réels listés ; calculs futurs uniquement dans attendu/dépendances. |
 | Preuves / journal / checkpoints | Référence inchangée à l'abandon, différence explicable, confirmation avant engagement, absence de double comptage ; reviewT puis validation humaine. |
 
-## Sortie de cette phase
+## Sortie de la première passe, avant les confirmations humaines
 
 Un seul fichier documentaire créé par l'orchestrateur : ce rapport. Aucune
 fiche, décision, maquette, source Kotlin, donnée utilisateur, PRD ou task

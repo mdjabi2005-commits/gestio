@@ -1,0 +1,38 @@
+# Template de décision Lamoms (.lamoms/decisions/<decision-id>.yaml)
+decision_id: point-de-situation-parcours-autonome
+journey_id: point-de-situation
+# cycle_id est facultatif pour une décision de cadrage.
+decision_type: cadrage
+question: Conserver Point de situation comme parcours autonome de suivi, distinct d'Objectif ?
+options:
+  - Parcours autonome de suivi, distinct d'Objectif
+  - Suivi intégré à un autre parcours
+criteria: []
+value:
+time_to_value:
+estimated_effort:
+impact: >-
+  Ajouter la fiche .lamoms/journeys/point-de-situation.md. Objectif conserve
+  la création et l'évaluation d'un projet financier ; Point de situation
+  porte le suivi de sa trajectoire et l'exploration des écarts.
+  Les cinq identités de parcours sont premiere-ouverture, usage-courant,
+  objectif, point-de-situation et simulation. Leur contenu détaillé,
+  leurs règles métier et leur validation UX restent à réconcilier.
+risks: []
+decision: continue
+rationale: >-
+  Décision consignée le 2026-09-21. Après avoir retenu Objectif comme parcours autonome,
+  le maître de projet a répondu « oui » à la question : « Souhaitez-vous
+  conserver Point de situation comme parcours autonome de suivi,
+  distinct d'Objectif ? ». Cette décision consigne cette confirmation
+  sans valider le PRD, les tasks ou les autres arbitrages métier.
+decided_by: user
+source_refs:
+  - docs/CADRAGE_PORTE_1.md
+  - .lamoms/decisions/objectif-parcours-autonome.yaml
+  - .lamoms/journeys/point-de-situation.md
+  - "Conversation Codex 01a0be87-6de4-7810-ae2d-ec81c566bc65 : confirmation utilisateur oui, consignée le 2026-09-21"
+parent_artifact_ids:
+  - objectif-parcours-autonome
+status: accepted
+version: 1
