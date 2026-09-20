@@ -549,6 +549,58 @@ Sources officielles :
 |---|---:|---:|---:|---:|---|
 | transfer | 100 | 100 | 82 | 82 | creditor, debtor |
 
+## Catégorisation Powens
+
+### Contrat documenté
+
+La catégorisation Powens est une fonctionnalité distincte de l'agrégation des
+transactions et n'est pas activée par défaut sur un domaine. Lorsqu'elle est
+active, `GET /users/{userId}/transactions?expand=categories` ajoute à chaque
+transaction une propriété `categories` sous forme de tableau d'objets :
+
+```text
+categories[]
+├── code        catégorie enfant
+└── parent_code famille parente ou null
+```
+
+La catégorisation Powens est donc une classification hiérarchique fournie par
+le fournisseur. Elle ne constitue pas, par elle-même, une pocket Gestio
+personnalisable. La documentation expose également une mise à jour des
+catégories via `POST /users/{userId}/transactions/{transactionId}`, mais cette
+écriture n'a pas été exécutée dans la mission de lecture seule ; la forme exacte
+du corps doit être vérifiée avant toute utilisation.
+
+### Résultat dans le corpus Sandbox
+
+Les expansions `categories` ont répondu HTTP 200 pour les dix comptes testés,
+mais la propriété n'était présente dans aucune des 1 139 transactions et aucun
+élément n'a été retourné. Le champ observé `transaction.id_category` est une
+extension distincte, avec une seule valeur distincte anonymisée ; il ne permet
+pas de reconstruire la hiérarchie `code` / `parent_code`.
+
+Conclusion : le contrat Powens permet de remplacer un moteur local de
+classification automatique, mais l'activation et la réception effective des
+catégories ne sont pas encore démontrées dans ce Sandbox.
+
+### Règle de modélisation proposée
+
+| Donnée Powens | Rôle Gestio | Règle |
+|---|---|---|
+| `categories[].parent_code` | Famille de classification | Conserver comme niveau parent, sans le transformer en pocket |
+| `categories[].code` | Catégorie fournisseur | Conserver le code et afficher un libellé humain mappé |
+| Tableau `categories[]` | Classification d'une transaction | Conserver le tableau ; ne pas l'écraser prématurément en catégorie unique |
+| Absence de `categories` | Classification indisponible | Afficher l'absence et garder la transaction classifiable par un fallback validé |
+
+Si l'activation Powens est confirmée, le concept de **pocket de gestion servant
+uniquement à classer les transactions** devient inutile. Il faudra alors
+supprimer ou désactiver ce seul mécanisme local, sans confondre cette décision
+avec les éventuelles poches d'épargne ou qualifications personnelles du
+produit.
+
+Source officielle : [Categorization](https://docs.powens.com/api-reference/products/data-aggregation/categorization)
+et [Bank transactions](https://docs.powens.com/api-reference/products/data-aggregation/bank-transactions).
+
 ## Expansions categories / attachments
 
 | Connexion | Compte | Type de compte | Expansion | HTTP | Pages | Transactions lues | Propriété présente | Transactions non vides | Éléments | Indicateurs fichier | Indicateurs lien | Structure JSON |
