@@ -182,11 +182,21 @@ Cette décision implique qu’il faudra revoir les concepts du glossaire et les 
 
 ## Données incomplètes ou ambiguës
 
-### 13. Que peut-on consulter quand certaines données manquent ?
+### 13. Que fait Gestio lorsqu’une transaction n’est pas suffisamment enrichie ?
 
-**À arbitrer.**
+**Décision retenue**
 
-Par exemple, les transactions sont disponibles mais pas leurs catégories : souhaite-t-on afficher les informations fiables et rendre indisponibles seulement les analyses concernées, ou bloquer le parcours jusqu’à résolution ?
+Une information d’enrichissement absente ou incorrecte, notamment une catégorie ou une sous-catégorie, ne rend pas la transaction bancaire elle-même inutilisable.
+
+Gestio conserve donc les faits disponibles sur la transaction — compte d’origine, montant, date, libellé et autres données bancaires disponibles — et distingue ces faits de leur enrichissement.
+
+Lorsqu’une catégorie est absente, indéterminée ou incorrecte et que l’utilisateur reconnaît l’origine de la transaction, Gestio lui propose les catégories et sous-catégories disponibles dans la taxonomie Powens afin qu’il puisse sélectionner celle qui correspond réellement à la transaction.
+
+L’utilisateur participe ainsi directement à l’enrichissement de ses données plutôt que Gestio d’inventer une information incertaine. La catégorisation corrigée peut ensuite être utilisée dans les analyses et dans la comparaison entre l’usage attendu d’un compte et les transactions qui y passent.
+
+Si l’utilisateur ne sait pas identifier la transaction, Gestio conserve l’incertitude au lieu de forcer une catégorisation arbitraire. Seules les analyses qui dépendent effectivement de cette information peuvent alors être limitées ou signalées comme incomplètes ; le reste des données et de l’application reste disponible.
+
+La documentation Powens permet de mettre à jour les métadonnées d’une transaction, notamment ses catégories. Le modèle cible est donc de réutiliser cette capacité lorsque la fonctionnalité de catégorisation Powens est disponible sur le domaine Gestio, plutôt que de maintenir une catégorisation contradictoire uniquement côté Gestio.
 
 ### 14. Comment traiter un virement dont la nature est incertaine ?
 
