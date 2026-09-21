@@ -132,21 +132,35 @@ Le corpus prévoit une notification hebdomadaire, avec un jour choisi par l’ut
 
 ### 11. Quelles simulations doivent être disponibles dès la première version ?
 
-**À arbitrer.**
+**Décision retenue**
 
-Possibilités actuellement présentes dans les documents :
+La première version conserve l’ensemble des possibilités de simulation identifiées :
 
 - changer l’effort mensuel ou le montant d’un objectif ;
-- modifier la répartition entre les pockets de dépenses ;
+- modifier la répartition ou l’organisation des dépenses ;
 - envisager une dépense ponctuelle ;
 - ajouter, modifier ou supprimer une dépense récurrente ;
 - mesurer l’effet d’un imprévu sur le fonds d’urgence et sa reconstitution.
 
-### 12. Comment l’utilisateur organise-t-il ses pockets de dépenses ?
+La formulation liée aux « pockets de dépenses » est abandonnée conformément à la décision de la question 12. La capacité de simulation est conservée, mais devra s’appuyer sur le nouveau modèle de catégorisation des dépenses.
 
-**À arbitrer.**
+### 12. Comment l’utilisateur organise-t-il ses dépenses ?
 
-Gestio propose-t-il une organisation initiale à partir des catégories disponibles, que l’utilisateur ajuste, ou l’utilisateur construit-il lui-même ses pockets ? Doit-il pouvoir regrouper plusieurs catégories dans une même pocket ?
+**Décision retenue**
+
+Le concept métier de **pocket de dépense** est retiré de Gestio.
+
+Ce concept provenait principalement du modèle Revolut, où une Pocket constitue un mécanisme permettant de mettre de l’argent à part depuis le compte principal et, selon sa configuration, de dépenser depuis cette réserve. Ce fonctionnement est propre au produit bancaire et ne doit pas devenir une abstraction générique de Gestio.
+
+Gestio doit plutôt s’appuyer sur la catégorisation des transactions disponible dans les données bancaires. Dans le modèle Powens, le compte bancaire possède son propre type — notamment `checking` pour un compte courant — tandis que les catégories et sous-catégories sont associées aux **transactions** du compte et non au compte lui-même.
+
+La nouvelle base de travail devient donc :
+
+`compte bancaire → transactions → catégorie / sous-catégorie`
+
+L’utilisateur organise et comprend ses dépenses à partir de ces catégories et sous-catégories, avec la possibilité pour Gestio de permettre des ajustements lorsque cela est nécessaire.
+
+Cette décision implique qu’il faudra revoir les concepts du glossaire et les calculs encore exprimés en termes de pockets, notamment la qualification vital / plaisir ainsi que les définitions de SB et SPP. Cet impact n’est pas arbitré ici : il devra être traité explicitement lors de la consolidation du modèle métier.
 
 ## Données incomplètes ou ambiguës
 
