@@ -200,6 +200,12 @@ La documentation Powens permet de mettre à jour les métadonnées d’une trans
 
 ### 14. Comment traiter un virement dont la nature est incertaine ?
 
-**À arbitrer.**
+**Décision retenue**
 
-Si Gestio ne sait pas s’il s’agit d’un transfert entre comptes personnels ou d’un véritable revenu/d’une dépense, faut-il demander une confirmation avant de l’intégrer aux calculs concernés ? Que doit voir l’utilisateur en attendant ?
+Lorsqu’un virement ne peut pas être identifié de manière fiable comme un transfert entre comptes personnels, un revenu ou une dépense, Gestio demande confirmation à l’utilisateur.
+
+Si l’utilisateur se souvient de la nature du mouvement, il peut la préciser et Gestio utilise ensuite cette qualification dans les calculs concernés.
+
+Si l’utilisateur ne sait pas ou ne se souvient plus de la nature du virement, Gestio n’invente pas de qualification. La transaction reste conservée comme fait bancaire observé, mais elle est ignorée dans les calculs qui nécessitent de savoir s’il s’agit d’un transfert interne, d’un revenu ou d’une dépense.
+
+L’objectif est d’éviter qu’une hypothèse incertaine fausse la situation financière calculée tout en conservant la donnée source pour consultation ou qualification ultérieure.
