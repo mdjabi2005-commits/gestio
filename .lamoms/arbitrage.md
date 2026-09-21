@@ -110,9 +110,11 @@ La situation financière globale reste accessible et utile, mais elle constitue 
 
 ### 8. Que montre ce parcours avant l’existence d’objectifs personnels ?
 
-**À arbitrer.**
+**Décision différée.**
 
-Pendant la constitution du fonds d’urgence, doit-il déjà permettre de suivre le fonds et l’évolution de la situation, ou devient-il accessible seulement après cette étape ?
+L’écran / parcours « point de situation » n’a pas encore été repris dans la refonte actuelle et doit d’abord être repensé avant de décider précisément ce qu’il montre pendant la constitution du fonds d’urgence ou après la création d’objectifs.
+
+Cette question sera réouverte lors de la refonte de cet écran afin d’éviter de figer un comportement à partir d’une ancienne conception qui n’est plus représentative du produit actuel.
 
 ### 9. Comment suivre plusieurs objectifs ?
 
