@@ -16,7 +16,7 @@ Formule de référence :
 
 `fonds d’urgence cible = nombre de mois de couverture choisi × dépenses vitales mensuelles`
 
-Le lien avec le modèle Gestio se fait naturellement via le **SB**, puisqu’il représente les montants affectés aux pockets qualifiées comme vitales.
+Le lien avec le modèle Gestio se fait naturellement via le **SB**, puisqu’il représente les montants affectés aux dépenses qualifiées comme vitales.
 
 Gestio ne décide donc pas qu’un nombre donné de mois est « le bon montant ». Il donne le contexte, montre ce que représente chaque niveau de couverture et laisse l’utilisateur choisir.
 
@@ -144,23 +144,39 @@ La première version conserve l’ensemble des possibilités de simulation ident
 
 La formulation liée aux « pockets de dépenses » est abandonnée conformément à la décision de la question 12. La capacité de simulation est conservée, mais devra s’appuyer sur le nouveau modèle de catégorisation des dépenses.
 
-### 12. Comment l’utilisateur organise-t-il ses dépenses ?
+### 12. Comment l’utilisateur organise-t-il ses dépenses et ses comptes courants ?
 
 **Décision retenue**
 
-Le concept métier de **pocket de dépense** est retiré de Gestio.
+Le concept métier de **pocket de dépense** est retiré de Gestio. Gestio distingue désormais clairement le support financier, l’usage que l’utilisateur veut en faire et la nature réelle des transactions qui y passent.
 
-Ce concept provenait principalement du modèle Revolut, où une Pocket constitue un mécanisme permettant de mettre de l’argent à part depuis le compte principal et, selon sa configuration, de dépenser depuis cette réserve. Ce fonctionnement est propre au produit bancaire et ne doit pas devenir une abstraction générique de Gestio.
-
-Gestio doit plutôt s’appuyer sur la catégorisation des transactions disponible dans les données bancaires. Dans le modèle Powens, le compte bancaire possède son propre type — notamment `checking` pour un compte courant — tandis que les catégories et sous-catégories sont associées aux **transactions** du compte et non au compte lui-même.
-
-La nouvelle base de travail devient donc :
+Le modèle de travail devient :
 
 `compte bancaire → transactions → catégorie / sous-catégorie`
 
-L’utilisateur organise et comprend ses dépenses à partir de ces catégories et sous-catégories, avec la possibilité pour Gestio de permettre des ajustements lorsque cela est nécessaire.
+avec, côté Gestio, un rôle ou un usage attendu pouvant être associé par l’utilisateur à un compte courant.
 
-Cette décision implique qu’il faudra revoir les concepts du glossaire et les calculs encore exprimés en termes de pockets, notamment la qualification vital / plaisir ainsi que les définitions de SB et SPP. Cet impact n’est pas arbitré ici : il devra être traité explicitement lors de la consolidation du modèle métier.
+Il faut donc distinguer trois niveaux :
+
+- **type du compte** : nature bancaire du support, par exemple un compte courant ;
+- **usage attendu du compte** : rôle que l’utilisateur souhaite donner à ce compte dans son organisation personnelle, par exemple « courses » ou « voiture » ;
+- **catégorie / sous-catégorie d’une transaction** : nature de la dépense ou du revenu réellement observé sur ce compte.
+
+Les catégories Powens restent attachées aux transactions et non au compte bancaire lui-même. Le rôle attribué au compte est donc un concept propre à Gestio : il sert à exprimer l’intention d’organisation de l’utilisateur sans modifier la nature bancaire du compte ni la catégorisation réelle de ses transactions.
+
+Cette séparation permet à Gestio de détecter les écarts entre l’usage prévu d’un compte et son usage réel.
+
+Exemple :
+
+- compte A : usage attendu « courses » ;
+- compte B : usage attendu « voiture » ;
+- une transaction classée « courses / supermarché » apparaît sur le compte B.
+
+Gestio peut alors constater que cette transaction ne correspond pas à l’usage normalement prévu pour le compte B et le signaler à l’utilisateur. L’objectif n’est pas d’empêcher la transaction ni de la reclasser automatiquement, mais de rendre visible l’écart afin que l’utilisateur puisse comprendre et mieux organiser ses comptes.
+
+Ce modèle évite de fusionner les rôles des objets : le compte reste un support financier, la transaction reste un mouvement observé, la catégorie décrit ce mouvement, et le rôle du compte exprime l’organisation voulue par l’utilisateur.
+
+Cette décision implique qu’il faudra revoir les concepts du glossaire et les calculs encore exprimés en termes de pockets, notamment la qualification vital / plaisir ainsi que les définitions de SB et SPP. Cet impact devra être traité explicitement lors de la consolidation du modèle métier.
 
 ## Données incomplètes ou ambiguës
 
