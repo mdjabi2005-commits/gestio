@@ -98,9 +98,13 @@ L’ordre retenu est donc :
 
 ### 7. Quelle réponse doit dominer l’écran quotidien ?
 
-**À arbitrer.**
+**Décision retenue**
 
-« Combien puis-je encore dépenser ? » ou « Où en est ma situation financière ? » Les deux peuvent exister, mais laquelle doit être comprise en premier ?
+La réponse qui doit être comprise en premier sur l’écran quotidien est : **« Combien puis-je encore dépenser ? »**
+
+L’écran quotidien doit donc mettre en avant le budget libre et l’argent réellement utilisable à l’instant présent sans compromettre les dépenses déjà attendues.
+
+La situation financière globale reste accessible et utile, mais elle constitue un niveau d’information secondaire par rapport à cette question immédiate d’usage quotidien.
 
 ## Point de situation
 
