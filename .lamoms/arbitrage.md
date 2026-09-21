@@ -176,6 +176,8 @@ Gestio peut alors constater que cette transaction ne correspond pas à l’usage
 
 Ce modèle évite de fusionner les rôles des objets : le compte reste un support financier, la transaction reste un mouvement observé, la catégorie décrit ce mouvement, et le rôle du compte exprime l’organisation voulue par l’utilisateur.
 
+La relation entre un rôle de compte et les catégories ou sous-catégories compatibles n’est pas figée à ce stade. Gestio doit d’abord exploiter la taxonomie réellement disponible via Powens. Si cette taxonomie permet de couvrir correctement les usages attendus, elle sert directement de base. Si certains cas ne sont pas suffisamment représentés, Gestio pourra ajouter une couche métier d’adaptation sans modifier les catégories sources fournies par Powens.
+
 Cette décision implique qu’il faudra revoir les concepts du glossaire et les calculs encore exprimés en termes de pockets, notamment la qualification vital / plaisir ainsi que les définitions de SB et SPP. Cet impact devra être traité explicitement lors de la consolidation du modèle métier.
 
 ## Données incomplètes ou ambiguës
