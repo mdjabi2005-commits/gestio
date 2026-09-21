@@ -84,9 +84,17 @@ Elle n’est donc pas limitée aux étudiants financièrement autonomes. Le beso
 
 ### 6. Comment commence la première ouverture ?
 
-**À arbitrer.**
+**Décision retenue**
 
-Est-ce que Gestio commence par importer les données, puis échange avec l’utilisateur sur sa situation ? Ou conserve-t-on les questions préalables sur sa perception de son épargne et ses intentions ?
+Gestio conserve les questions préalables avant l’import des données financières.
+
+La première ouverture commence donc par un échange avec l’utilisateur sur sa perception de son épargne, sa situation et ses intentions. Ces réponses constituent un premier contexte exprimé par l’utilisateur avant que Gestio n’observe ses données financières réelles.
+
+L’import des données intervient ensuite. Gestio peut alors confronter la perception initiale de l’utilisateur aux faits observés, sans remplacer ce qu’il a exprimé au départ.
+
+L’ordre retenu est donc :
+
+`questions initiales → import des données → observation et analyse de la situation réelle`
 
 ### 7. Quelle réponse doit dominer l’écran quotidien ?
 
