@@ -76,9 +76,11 @@ Gestio accompagne la décision en montrant les conséquences des nouveaux effort
 
 ### 5. À qui s’adresse prioritairement la première version ?
 
-**À arbitrer.**
+**Décision retenue**
 
-Aux étudiants financièrement autonomes, comme dans le cadrage initial, ou plus largement aux personnes souhaitant comprendre et organiser leurs finances ?
+La première version de Gestio s’adresse plus largement aux personnes souhaitant comprendre et organiser leurs finances.
+
+Elle n’est donc pas limitée aux étudiants financièrement autonomes. Le besoin central retenu est la volonté de mieux comprendre sa situation financière réelle, puis de l’organiser de manière cohérente avec ses dépenses, son épargne et ses objectifs.
 
 ### 6. Comment commence la première ouverture ?
 
