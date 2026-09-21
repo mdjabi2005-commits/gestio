@@ -42,13 +42,17 @@ Gestio doit rendre ce décalage visible et recalculer les projections des object
 
 Si la capacité d’épargne disponible est inférieure ou égale au montant nécessaire pour reconstituer le fonds, elle est entièrement affectée au fonds d’urgence pour la période concernée.
 
-Le traitement d’un éventuel surplus de capacité d’épargne au moment où le minimum est atteint reste volontairement ouvert et relève de la question 3.
-
 ### 3. Que faire du surplus lorsque le minimum est atteint ?
 
-**À arbitrer.**
+**Décision retenue**
 
-Exemple : il manque 200 € au fonds et la capacité d’épargne du mois est de 800 €. Les 600 € restants deviennent-ils disponibles immédiatement pour les objectifs, ou seulement à partir du mois suivant ?
+Le surplus devient disponible immédiatement pour les objectifs dès que le fonds d’urgence atteint son minimum, sans attendre le mois suivant.
+
+La priorité au fonds d’urgence s’applique donc uniquement au montant nécessaire pour atteindre sa cible. Le reste de la capacité d’épargne de la même période est aussitôt réaffectable aux objectifs.
+
+Exemple : si 200 € sont nécessaires pour reconstituer le fonds d’urgence et que la capacité d’épargne du mois est de 800 €, 200 € sont affectés au fonds et les 600 € restants sont immédiatement disponibles pour les objectifs.
+
+Cette règle maintient le principe selon lequel la capacité d’épargne est entièrement utilisée, tout en évitant de bloquer inutilement le financement des objectifs une fois le niveau de sécurité rétabli.
 
 ### 4. Que faire quand la capacité d’épargne ne couvre plus les efforts choisis ?
 
