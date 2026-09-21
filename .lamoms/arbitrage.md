@@ -30,9 +30,19 @@ Cette décision respecte le principe de Gestio : fournir assez de contexte pour 
 
 ### 2. Que faire si le fonds redescend sous ce minimum ?
 
-**À arbitrer.**
+**Décision retenue**
 
-Quand des objectifs sont déjà en cours, faut-il suspendre leur financement pour reconstituer le fonds en priorité, comme au démarrage ?
+Lorsque le fonds d’urgence redescend sous son minimum choisi, sa reconstitution redevient prioritaire sur le financement courant des objectifs.
+
+La capacité d’épargne reste entièrement utilisée : elle n’est pas réduite ni laissée sans affectation. Son affectation est temporairement modifiée pour reconstituer le fonds d’urgence.
+
+Les objectifs existants ne sont ni supprimés ni annulés. Les sommes déjà affectées à ces objectifs restent intactes, mais leur financement futur est décalé tant que le fonds d’urgence n’a pas retrouvé son minimum.
+
+Gestio doit rendre ce décalage visible et recalculer les projections des objectifs concernés afin que l’utilisateur comprenne l’impact de cette priorité sur leur calendrier.
+
+Si la capacité d’épargne disponible est inférieure ou égale au montant nécessaire pour reconstituer le fonds, elle est entièrement affectée au fonds d’urgence pour la période concernée.
+
+Le traitement d’un éventuel surplus de capacité d’épargne au moment où le minimum est atteint reste volontairement ouvert et relève de la question 3.
 
 ### 3. Que faire du surplus lorsque le minimum est atteint ?
 
