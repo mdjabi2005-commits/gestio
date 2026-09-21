@@ -56,9 +56,21 @@ Cette règle maintient le principe selon lequel la capacité d’épargne est en
 
 ### 4. Que faire quand la capacité d’épargne ne couvre plus les efforts choisis ?
 
-**À arbitrer.**
+**Décision retenue**
 
-Exemple : les objectifs totalisent 800 €/mois, mais la capacité tombe à 600 €. Que doit montrer Gestio et demander à l’utilisateur pour rééquilibrer son plan ? La question porte sur l’accompagnement, pas sur des changements effectués à son insu.
+Gestio ne rééquilibre pas automatiquement les objectifs et ne modifie aucun effort mensuel à l’insu de l’utilisateur.
+
+Lorsque la somme des efforts mensuels choisis pour les objectifs dépasse la capacité d’épargne disponible, Gestio montre clairement l’écart entre les deux et indique que le plan actuel n’est plus compatible avec la capacité d’épargne observée.
+
+Gestio propose alors à l’utilisateur de modifier lui-même les efforts mensuels de ses objectifs afin que leur somme redevienne compatible avec la capacité d’épargne disponible.
+
+La contrainte de référence devient donc :
+
+`Somme des efforts mensuels des objectifs ≤ capacité d’épargne disponible`
+
+Exemple : si les objectifs représentent 800 €/mois alors que la capacité d’épargne est désormais de 600 €/mois, Gestio affiche l’écart de 200 € et invite l’utilisateur à revoir la répartition des efforts mensuels entre ses objectifs jusqu’à revenir à un total de 600 € ou moins.
+
+Gestio accompagne la décision en montrant les conséquences des nouveaux efforts sur les projections et échéances des objectifs, mais ne choisit pas à la place de l’utilisateur quels objectifs doivent être ralentis.
 
 ## Première utilisation et consultation
 
