@@ -1,0 +1,54 @@
+decision_id: base-visuelle-gelee-avant-powens
+journey_id: null
+decision_type: produit
+question: Quelle base documentaire et visuelle retenir avant l'intégration Powens ?
+options:
+  - Figer la base actuelle et reprendre les finitions après l'intégration Powens
+  - Continuer à modifier les maquettes avant l'intégration Powens
+criteria:
+  - cohérence avec les retours de revue des écrans
+  - lisibilité en cinq secondes
+  - absence de doublons entre les parcours
+  - possibilité de compléter les données réelles après Powens
+value: >-
+  Figer la base actuelle jusqu'à l'intégration Powens. Le point de situation est
+  un rendez-vous hebdomadaire simple centré sur l'état et l'avancement des
+  objectifs ; il n'affiche ni graphique, ni moyenne sur douze mois, ni bloc
+  redondant sur le fonds d'urgence. Les transactions non catégorisées forment
+  une file unique, signalée par notification avec le choix de les traiter
+  maintenant ou au prochain point. Les catégories de dépenses sont le
+  vocabulaire affiché ; pocket d'épargne reste réservé aux comptes et supports
+  d'épargne. La gestion des objectifs, leur détail avec avancement et l'ajout
+  par popup restent distincts.
+time_to_value: court
+estimated_effort: faible
+impact: >-
+  Les documents de design, glossaire, modèle, parcours et diagrammes décrivent
+  la même base. Les fiches parcours peuvent rester en draft : leur exécution,
+  leur contrat de données Powens et leur validation UX humaine seront complétés
+  après l'intégration, sans rouvrir les rôles d'écran par défaut.
+risks:
+  - certaines règles de catégories et sous-catégories restent dépendantes des données Powens réelles
+  - les seuils exacts des états d'objectif restent à valider sur les données intégrées
+  - le prototype conserve encore un champ visuel d'échéance ; la règle retenue reste que la date est calculée depuis l'effort mensuel, à traiter pendant les finitions
+  - les finitions visuelles sont volontairement reportées
+decision: continue
+rationale: >-
+  Le 2026-09-23, le maître de projet a demandé de régler les divergences
+  documentaires, de figer la documentation et de ne plus modifier les maquettes
+  avant l'intégration Powens. Les éléments non déterminables sans les données
+  réelles restent explicitement reportés aux finitions.
+decided_by: user
+source_refs:
+  - docs/knowledge/profiles/gestio/context/DESIGN.md
+  - docs/knowledge/profiles/gestio/context/gestion-point-de-situation.md
+  - docs/knowledge/profiles/gestio/context/gestion-glossaire.md
+  - .lamoms/journeys/point-de-situation.md
+  - .lamoms/journeys/objectif.md
+  - .lamoms/decisions/point-de-situation-parcours-autonome.yaml
+  - .lamoms/decisions/objectif-parcours-autonome.yaml
+  - .lamoms/decisions/objectifs-efforts-mensuels-paralleles.yaml
+  - .lamoms/lab/src/screens/PointSituation.tsx
+  - .lamoms/lab/src/screens/ObjectiveManagement.tsx
+status: accepted
+version: 1

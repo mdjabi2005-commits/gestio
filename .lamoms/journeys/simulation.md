@@ -15,7 +15,7 @@ journey:
   artifact_decision: "La fiche conserve la définition durable du parcours. Les scénarios, hypothèses temporaires, paramètres simulés et résultats calculés appartiennent à l'état métier de Gestio et ne sont pas dupliqués comme artefacts documentaires parallèles. Lorsqu'une dépense simulée est explicitement retenue par l'utilisateur comme dépense future réelle, elle quitte l'état purement hypothétique et devient un engagement planifié exploitable par usage-courant."
   scope_in:
     - "Partir d'une situation financière de référence déjà construite."
-    - "Permettre une simulation d'objectif en faisant varier notamment le montant cible, l'échéance ou la somme déjà affectée."
+    - "Permettre une simulation d'objectif en faisant varier notamment le montant cible, l'effort mensuel ou la somme déjà affectée."
     - "Permettre de tester des hypothèses de répartition portant sur SB ou SPP et recalculer CP tout en conservant SH comme référence fixe dans ce type de scénario."
     - "Permettre de simuler une dépense ponctuelle future en définissant au minimum son montant et son échéance afin d'en mesurer les conséquences avant de la planifier."
     - "Permettre de simuler l'ajout, la suppression ou la modification d'une dépense récurrente, notamment un abonnement."
@@ -27,7 +27,7 @@ journey:
     - "Permettre une simulation d'imprévu financier hypothétique."
     - "Lors d'un imprévu simulé, montrer quelle part du choc peut être absorbée par le fonds d'urgence, quelle part reste à absorber et l'impact sur la situation ou les objectifs."
     - "Permettre de choisir une durée de reconstitution du fonds d'urgence et calculer le montant mensuel correspondant."
-    - "Comparer cet effort de reconstitution à la marge disponible après l'effort de l'objectif courant afin de distinguer une échéance inchangée, un décalage temporaire ou une capacité insuffisante."
+    - "Comparer cet effort de reconstitution à la marge disponible après la somme des efforts d'objectifs afin de distinguer une date inchangée, un décalage temporaire ou une capacité insuffisante."
     - "Distinguer clairement les faits observés, les engagements planifiés, les projections calculées et les possibilités simulées."
     - "Permettre à l'utilisateur de continuer à modifier le scénario, de revenir à la référence, de quitter sans changement ou de retenir explicitement certains changements."
   scope_out:
@@ -53,8 +53,8 @@ user_flow:
       visible_result: "Gestio distingue au minimum une simulation liée à un objectif, une simulation de répartition, une dépense future ponctuelle ou récurrente et une simulation d'imprévu, sans présenter ces scénarios comme des événements réels."
       possible_error: "Le scénario choisi nécessite des données qui ne sont pas disponibles ; Gestio doit rendre cette limite explicite."
       state: expected
-    - action: "Dans une simulation d'objectif, l'utilisateur modifie un ou plusieurs paramètres tels que le montant cible, l'échéance ou la somme déjà affectée."
-      visible_result: "Gestio recalcule le reste à financer, l'effort ou le délai associé, la part de capacité d'épargne (CP) mobilisée et l'écart éventuel par rapport à la situation de référence."
+    - action: "Dans une simulation d'objectif, l'utilisateur modifie un ou plusieurs paramètres tels que le montant cible, l'effort mensuel ou la somme déjà affectée."
+      visible_result: "Gestio recalcule le reste à financer, la durée et la date d'atteinte associées, la part de capacité d'épargne (CP) mobilisée et l'écart éventuel par rapport à la situation de référence."
       possible_error: "Une valeur simulée est incohérente ou inexploitable ; Gestio doit signaler le paramètre concerné sans altérer la référence."
       state: expected
     - action: "Dans une simulation de répartition, l'utilisateur teste une variation de SB ou de SPP."
@@ -74,7 +74,7 @@ user_flow:
       possible_error: "Le fonds d'urgence ou certaines données nécessaires ne sont pas connus ; Gestio doit distinguer clairement ce qui peut être calculé de ce qui reste incertain."
       state: expected
     - action: "L'utilisateur choisit la durée de reconstitution du fonds après le choc."
-      visible_result: "Gestio calcule le montant à remettre de côté chaque mois. Si ce montant tient dans la marge après l'effort de l'objectif courant, l'échéance de cet objectif reste inchangée ; s'il dépasse la capacité totale, le scénario est présenté comme insuffisant plutôt que converti en délai aberrant."
+      visible_result: "Gestio calcule le montant à remettre de côté chaque mois. Si ce montant tient dans la marge après la somme des efforts d'objectifs, les dates restent inchangées ; s'il dépasse la capacité totale, le scénario est présenté comme insuffisant plutôt que converti en délai aberrant."
       possible_error: "La durée est absente, nulle ou incompatible avec la capacité disponible ; Gestio doit rendre l'insuffisance visible et laisser l'utilisateur modifier l'hypothèse."
       state: expected
     - action: "L'utilisateur consulte la comparaison entre référence et scénario."
@@ -202,7 +202,7 @@ progress:
 - Une dépense ponctuelle peut être simulée avec un montant et une échéance afin d'en mesurer l'impact avant décision.
 - Une dépense récurrente peut être ajoutée, modifiée ou supprimée dans un scénario. Son impact mensuel permet de comprendre sa soutenabilité ; son coût cumulé, notamment annuel pour un abonnement stable, permet de comprendre l'engagement dans le temps.
 - Une dépense simulée ne devient une dépense planifiée que lorsque l'utilisateur la retient explicitement comme engagement futur réel. À partir de ce moment, elle doit pouvoir être prise en compte par usage-courant dans les sorties futures connues et le budget libre.
-- La simulation d'objectif explore notamment montant, échéance et somme déjà affectée ; la simulation d'imprévu mesure l'absorption du choc par le fonds d'urgence puis son impact résiduel.
-- Pour une reconstitution d'urgence, le montant mensuel simulé correspond au choc réparti sur la durée choisie. La comparaison se fait avec la CP totale et avec la marge après l'effort de l'objectif courant : une reconstitution couverte par la marge ne décale pas l'objectif ; une reconstitution supérieure à la CP rend le scénario insuffisant.
+- La simulation d'objectif explore notamment montant, effort mensuel et somme déjà affectée ; la date d'atteinte est un résultat calculé. La simulation d'imprévu mesure l'absorption du choc par le fonds d'urgence puis son impact résiduel.
+- Pour une reconstitution d'urgence, le montant mensuel simulé correspond au choc réparti sur la durée choisie. La comparaison se fait avec la CP totale et avec la marge après la somme des efforts d'objectifs : une reconstitution couverte par la marge ne décale pas les dates ; une reconstitution supérieure à la CP rend le scénario insuffisant.
 - Le résultat essentiel du parcours est la comparaison entre référence et scénario, pas seulement l'affichage d'une nouvelle valeur calculée.
 - La planification d'une dépense, l'ajustement et l'imprévu ne sont pas des parcours autonomes : ils sont traités comme possibilités ou situations à l'intérieur des quatre journeys de la refondation.

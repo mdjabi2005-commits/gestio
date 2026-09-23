@@ -26,47 +26,48 @@ journey_id: point-de-situation
 project_id: gestio
 title: "Point de situation — suivre ma trajectoire"
 journey:
-  intent: "Permettre à l'utilisateur de comprendre l'évolution de sa trajectoire financière par rapport à un objectif suivi, puis d'explorer volontairement ce qui contribue aux écarts."
+  intent: "Permettre à l'utilisateur de faire un contrôle hebdomadaire simple de ses objectifs, de voir ce qui est atteint, à jour ou à rattraper, puis de traiter les transactions qui attendent une qualification."
   actor: "Utilisateur de Gestio souhaitant faire le point sur sa trajectoire."
-  trigger: "Consultation volontaire depuis l'usage courant ou l'objectif ; entrée par notification hebdomadaire décrite dans le corpus, à réconcilier avant validation du flux."
-  expected_outcome: "L'utilisateur comprend sa progression, les limites des observations et les conséquences projetées, et choisit s'il souhaite examiner une pocket ou explorer un ajustement."
-  artifact_decision: "La fiche conserve le contrat documentaire du suivi. Les objectifs, affectations, transactions, courbes et arbitrages restent des données métier ; les décisions de cadrage sont conservées dans .lamoms/decisions/."
+  trigger: "Notification hebdomadaire ou ouverture volontaire depuis l'usage courant, un objectif ou une alerte de transaction non catégorisée."
+  expected_outcome: "L'utilisateur sait quels objectifs sont atteints, à jour, à commencer ou à rattraper ; il traite les transactions en attente ou quitte sans modification automatique."
+  artifact_decision: "La fiche conserve le contrat documentaire du suivi. Les objectifs, affectations et transactions restent des données métier ; les décisions de cadrage sont conservées dans .lamoms/decisions/. Les maquettes et le périmètre visuel sont gelés jusqu'à l'intégration Powens."
   scope_in:
-    - "Consulter la progression d'un objectif suivi et comparer l'épargne affectée observée à sa référence sur une période explicite."
-    - "Présenter les écarts et leurs conséquences temporelles sans jugement, avec les limites des données et projections."
-    - "Explorer volontairement les enveloppes, une pocket puis ses transactions pour comprendre les contributions."
-    - "Accéder aux arbitrages ou à une simulation sans appliquer automatiquement un ajustement."
+    - "Consulter la progression de chaque objectif suivi, avec son montant affecté, sa cible, sa barre et son état."
+    - "Présenter un bilan hebdomadaire lisible sans graphique, moyenne sur douze mois ou répétition du fonds d'urgence."
+    - "Afficher une file unique de transactions non catégorisées ou à confirmer lorsqu'elle n'est pas vide."
+    - "Ouvrir la qualification d'une transaction ou le détail d'un objectif sans appliquer automatiquement un ajustement."
   scope_out:
     - "Créer ou évaluer initialement un objectif : cette responsabilité appartient au parcours autonome objectif."
-    - "Remplacer le budget libre de l'usage courant par une mesure de trajectoire."
+    - "Remplacer le budget libre de l'usage courant par une mesure de suivi."
     - "Modifier automatiquement un objectif, une affectation d'épargne ou une enveloppe."
-    - "Fixer ici les règles encore ouvertes d'allocation multi-objectifs, de fonds d'urgence ou d'accès sans objectif."
+    - "Fixer ici le contrat détaillé des catégories et sous-catégories Powens, ou les règles d'affectation financière."
 
 user_flow:
   preconditions:
     - "Disposer d'une situation financière exploitable ; ses lacunes restent visibles."
-    - "Pour la lecture d'une trajectoire d'objectif, disposer d'un objectif et d'une référence identifiables. Le comportement sans objectif reste à arbitrer."
+    - "Disposer d'au moins un objectif ou d'une transaction en attente ; les données indisponibles restent visibles."
   steps:
     - action: "Ouvrir le point de situation."
-      visible_result: "La période et l'objectif suivi sont identifiables ; les données indisponibles sont signalées."
-      possible_error: "Objectif absent, observations insuffisantes ou données non actualisées ; comportement détaillé à valider."
+      visible_result: "La date du contrôle et le bilan hebdomadaire sont identifiables ; les données indisponibles sont signalées."
+      possible_error: "Aucun objectif ou aucune transaction en attente ; Gestio affiche l'état vide sans inventer de conclusion."
       state: expected
-    - action: "Lire la progression et la comparaison avec la référence."
-      visible_result: "L'épargne affectée, les courbes disponibles et une explication de la différence sont présentées avec leur période et leurs limites."
-      possible_error: "Une observation ou une référence manquante empêche une comparaison fiable ; elle n'est pas remplacée silencieusement par zéro."
+    - action: "Lire le bilan puis l'avancement des objectifs."
+      visible_result: "Chaque objectif affiche son état — atteint, à jour, à commencer ou à rattraper — avec le montant affecté, la cible et la progression."
+      possible_error: "Une observation ou une échéance manque ; l'état n'est pas remplacé silencieusement par une valeur inventée."
       state: expected
-    - action: "Explorer, si nécessaire, les enveloppes puis une pocket et ses transactions."
-      visible_result: "La comparaison dépensé/prévu et les mouvements explicatifs permettent de comprendre la contribution de la pocket."
-      possible_error: "Classement, affectation ou historique incomplet ; une contribution peut rester non déterminée."
+    - action: "Traiter une transaction en attente, si la file existe."
+      visible_result: "Le lien Traiter maintenant ouvre la qualification avec le libellé d'origine et les catégories et sous-catégories proposées par Powens."
+      possible_error: "Powens ne propose pas de classement exploitable ; la transaction reste en attente et Gestio ne choisit pas à la place de l'utilisateur."
       state: expected
-    - action: "Choisir de traiter un arbitrage, d'explorer une simulation ou de quitter."
+    - action: "Ouvrir le détail d'un objectif ou quitter le rendez-vous."
       visible_result: "L'utilisateur rejoint l'action choisie ; la simple consultation ne modifie pas sa situation de référence."
       possible_error: "Action indisponible ou données insuffisantes ; aucune modification automatique."
       state: expected
-  success_result: "L'utilisateur comprend sa progression et ses limites et choisit librement la suite ; cette proposition de flux reste à valider humainement."
+  success_result: "L'utilisateur sait où en est chaque objectif, traite les transactions en attente lorsqu'il le souhaite et termine le rendez-vous sans surcharge."
   exit_conditions:
     - "Retour à l'usage courant ou à l'objectif sans changement."
-    - "Entrée volontaire dans simulation pour explorer un ajustement."
+    - "Ouverture du détail d'un objectif."
+    - "Qualification d'une ou plusieurs transactions en attente."
 
 execution_flow:
   - user_action:
@@ -153,10 +154,10 @@ progress:
       validated_at:
       decision: "Proposition documentaire issue du corpus ; aucune preuve d'exécution ou validation UX."
   rupture:
-    section: journey
-    reason: "Le découpage autonome est accepté. Restent les arbitrages sur l'accès sans objectif, le suivi multi-objectifs, les règles de capacité et d'urgence, puis la validation des sections de cadrage."
-    observed_at: "2026-09-21"
-    resume_action: "Maître de projet : arbitrer les points ouverts dans docs/CADRAGE_PORTE_1.md. Cadrage : reprendre sections/get/set --as cadrage sur point-de-situation ; plan : renseigner ensuite execution_flow attendu. Vérifier avec lamoms check journey .lamoms/journeys/point-de-situation.md."
+    section: execution_flow
+    reason: "Le contenu et le périmètre visuel de la base sont figés. La fiche reste en draft car le flux d'exécution, le contrat de données Powens et la validation UX humaine ne sont pas encore disponibles."
+    observed_at: "2026-09-23"
+    resume_action: "Après l'intégration Powens, renseigner execution_flow et les preuves de validation sans rouvrir la maquette par défaut. Vérifier avec lamoms check journey .lamoms/journeys/point-de-situation.md."
 ```
 
 ## Le nom du fichier est le `journey_id`
