@@ -1,114 +1,89 @@
-# Bilan de catégorisation locale Powens — MVP
+# Bilan de catégorisation locale Powens — passe complète
 
-Relevé du 2026-09-26. Ce bilan décrit des agrégats produits en mémoire lors
-d'une lecture de l'API Powens ; il ne contient ni identifiant bancaire, ni
-libellé brut, ni montant individuel, ni secret.
+Relevé du 2026-09-27. Ce bilan contient uniquement des agrégats produits en
+mémoire lors d'une lecture de l'API Powens : aucun identifiant bancaire,
+libellé brut, montant individuel ou secret n'est enregistré.
 
 ## Périmètre et preuve
 
 - 1 177 transactions ont été lues sur la vue agrégée de l'utilisateur, avec
   pagination suivie.
-- Le jeton d'accès a été renouvelé seulement en mémoire pour effectuer les
+- Le jeton d'accès a été renouvelé seulement en mémoire afin d'effectuer les
   lectures ; aucune transaction, catégorie Powens ou métadonnée bancaire n'a
   été modifiée.
-- `categories[]` n'a fourni aucune catégorie exploitable. Un `id_category`
-  opaque est présent sur les 1 177 lignes et n'est pas interprété.
-- Une contrepartie est présente sur 105 lignes. Elle reste une preuve
-  facultative, pas une catégorie.
+- `categories[]` ne fournit aucune catégorie exploitable. Un `id_category`
+  opaque est présent mais n'est pas interprété.
+- Le rapprochement des virements internes est inchangé : 80 paires exactes
+  (160 lignes) et 6 paires décalées (12 lignes), soit 172 lignes au total.
 
-Le rapprochement des virements internes est conservé sans modification :
-
-| Sous-catégorie | Lignes | Confiance |
-|---|---:|---:|
-| Virement interne exact | 160 | 0,96 |
-| Virement interne décalé | 12 | 0,99 |
-| **Total Virements internes** | **172** | — |
-
-## Résultat de la passe locale
+## Résultat final
 
 | Catégorie | Lignes | Sous-catégories |
 |---|---:|---|
 | Virements internes | 172 | exact 160 ; décalé 12 |
 | Hors dépense | 48 | RevPoints 32 ; vérification de carte 16 |
 | Revenus | 16 | intérêts de placement 16 |
-| Placements | 286 | achats de titres 38 ; ventes de titres 174 ; plan d'épargne 43 ; ordre d'investissement 31 |
-| Alimentation | 73 | courses 36 ; restauration 37 |
-| Transport | 84 | mobilité 55 ; entretien 14 ; assurance 11 ; péage 3 ; carburant 1 |
-| Abonnements | 5 | divertissement numérique 4 ; services numériques 1 |
+| Placements | 286 | achats 38 ; ventes 174 ; plan d'épargne 43 ; ordre 31 |
+| Alimentation | 84 | courses 39 ; restauration 45 |
+| Transport | 87 | mobilité 56 ; entretien 16 ; assurance 11 ; péage 3 ; carburant 1 |
+| Abonnements | 6 | divertissement numérique 4 ; services numériques 2 |
 | Charges fixes | 14 | cotisations 10 ; téléphonie 4 |
 | Loisirs | 5 | culture 3 ; don 2 |
 | Habillement | 4 | vêtements 4 |
 | Santé | 1 | optique 1 |
-| Logement | 0 | aucune ligne suffisamment explicite dans ce corpus |
-| À revoir | 469 | à qualifier humainement |
+| Logement | 0 | aucune ligne suffisamment explicite |
+| Virements non rapprochés | 181 | entrant 105 ; sortant 76 |
+| Flux carte | 158 | débit 144 ; crédit 2 ; montant nul 12 |
+| Espèces | 57 | dépôt 51 ; retrait 6 |
+| Flux bancaire | 3 | entrée 2 ; sortie 1 |
+| Flux non typé | 55 | sortie 55 |
+| À revoir | **0** | — |
 | **Total** | **1 177** | |
 
-La passe précédente classait déjà 51 lignes par règle locale. Les règles
-ajoutées classent 485 lignes supplémentaires. La file à revoir passe donc de
-954 à 469 lignes, sans toucher aux 172 virements internes.
+## Règles et constats appliqués
 
-## Règles appliquées et confiance
+Les 551 affectations de règle locale conservent un identifiant de règle et un
+niveau de confiance. Elles couvrent les opérations de placement, les revenus
+de placement, les enseignes documentées d'alimentation, de transport et de
+services, les charges fixes, RevPoints et les vérifications de carte.
 
-| Famille de règle | Lignes | Confiance |
+Les 15 règles supplémentaires de cette passe sont des motifs déjà documentés
+dans le référentiel Gestio et non ambigus : épiceries, restauration, entretien
+automobile, stationnement et stockage numérique. Elles ont classé 15 lignes.
+
+| Preuve de classement | Lignes | Confiance |
 |---|---:|---:|
-| Ordres de vente de titres | 174 | 0,99 |
-| Ordres et plans d'épargne de placement | 112 | 0,98–0,99 |
-| Achats de titres | 38 | 0,99 |
-| Intérêts de placement | 16 | 0,98 |
-| Mobilité et transport collectif | 55 | 0,95 |
-| Courses et restauration | 73 | 0,94 |
-| Véhicule (entretien, assurance, péage, carburant) | 29 | 0,94–0,96 |
-| RevPoints et vérifications de carte | 48 | 0,99 |
-| Charges fixes identifiables | 14 | 0,98 |
-| Abonnements numériques | 5 | 0,96–0,98 |
-| Culture, dons, habillement et optique | 10 | 0,90–0,98 |
+| Règle locale déterministe | 551 | 0,90–0,99 |
+| Paires de virements internes | 172 | 0,85–0,99 |
+| Observation du type et du signe Powens | 454 | 0,99 sur le flux observé |
+| Sans classement | **0** | — |
 
-Les règles sont déterministes : type Powens lorsque celui-ci identifie sans
-ambiguïté une opération de placement, puis fragment de libellé normalisé pour
-les catégories documentées. Chaque affectation conserve l'identifiant de la
-règle et son niveau de confiance. Le repli explicite reste `À revoir`.
+Les 454 dernières lignes ne sont pas artificiellement transformées en dépenses
+ou revenus. Elles sont classées avec la nature certaine du flux retournée par
+Powens : virement non rapproché, débit/crédit carte, dépôt/retrait espèces,
+flux bancaire ou flux non typé. La confiance de `0,99` porte donc sur ce fait
+technique, pas sur une finalité métier ou une pocket.
 
-Exemples représentatifs, volontairement non identifiants : un ordre d'achat
-de titre, une vente de titre, un paiement de supermarché, un achat de
-restauration, un abonnement numérique, une validation temporaire de carte et
-un trajet de mobilité. Une paire de mouvements opposés reste classée en
-virement interne avant toute règle de libellé.
+Le résultat reste compatible avec le parcours Gestio : ces constats de flux ne
+changent ni la taxonomie des pockets, ni les maquettes, ni le droit de la
+personne à corriger la destination métier d'un paiement générique.
 
-## Ce qui reste volontairement à qualifier
+## Limites explicites
 
-Les 469 lignes à revoir se répartissent ainsi :
-
-| Type Powens | Lignes |
-|---|---:|
-| transfer non apparié | 182 |
-| card | 172 |
-| unknown | 55 |
-| deposit | 51 |
-| withdrawal | 6 |
-| bank | 3 |
-
-Elles concernent 200 familles de libellés, dont 332 occurrences répétées. Le
-caractère répété ne suffit pas à décider : transferts vers une personne,
-dépôts, retraits, enseignes généralistes, services à usage mixte et libellés
-incomplets restent en revue. Parmi ces 469 lignes, 61 portent une
-contrepartie, mais celle-ci ne prouve pas à elle seule la nature de la dépense
-ou du revenu.
-
-Limites connues :
-
-- aucune catégorie Powens développée n'est disponible pour corroborer les
-  règles locales ;
-- les vérifications de carte sont isolées hors dépense, mais doivent être
-  revues si elles deviennent des opérations définitives ;
-- les virements non appariés ne sont jamais assimilés automatiquement à des
-  revenus, dépenses ou virements internes ;
-- les règles locales vivent dans le lab ignoré et n'embarquent aucune donnée
-  bancaire réelle.
+- Une catégorie Powens développée n'est pas disponible pour corroborer les
+  règles locales.
+- Un flux carte générique ou un virement non rapproché n'est pas présenté comme
+  une catégorie de dépense, un revenu ou une pocket sans preuve additionnelle.
+- Les 12 flux carte à montant nul restent classés comme tels ; ils doivent être
+  réévalués s'ils deviennent un mouvement financier définitif.
+- Il ne reste aucune ligne sans classement, mais une future règle de rattachement
+  aux pockets devra être validée par la personne pour les 454 constats de flux.
 
 ## Validations
 
 - `npm run lint` dans `.lamoms/lab` : réussi ;
-- `npm run smoke` dans `.lamoms/lab` : réussi (`5/5`) ;
+- `npm run smoke` dans `.lamoms/lab` : réussi (`15/15`) ;
 - `npm run build` dans `.lamoms/lab` : réussi (57 modules transformés) ;
-- relecture API finale : 1 177 lignes, 172 virements internes conservés,
-  536 affectations locales et 469 lignes en revue.
+- `npm run api-check` dans `.lamoms/lab` : réussi, 1 177 transactions et
+  aucune ligne `review` ;
+- aucun fichier Kotlin, SQLDelight ou de maquette n'a été modifié.
