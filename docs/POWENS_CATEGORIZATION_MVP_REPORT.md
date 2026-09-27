@@ -25,15 +25,15 @@ libellé brut, montant individuel ou secret n'est enregistré.
 | Revenus | 16 | intérêts de placement 16 |
 | Placements | 286 | achats 38 ; ventes 174 ; plan d'épargne 43 ; ordre 31 |
 | Alimentation | 84 | courses 39 ; restauration 45 |
-| Transport | 87 | mobilité 56 ; entretien 16 ; assurance 11 ; péage 3 ; carburant 1 |
-| Abonnements | 6 | divertissement numérique 4 ; services numériques 2 |
+| Transport | 85 | mobilité 53 ; parking 1 ; entretien 16 ; assurance 11 ; péage 3 ; carburant 1 |
+| Abonnements | 5 | divertissement numérique 3 ; services numériques 2 |
 | Charges fixes | 14 | cotisations 10 ; téléphonie 4 |
 | Loisirs | 5 | culture 3 ; don 2 |
 | Habillement | 4 | vêtements 4 |
 | Santé | 1 | optique 1 |
 | Logement | 0 | aucune ligne suffisamment explicite |
 | Virements à contrepartie non déterminée | 181 | entrant 105 ; sortant 76 |
-| Flux carte | 158 | débit 144 ; crédit 2 ; montant nul 12 |
+| Flux carte | 161 | débit 144 ; crédit 3 ; montant nul 14 |
 | Espèces | 57 | dépôt 51 ; retrait 6 |
 | Flux bancaire | 3 | entrée 2 ; sortie 1 |
 | Flux non typé | 55 | sortie 55 |
@@ -42,23 +42,34 @@ libellé brut, montant individuel ou secret n'est enregistré.
 
 ## Règles et constats appliqués
 
-Les 551 affectations de règle locale conservent un identifiant de règle et un
+Les 548 affectations de règle locale conservent un identifiant de règle et un
 niveau de confiance. Elles couvrent les opérations de placement, les revenus
 de placement, les enseignes documentées d'alimentation, de transport et de
 services, les charges fixes, RevPoints et les vérifications de carte.
 
-Les 15 règles supplémentaires de cette passe sont des motifs déjà documentés
-dans le référentiel Gestio et non ambigus : épiceries, restauration, entretien
-automobile, stationnement et stockage numérique. Elles ont classé 15 lignes.
+La passe carte rend le stationnement explicite (`Transport › Parking`,
+confiance 0,96) et prépare le cinéma (`Loisirs › Cinéma`, 0,98) pour les
+débits carte dont l'enseigne est explicite. Une ligne courante a été déplacée
+de `Mobilité` vers `Parking`; aucun libellé du jeu API actuel n'a déclenché la
+règle cinéma.
+
+Avant toute règle d'enseigne, un crédit carte ou un montant nul est désormais
+classé comme tel (sauf RevPoints et vérification de carte). Trois lignes qui
+ressemblaient à une dépense par leur libellé sont ainsi redevenues un constat de
+flux : un crédit ou un mouvement nul n'établit pas une dépense.
+
+Les règles `Revenus › Activité` (Uber) et `Revenus › Salaire` ne s'appliquent
+qu'aux montants entrants. Ainsi, les gains de livraison Uber restent des
+revenus, sans confondre un éventuel débit carte Uber avec un gain.
 
 | Preuve de classement | Lignes | Confiance |
 |---|---:|---:|
-| Règle locale déterministe | 551 | 0,90–0,99 |
+| Règle locale déterministe | 548 | 0,90–0,99 |
 | Paires de virements internes | 172 | 0,85–0,99 |
-| Observation du type et du signe Powens | 454 | 0,99 sur le flux observé |
+| Observation du type et du signe Powens | 457 | 0,99 sur le flux observé |
 | Sans classement | **0** | — |
 
-Les 454 dernières lignes ne sont pas artificiellement transformées en dépenses
+Les 457 dernières lignes ne sont pas artificiellement transformées en dépenses
 ou revenus. Elles sont classées avec la nature certaine du flux retournée par
 Powens : virement dont la contrepartie n'est pas déterminée par le périmètre
 connecté, débit/crédit carte, dépôt/retrait espèces, flux bancaire ou flux non
@@ -76,15 +87,18 @@ personne à corriger la destination métier d'un paiement générique.
 - Un flux carte générique ou un virement à contrepartie non déterminée n'est
   pas présenté comme une catégorie de dépense, un revenu, un virement interne
   ou un virement externe sans preuve additionnelle.
-- Les 12 flux carte à montant nul restent classés comme tels ; ils doivent être
+- Les 14 flux carte à montant nul restent classés comme tels ; ils doivent être
   réévalués s'ils deviennent un mouvement financier définitif.
+- Les 144 débits carte génériques restent des débits carte, pas des dépenses
+  attribuées silencieusement à une enveloppe. Il faudra une enseigne explicite
+  ou une résolution utilisateur réutilisable pour les catégoriser plus loin.
 - Il ne reste aucune ligne sans classement, mais une future règle de rattachement
-  aux pockets devra être validée par la personne pour les 454 constats de flux.
+  aux pockets devra être validée par la personne pour les 457 constats de flux.
 
 ## Validations
 
 - `npm run lint` dans `.lamoms/lab` : réussi ;
-- `npm run smoke` dans `.lamoms/lab` : réussi (`15/15`) ;
+- `npm run smoke` dans `.lamoms/lab` : réussi ;
 - `npm run build` dans `.lamoms/lab` : réussi (57 modules transformés) ;
 - `npm run api-check` dans `.lamoms/lab` : réussi, 1 177 transactions et
   aucune ligne `review` ;
