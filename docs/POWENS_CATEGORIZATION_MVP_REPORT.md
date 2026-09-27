@@ -16,6 +16,16 @@ libellé brut, montant individuel ou secret n'est enregistré.
 - Le rapprochement des virements internes est inchangé : 80 paires exactes
   (160 lignes) et 6 paires décalées (12 lignes), soit 172 lignes au total.
 
+### Contrôle ultérieur de la source
+
+Deux lectures de contrôle successives effectuées après ce snapshot retournent
+le même agrégat de 1 178 transactions et aucune ligne `review`. Elles observent
+174 virements internes (162 exacts, 12 décalés) et 205 demandes de qualification
+(145 débits carte, 6 retraits, 54 sorties non typées). L'écart avec le snapshot
+validé ci-dessous provient donc d'une évolution ou d'une normalisation des
+données retournées par l'API, pas d'une modification du rapprochement. Le
+snapshot à 1 177 lignes est conservé comme référence validée.
+
 ## Résultat final
 
 | Catégorie | Lignes | Sous-catégories |
@@ -122,7 +132,45 @@ personne à corriger la destination métier d'un paiement générique.
 
 - `npm run lint` dans `.lamoms/lab` : réussi ;
 - `npm run smoke` dans `.lamoms/lab` : réussi ;
-- `npm run build` dans `.lamoms/lab` : réussi (57 modules transformés) ;
-- `npm run api-check` dans `.lamoms/lab` : réussi, 1 177 transactions et
-  aucune ligne `review` ;
-- aucun fichier Kotlin, SQLDelight ou de maquette n'a été modifié.
+- `npm run build` dans `.lamoms/lab` : réussi (59 modules transformés) ;
+- `npm run api-check` dans `.lamoms/lab` : réussi ; la dernière double lecture
+  stable retourne 1 178 transactions et aucune ligne `review` ;
+- aucun fichier Kotlin ou SQLDelight n'a été modifié ; les changements de
+  maquette restent dans `.lamoms/lab`, qui est ignoré par Git.
+
+## Prototype dynamique de la maquette
+
+L'écran local `PO-AMBIGUOUS` ne part plus d'une liste statique d'opérations à
+revoir. Il dérive sa file de `categorizeTransactions(...)` et de
+`needsUserInput`, sur la fixture synthétique uniquement. Les trois exemples
+montrent respectivement un débit carte, un retrait d'espèces et un flux non
+typé ; aucun libellé ou montant bancaire réel n'est affiché ou conservé par la
+maquette.
+
+Pour chaque opération, la personne peut choisir une catégorie, une
+sous-catégorie et une qualification Gestio. Elle peut aussi définir un compte
+préféré au niveau de la catégorie, puis éventuellement le remplacer pour une
+sous-catégorie. La résolution est explicite :
+
+1. préférence de sous-catégorie ;
+2. sinon préférence de catégorie ;
+3. sinon aucun compte préféré.
+
+Le compte source de la transaction reste un fait bancaire distinct : cette
+préférence ne le réécrit jamais. Si la question est passée, le flux technique
+est conservé (`Flux carte`, `Espèces › Retrait` ou `Flux non typé`) et peut être
+repris plus tard.
+
+Le prototype conserve seulement ces choix dans le `localStorage` du navigateur
+pour pouvoir valider le comportement de l'écran après rechargement. Il ne lit
+pas l'API Powens et n'écrit aucune donnée réelle. Une base Kotlin/SQLDelight
+serait prématurée ici : le schéma présent ne porte ni sous-catégorie, ni
+préférence catégorie/sous-catégorie vers un compte, ni réponse utilisateur. Le
+modèle persistant reste donc à décider avant tout raccordement aux données
+bancaires.
+
+Validation complémentaire du 2026-09-27 : parcours navigateur local effectué,
+sélection enregistrée puis retrouvée après rechargement ; une préférence
+`Alimentation` a été remplacée correctement par la préférence `Courses`, sans
+modifier le compte source. `npm run lint`, `npm run smoke` et `npm run build`
+ont aussi réussi après cette évolution (59 modules transformés).
