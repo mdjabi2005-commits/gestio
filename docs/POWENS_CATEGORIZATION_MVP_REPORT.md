@@ -32,7 +32,7 @@ libellé brut, montant individuel ou secret n'est enregistré.
 | Habillement | 4 | vêtements 4 |
 | Santé | 1 | optique 1 |
 | Logement | 0 | aucune ligne suffisamment explicite |
-| Virements externes | 181 | entrant 105 ; sortant 76 |
+| Virements à contrepartie non déterminée | 181 | entrant 105 ; sortant 76 |
 | Flux carte | 158 | débit 144 ; crédit 2 ; montant nul 12 |
 | Espèces | 57 | dépôt 51 ; retrait 6 |
 | Flux bancaire | 3 | entrée 2 ; sortie 1 |
@@ -60,10 +60,10 @@ automobile, stationnement et stockage numérique. Elles ont classé 15 lignes.
 
 Les 454 dernières lignes ne sont pas artificiellement transformées en dépenses
 ou revenus. Elles sont classées avec la nature certaine du flux retournée par
-Powens : virement externe au périmètre des comptes connectés, débit/crédit
-carte, dépôt/retrait espèces, flux bancaire ou flux non typé. La confiance de
-`0,99` porte donc sur ce fait technique, pas sur une finalité métier ou une
-pocket.
+Powens : virement dont la contrepartie n'est pas déterminée par le périmètre
+connecté, débit/crédit carte, dépôt/retrait espèces, flux bancaire ou flux non
+typé. La confiance de `0,99` porte donc sur ce fait technique, pas sur une
+finalité métier ou une pocket.
 
 Le résultat reste compatible avec le parcours Gestio : ces constats de flux ne
 changent ni la taxonomie des pockets, ni les maquettes, ni le droit de la
@@ -73,9 +73,9 @@ personne à corriger la destination métier d'un paiement générique.
 
 - Une catégorie Powens développée n'est pas disponible pour corroborer les
   règles locales.
-- Un flux carte générique ou un virement externe au périmètre connecté n'est
-  pas présenté comme une catégorie de dépense, un revenu ou une pocket sans
-  preuve additionnelle.
+- Un flux carte générique ou un virement à contrepartie non déterminée n'est
+  pas présenté comme une catégorie de dépense, un revenu, un virement interne
+  ou un virement externe sans preuve additionnelle.
 - Les 12 flux carte à montant nul restent classés comme tels ; ils doivent être
   réévalués s'ils deviennent un mouvement financier définitif.
 - Il ne reste aucune ligne sans classement, mais une future règle de rattachement
