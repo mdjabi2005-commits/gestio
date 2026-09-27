@@ -76,6 +76,27 @@ connecté, débit/crédit carte, dépôt/retrait espèces, flux bancaire ou flux
 typé. La confiance de `0,99` porte donc sur ce fait technique, pas sur une
 finalité métier ou une pocket.
 
+## Qualification demandée à la personne
+
+Le catégoriseur marque explicitement 205 mouvements pour lesquels Gestio doit
+demander un renseignement, sans effacer le constat technique si la personne
+passe la question :
+
+| Flux conservé | Lignes | Question attendue |
+|---|---:|---|
+| `Flux carte › Débit carte` | 144 | À quoi correspond ce paiement ? |
+| `Espèces › Retrait` | 6 | À quel usage ont servi ces espèces ? |
+| `Flux non typé › Sortie` | 55 | Quelle est l'origine de cette opération ? |
+
+`Flux non typé` signifie que Powens a renvoyé `type: unknown` : le signe dit
+seulement si l'argent entre ou sort, sans établir s'il s'agit d'une dépense,
+d'un revenu, d'un remboursement ou d'un virement. Ce n'est donc pas une
+catégorie de dépense.
+
+Le lab expose cette attente avec `needsUserInput`. Son écran de qualification
+reste aujourd'hui alimenté par une fixture : le raccordement de cette file aux
+données réelles est volontairement hors de cette passe de catégorisation.
+
 Le résultat reste compatible avec le parcours Gestio : ces constats de flux ne
 changent ni la taxonomie des pockets, ni les maquettes, ni le droit de la
 personne à corriger la destination métier d'un paiement générique.
@@ -92,6 +113,8 @@ personne à corriger la destination métier d'un paiement générique.
 - Les 144 débits carte génériques restent des débits carte, pas des dépenses
   attribuées silencieusement à une enveloppe. Il faudra une enseigne explicite
   ou une résolution utilisateur réutilisable pour les catégoriser plus loin.
+- Les 6 retraits et les 55 flux non typés sont également conservés avec leur
+  nature technique jusqu'à ce que la personne indique leur usage ou origine.
 - Il ne reste aucune ligne sans classement, mais une future règle de rattachement
   aux pockets devra être validée par la personne pour les 457 constats de flux.
 
