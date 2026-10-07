@@ -16,3 +16,6 @@ recovery/
 
 # Artefacts d'analyse locaux
 .lamoms/lab/
+.lamoms/maquettes-compilees/
+config/
+.graphify/
